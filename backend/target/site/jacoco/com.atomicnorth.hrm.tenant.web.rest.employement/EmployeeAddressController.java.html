@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmployeeAddressController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.employement</a> &gt; <span class="el_source">EmployeeAddressController.java</span></div><h1>EmployeeAddressController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.employement;
+
+import com.atomicnorth.hrm.tenant.service.dto.employement.employeeAddressDTO.Ses_M00_Addresses_Request;
+import com.atomicnorth.hrm.tenant.service.dto.employement.employeeAddressDTO.Ses_M00_Addresses_Response;
+import com.atomicnorth.hrm.tenant.service.employement.EmployeeAddressService;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.transaction.Transactional;
+import javax.validation.Valid;
+import java.util.Collections;
+import java.util.List;
+
+@RestController
+@RequestMapping(&quot;/api/employee-addresses&quot;)
+<span class="nc" id="L19">public class EmployeeAddressController {</span>
+
+    @Autowired
+    private EmployeeAddressService employeeAddressService;
+
+    @Transactional
+    @PostMapping(&quot;/create-employee-address&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Ses_M00_Addresses_Request&gt;&gt;&gt; saveOrUpdateAddress(@Valid @RequestBody List&lt;Ses_M00_Addresses_Request&gt; addressDTO) {
+        try {
+<span class="nc" id="L28">            List&lt;Ses_M00_Addresses_Request&gt; updatedRecords = employeeAddressService.saveOrUpdateAddress(addressDTO);</span>
+
+<span class="nc" id="L30">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(updatedRecords, true, &quot;EMPLOYEE_ADDRESS_SAVE_SUCCESS&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L31">        } catch (Exception e) {</span>
+<span class="nc" id="L32">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;EMPLOYEE_ADDRESS_SAVE_FAILURE&quot;, &quot;ERROR&quot;, Collections.singletonList(e.getMessage())));</span>
+        }
+    }
+
+    @GetMapping(&quot;{username}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Ses_M00_Addresses_Response&gt;&gt;&gt; getAllAddressesByUsername(@PathVariable Integer username) {
+        try {
+<span class="nc" id="L39">            List&lt;Ses_M00_Addresses_Response&gt; addresses = employeeAddressService.getAllAddressesByUsername(username);</span>
+
+<span class="nc bnc" id="L41" title="All 2 branches missed.">            if (addresses.isEmpty()) {</span>
+<span class="nc" id="L42">                return ResponseEntity.ok(new ApiResponse&lt;&gt;(null, false, &quot;EMPLOYEE_ADDRESS_NOT_FOUND&quot;, &quot;FAILURE&quot;, Collections.singletonList(&quot;No address found for user ID: &quot; + username)));</span>
+            }
+<span class="nc" id="L44">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(addresses, true, &quot;EMPLOYEE_ADDRESS_FETCHED_SUCCESS&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L45">        } catch (Exception e) {</span>
+<span class="nc" id="L46">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;EMPLOYEE_ADDRESS_FETCH_ERROR&quot;, &quot;FAILURE&quot;, Collections.singletonList(e.getMessage())));</span>
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

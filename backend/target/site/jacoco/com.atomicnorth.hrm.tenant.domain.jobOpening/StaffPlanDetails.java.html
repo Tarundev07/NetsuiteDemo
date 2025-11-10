@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>StaffPlanDetails.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.domain.jobOpening</a> &gt; <span class="el_source">StaffPlanDetails.java</span></div><h1>StaffPlanDetails.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.domain.jobOpening;
+
+import com.atomicnorth.hrm.tenant.domain.AbstractAuditingEntity;
+import com.atomicnorth.hrm.tenant.domain.designation.Designation;
+import com.atomicnorth.hrm.util.Enum.Active;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+
+import javax.persistence.*;
+import java.io.Serializable;
+import java.util.Date;
+
+@Entity
+<span class="nc" id="L17">@AllArgsConstructor</span>
+<span class="nc" id="L18">@NoArgsConstructor</span>
+<span class="nc bnc" id="L19" title="All 102 branches missed.">@Data</span>
+@Table(name = &quot;ses_m04_staff_plan_details&quot;)
+@Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
+public class StaffPlanDetails extends AbstractAuditingEntity&lt;Long&gt; implements Serializable {
+
+    @Id
+    @Column(name = &quot;ID&quot;)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<span class="nc" id="L27">    private Long id;</span>
+
+    @Column(name = &quot;DESIGNATION_ID&quot;, nullable = false)
+<span class="nc" id="L30">    private Integer designationId;</span>
+
+    @Column(name = &quot;DEPARTMENT_ID&quot;, nullable = false)
+<span class="nc" id="L33">    private Integer departmentId;</span>
+
+    @Column(name = &quot;JOB_REQUISITION_ID&quot;)
+<span class="nc" id="L36">    private Integer jobRequisitionId;</span>
+
+    @Column(name = &quot;REQUIRED_VACANCY&quot;, nullable = false)
+<span class="nc" id="L39">    private Integer requiredVacancies;</span>
+
+    @Column(name = &quot;ESTIMATED_COST&quot;, nullable = false)
+<span class="nc" id="L42">    private Integer estimateCost;</span>
+
+    @Column(name = &quot;IS_ACTIVE&quot;)
+<span class="nc" id="L45">    private Active isActive;</span>
+
+    @Transient
+<span class="nc" id="L48">    private String designationName;</span>
+
+    @Transient
+<span class="nc" id="L51">    private String jobRequisitionName;</span>
+
+    @ManyToOne
+    @JoinColumn(name = &quot;STAFF_PLAN_ID&quot;, nullable = false)
+<span class="nc" id="L55">    private StaffPlan staffPlanId;</span>
+
+    @ManyToOne
+    @JoinColumn(name = &quot;DESIGNATION_ID&quot;, referencedColumnName = &quot;DESIGNATION_ID&quot;, insertable = false, updatable = false)
+<span class="nc" id="L59">    private Designation designation;</span>
+
+    @ManyToOne
+    @JoinColumn(name = &quot;JOB_REQUISITION_ID&quot;, referencedColumnName = &quot;ID&quot;, insertable = false, updatable = false)
+<span class="nc" id="L63">    private JobRequisition jobRequisition;</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

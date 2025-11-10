@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TokenProvider.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.configuration.security.jwt</a> &gt; <span class="el_source">TokenProvider.java</span></div><h1>TokenProvider.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.configuration.security.jwt;
+
+import com.atomicnorth.hrm.configuration.ApplicationProperties;
+import com.atomicnorth.hrm.configuration.multitenant.TenantContextHolder;
+import com.atomicnorth.hrm.management.SecurityMetersService;
+import com.atomicnorth.hrm.tenant.domain.Employee;
+import com.atomicnorth.hrm.tenant.domain.accessgroup.UserAssociation;
+import com.atomicnorth.hrm.tenant.domain.roles.Role;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.repository.UserRepository;
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.stereotype.Component;
+import org.springframework.util.ObjectUtils;
+
+import java.nio.charset.StandardCharsets;
+import java.security.Key;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Component
+public class TokenProvider {
+
+    private static final String AUTHORITIES_KEY = &quot;auth&quot;;
+    private static final String INVALID_JWT_TOKEN = &quot;Invalid JWT token.&quot;;
+<span class="nc" id="L38">    private final Logger log = LoggerFactory.getLogger(TokenProvider.class);</span>
+    private final Key key;
+
+    private final JwtParser jwtParser;
+
+    private final long tokenValidityInMilliseconds;
+
+    private final long tokenValidityInMillisecondsForRememberMe;
+
+    private final SecurityMetersService securityMetersService;
+
+    @Autowired
+    private EmployeeRepository employeeRepository;
+    @Autowired
+    private UserRepository userRepository;
+
+<span class="nc" id="L54">    public TokenProvider(ApplicationProperties applicationProperties, SecurityMetersService securityMetersService) {</span>
+        byte[] keyBytes;
+<span class="nc" id="L56">        String secret = applicationProperties.getSecurity().getAuthentication().getJwt().getBase64Secret();</span>
+<span class="nc bnc" id="L57" title="All 2 branches missed.">        if (!ObjectUtils.isEmpty(secret)) {</span>
+<span class="nc" id="L58">            log.debug(&quot;Using a Base64-encoded JWT secret key&quot;);</span>
+<span class="nc" id="L59">            keyBytes = Decoders.BASE64.decode(secret);</span>
+        } else {
+<span class="nc" id="L61">            log.warn(&quot;Warning: the JWT key used is not Base64-encoded. &quot; + &quot;We recommend using the `application.security.authentication.jwt.base64-secret` key for optimum security.&quot;);</span>
+<span class="nc" id="L62">            secret = applicationProperties.getSecurity().getAuthentication().getJwt().getSecret();</span>
+<span class="nc" id="L63">            keyBytes = secret.getBytes(StandardCharsets.UTF_8);</span>
+        }
+<span class="nc" id="L65">        key = Keys.hmacShaKeyFor(keyBytes);</span>
+<span class="nc" id="L66">        jwtParser = Jwts.parserBuilder().setSigningKey(key).build();</span>
+<span class="nc" id="L67">        this.tokenValidityInMilliseconds = 1000 * applicationProperties.getSecurity().getAuthentication().getJwt().getTokenValidityInSeconds();</span>
+<span class="nc" id="L68">        this.tokenValidityInMillisecondsForRememberMe = 1000 * applicationProperties.getSecurity().getAuthentication().getJwt().getTokenValidityInSecondsForRememberMe();</span>
+
+<span class="nc" id="L70">        this.securityMetersService = securityMetersService;</span>
+<span class="nc" id="L71">    }</span>
+
+    public String createToken(Authentication authentication, String clientId, boolean rememberMe) {
+<span class="nc" id="L74">        String authorities = authentication.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.joining(&quot;,&quot;));</span>
+
+<span class="nc" id="L76">        long now = (new Date()).getTime();</span>
+        Date validity;
+<span class="nc bnc" id="L78" title="All 2 branches missed.">        if (rememberMe) {</span>
+<span class="nc" id="L79">            validity = new Date(now + this.tokenValidityInMillisecondsForRememberMe);</span>
+        } else {
+<span class="nc" id="L81">            validity = new Date(now + this.tokenValidityInMilliseconds);</span>
+        }
+
+<span class="nc" id="L84">        return Jwts.builder().setSubject(authentication.getName()).setAudience(clientId).claim(AUTHORITIES_KEY, authorities).signWith(SignatureAlgorithm.HS512, key).setExpiration(validity).compact();</span>
+    }
+
+    //ADD METHOD FOR MORE DETAIL OF USER
+    public String createToken(Authentication authentication, String clientId, boolean rememberMe, com.atomicnorth.hrm.tenant.domain.User user) {
+<span class="nc" id="L89">        String authorities = authentication.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.joining(&quot;,&quot;));</span>
+
+<span class="nc" id="L91">        long now = (new Date()).getTime();</span>
+        Date validity;
+<span class="nc bnc" id="L93" title="All 2 branches missed.">        if (rememberMe) {</span>
+<span class="nc" id="L94">            validity = new Date(now + this.tokenValidityInMillisecondsForRememberMe);</span>
+        } else {
+<span class="nc" id="L96">            validity = new Date(now + this.tokenValidityInMilliseconds);</span>
+        }
+<span class="nc" id="L98">        SimpleDateFormat sdf = new SimpleDateFormat(&quot;yyyy-MM-dd&quot;);</span>
+<span class="nc" id="L99">        return Jwts.builder().setSubject(authentication.getName()).setAudience(clientId).claim(AUTHORITIES_KEY, authorities)</span>
+                //ADD USER MORE DETAILS
+<span class="nc" id="L101">                .claim(&quot;UserId&quot;, user.getId())</span>
+<span class="nc" id="L102">                .claim(&quot;DisplayName&quot;, user.getDisplayName())</span>
+<span class="nc" id="L103">                .claim(&quot;eMail&quot;, user.getEmail())</span>
+<span class="nc" id="L104">                .claim(&quot;CreatedDate&quot;, sdf.format(user.getStartDate()))</span>
+<span class="nc" id="L105">                .claim(&quot;Role&quot;, user.getAuthorities().stream().map(Role::getRoleId).collect(Collectors.toList()))</span>
+<span class="nc" id="L106">                .claim(&quot;UserType&quot;, user.getAssociations().stream().map(UserAssociation::getUserType).collect(Collectors.toList()))</span>
+<span class="nc" id="L107">                .claim(&quot;EmpId&quot;, user.getAssociations().stream().map(UserAssociation::getUserTypeId).filter(Objects::nonNull).findFirst().orElse(null))</span>
+<span class="nc" id="L108">                .signWith(SignatureAlgorithm.HS512, key)</span>
+<span class="nc" id="L109">                .setExpiration(validity)</span>
+<span class="nc" id="L110">                .compact();</span>
+    }
+
+    public UserLoginDetail parse(String token) throws ParseException {
+<span class="nc" id="L114">        Claims claims = jwtParser.parseClaimsJws(token).getBody();</span>
+<span class="nc" id="L115">        String tenantId = claims.getAudience();</span>
+
+<span class="nc" id="L117">        System.out.println(tenantId);</span>
+        /*CHECK HERE FOR TANSLATION IN FOR TENACY CHECK*/
+<span class="nc" id="L119">        TenantContextHolder.setTenantId(tenantId);</span>
+
+        //FETCH USER DETAILS FROM TOKEN
+
+<span class="nc" id="L123">        UserLoginDetail userLoginDetail = new UserLoginDetail();</span>
+<span class="nc" id="L124">        userLoginDetail.setUsername(((Integer) claims.get(&quot;UserId&quot;)).longValue());</span>
+<span class="nc" id="L125">        userLoginDetail.setAuthorities((String) claims.get(AUTHORITIES_KEY));</span>
+<span class="nc" id="L126">        userLoginDetail.setFirstname((String) claims.get(&quot;DisplayName&quot;));</span>
+<span class="nc" id="L127">        userLoginDetail.setPrimaryemail((String) claims.get(&quot;eMail&quot;));</span>
+<span class="nc" id="L128">        userLoginDetail.setEmpId((Integer) claims.get(&quot;EmpId&quot;));</span>
+<span class="nc" id="L129">        List&lt;Integer&gt; roles = (List&lt;Integer&gt;) claims.get(&quot;Role&quot;);</span>
+<span class="nc bnc" id="L130" title="All 4 branches missed.">        if (roles != null &amp;&amp; !roles.isEmpty()) {</span>
+<span class="nc" id="L131">            String roleString = roles.stream()</span>
+<span class="nc" id="L132">                    .map(String::valueOf)</span>
+<span class="nc" id="L133">                    .collect(Collectors.joining(&quot;,&quot;));</span>
+<span class="nc" id="L134">            userLoginDetail.setRole(roleString);</span>
+        }
+<span class="nc" id="L136">        userLoginDetail.setSubject(claims.getSubject());</span>
+<span class="nc" id="L137">        return userLoginDetail;</span>
+    }
+
+    public Authentication getAuthentication(UserLoginDetail userLoginDetail, String token) {
+<span class="nc bnc" id="L141" title="All 2 branches missed.">        Collection&lt;? extends GrantedAuthority&gt; authorities = Arrays.stream(userLoginDetail.getAuthorities().split(&quot;,&quot;)).filter(auth -&gt; !auth.trim().isEmpty()).map(SimpleGrantedAuthority::new).collect(Collectors.toList());</span>
+
+<span class="nc" id="L143">        User principal = new User(userLoginDetail.getSubject(), &quot;&quot;, authorities);</span>
+<span class="nc" id="L144">        return new UsernamePasswordAuthenticationToken(principal, token, authorities);</span>
+    }
+
+    public boolean validateToken(String authToken) {
+        try {
+<span class="nc" id="L149">            Claims claims = jwtParser.parseClaimsJws(authToken).getBody();</span>
+<span class="nc" id="L150">            String subject = claims.getSubject();</span>
+<span class="nc" id="L151">            Optional&lt;com.atomicnorth.hrm.tenant.domain.User&gt; endDateByEmail = userRepository.findEndDateByEmail(subject);</span>
+<span class="nc bnc" id="L152" title="All 2 branches missed.">            if (endDateByEmail.isPresent()) {</span>
+<span class="nc bnc" id="L153" title="All 2 branches missed.">                if (endDateByEmail.get().getEndDate() != null) {</span>
+<span class="nc bnc" id="L154" title="All 2 branches missed.">                    return !endDateByEmail.get().getEndDate().before(new Date());</span>
+                }
+            }
+<span class="nc" id="L157">            return true;</span>
+<span class="nc" id="L158">        } catch (ExpiredJwtException e) {</span>
+<span class="nc" id="L159">            this.securityMetersService.trackTokenExpired();</span>
+
+<span class="nc" id="L161">            log.trace(INVALID_JWT_TOKEN, e);</span>
+<span class="nc" id="L162">        } catch (UnsupportedJwtException e) {</span>
+<span class="nc" id="L163">            this.securityMetersService.trackTokenUnsupported();</span>
+
+<span class="nc" id="L165">            log.trace(INVALID_JWT_TOKEN, e);</span>
+<span class="nc" id="L166">        } catch (MalformedJwtException e) {</span>
+<span class="nc" id="L167">            this.securityMetersService.trackTokenMalformed();</span>
+
+<span class="nc" id="L169">            log.trace(INVALID_JWT_TOKEN, e);</span>
+<span class="nc" id="L170">        } catch (SignatureException e) {</span>
+<span class="nc" id="L171">            this.securityMetersService.trackTokenInvalidSignature();</span>
+
+<span class="nc" id="L173">            log.trace(INVALID_JWT_TOKEN, e);</span>
+<span class="nc" id="L174">        } catch (</span>
+                IllegalArgumentException e) { // TODO: should we let it bubble (no catch), to avoid defensive programming and follow the fail-fast principle?
+<span class="nc" id="L176">            log.error(&quot;Token validation error {}&quot;, e.getMessage());</span>
+<span class="nc" id="L177">        }</span>
+
+<span class="nc" id="L179">        return false;</span>
+    }
+
+    public Employee getByUserNameId(Integer usernameId) {
+<span class="nc" id="L183">        return employeeRepository.findById(usernameId).orElse(null);</span>
+    }
+
+    public String extractTenantId(String token) {
+        try {
+<span class="nc" id="L188">            Claims claims = jwtParser.parseClaimsJws(token).getBody();</span>
+<span class="nc" id="L189">            return claims.get(&quot;aud&quot;, String.class);</span>
+<span class="nc" id="L190">        } catch (ExpiredJwtException e) {</span>
+<span class="nc" id="L191">            this.securityMetersService.trackTokenExpired();</span>
+
+<span class="nc" id="L193">            log.trace(INVALID_JWT_TOKEN, e);</span>
+<span class="nc" id="L194">        } catch (UnsupportedJwtException e) {</span>
+<span class="nc" id="L195">            this.securityMetersService.trackTokenUnsupported();</span>
+
+<span class="nc" id="L197">            log.trace(INVALID_JWT_TOKEN, e);</span>
+<span class="nc" id="L198">        } catch (MalformedJwtException e) {</span>
+<span class="nc" id="L199">            this.securityMetersService.trackTokenMalformed();</span>
+
+<span class="nc" id="L201">            log.trace(INVALID_JWT_TOKEN, e);</span>
+<span class="nc" id="L202">        } catch (SignatureException e) {</span>
+<span class="nc" id="L203">            this.securityMetersService.trackTokenInvalidSignature();</span>
+
+<span class="nc" id="L205">            log.trace(INVALID_JWT_TOKEN, e);</span>
+<span class="nc" id="L206">        } catch (</span>
+                IllegalArgumentException e) { // TODO: should we let it bubble (no catch), to avoid defensive programming and follow the fail-fast principle?
+<span class="nc" id="L208">            log.error(&quot;Token validation error {}&quot;, e.getMessage());</span>
+<span class="nc" id="L209">        }</span>
+<span class="nc" id="L210">        return null;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

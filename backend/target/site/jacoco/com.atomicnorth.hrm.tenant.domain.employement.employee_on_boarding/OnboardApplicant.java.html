@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OnboardApplicant.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.domain.employement.employee_on_boarding</a> &gt; <span class="el_source">OnboardApplicant.java</span></div><h1>OnboardApplicant.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.domain.employement.employee_on_boarding;
+
+import com.atomicnorth.hrm.tenant.domain.Department;
+import com.atomicnorth.hrm.tenant.domain.designation.Designation;
+import com.atomicnorth.hrm.tenant.domain.employeeGrade.EmployeeGrade;
+import com.atomicnorth.hrm.tenant.domain.employement.employee_job_applicant.JobApplicant;
+import com.atomicnorth.hrm.tenant.domain.holiday.HolidaysCalendar;
+import com.atomicnorth.hrm.tenant.domain.jobOpening.JobOffer;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.persistence.*;
+import java.time.LocalDate;
+import java.util.Date;
+
+<span class="nc bnc" id="L18" title="All 470 branches missed.">@Data</span>
+<span class="nc" id="L19">@AllArgsConstructor</span>
+<span class="nc" id="L20">@NoArgsConstructor</span>
+@Entity
+@Table(name = &quot;ses_m00_onboard_applicants&quot;)
+public class OnboardApplicant {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = &quot;ONBOARDING_ID&quot;)
+<span class="nc" id="L28">    private Integer onboardingId;</span>
+
+    @Column(name = &quot;JOB_OFFER_ID&quot;)
+<span class="nc" id="L31">    private Integer jobOffer;</span>
+
+    @Column(name = &quot;JOB_APPLICANT_ID&quot;)
+<span class="nc" id="L34">    private Integer jobApplicantId;</span>
+
+    @Column(name = &quot;EMPLOYEE_ONBOARDING_TEMPLATE_ID&quot;)
+<span class="nc" id="L37">    private Integer employeeOnboardingTemplate;</span>
+
+    @Column(name = &quot;DATE_OF_JOINING&quot;)
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = &quot;dd-MM-yyyy&quot;)
+<span class="nc" id="L41">    private LocalDate dateOfJoining;</span>
+
+    @Column(name = &quot;DEPARTMENT_ID&quot;)
+<span class="nc" id="L44">    private Integer department;</span>
+
+    @Column(name = &quot;ONBOARDING_BEGINS_ON&quot;)
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = &quot;dd-MM-yyyy&quot;)
+<span class="nc" id="L48">    private LocalDate onboardingBeginsOn;</span>
+
+    @Column(name = &quot;DESIGNATION_ID&quot;)
+<span class="nc" id="L51">    private Integer designation;</span>
+
+    @Column(name = &quot;HOLIDAY_LIST_ID&quot;)
+<span class="nc" id="L54">    private Integer holiday;</span>
+
+    @Column(name = &quot;NOTIFY_USER_BY_EMAIL&quot;)
+<span class="nc" id="L57">    private String notifyUserByEmail;</span>
+
+    @Column(name = &quot;OPERATION_SOURCE&quot;)
+<span class="nc" id="L60">    private String operationSource;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE1&quot;)
+<span class="nc" id="L63">    private String cAttribute1;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE2&quot;)
+<span class="nc" id="L66">    private String cAttribute2;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE3&quot;)
+<span class="nc" id="L69">    private String cAttribute3;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE4&quot;)
+<span class="nc" id="L72">    private String cAttribute4;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE5&quot;)
+<span class="nc" id="L75">    private String cAttribute5;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE6&quot;)
+<span class="nc" id="L78">    private String cAttribute6;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE7&quot;)
+<span class="nc" id="L81">    private String cAttribute7;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE8&quot;)
+<span class="nc" id="L84">    private String cAttribute8;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE9&quot;)
+<span class="nc" id="L87">    private String cAttribute9;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE10&quot;)
+<span class="nc" id="L90">    private String cAttribute10;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE11&quot;)
+<span class="nc" id="L93">    private String cAttribute11;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE12&quot;)
+<span class="nc" id="L96">    private String cAttribute12;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE13&quot;)
+<span class="nc" id="L99">    private String cAttribute13;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE14&quot;)
+<span class="nc" id="L102">    private String cAttribute14;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE15&quot;)
+<span class="nc" id="L105">    private String cAttribute15;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE16&quot;)
+<span class="nc" id="L108">    private Integer nAttribute16;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE17&quot;)
+<span class="nc" id="L111">    private Integer nAttribute17;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE18&quot;)
+<span class="nc" id="L114">    private Integer nAttribute18;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE19&quot;)
+<span class="nc" id="L117">    private Integer nAttribute19;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE20&quot;)
+<span class="nc" id="L120">    private Integer nAttribute20;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE21&quot;)
+<span class="nc" id="L123">    private Integer nAttribute21;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE22&quot;)
+<span class="nc" id="L126">    private Integer nAttribute22;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE23&quot;)
+<span class="nc" id="L129">    private Integer nAttribute23;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE24&quot;)
+<span class="nc" id="L132">    private Integer nAttribute24;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE25&quot;)
+<span class="nc" id="L135">    private Integer nAttribute25;</span>
+
+    @Column(name = &quot;D_ATTRIBUTE26&quot;)
+    @Temporal(TemporalType.DATE)
+<span class="nc" id="L139">    private Date dAttribute26;</span>
+
+    @Column(name = &quot;D_ATTRIBUTE27&quot;)
+    @Temporal(TemporalType.DATE)
+<span class="nc" id="L143">    private Date dAttribute27;</span>
+
+    @Column(name = &quot;D_ATTRIBUTE28&quot;)
+    @Temporal(TemporalType.DATE)
+<span class="nc" id="L147">    private Date dAttribute28;</span>
+
+    @Column(name = &quot;D_ATTRIBUTE29&quot;)
+    @Temporal(TemporalType.DATE)
+<span class="nc" id="L151">    private Date dAttribute29;</span>
+
+    @Column(name = &quot;D_ATTRIBUTE30&quot;)
+    @Temporal(TemporalType.DATE)
+<span class="nc" id="L155">    private Date dAttribute30;</span>
+
+    @Column(name = &quot;J_ATTRIBUTE31&quot;)
+<span class="nc" id="L158">    private String jAttribute31;</span>
+
+    @Column(name = &quot;J_ATTRIBUTE32&quot;)
+<span class="nc" id="L161">    private String jAttribute32;</span>
+
+    @Column(name = &quot;CREATION_DATE&quot;)
+    @Temporal(TemporalType.DATE)
+<span class="nc" id="L165">    private Date creationDate;</span>
+
+    @Column(name = &quot;CREATED_BY&quot;)
+<span class="nc" id="L168">    private String createdBy;</span>
+
+    @Column(name = &quot;LAST_UPDATED_BY&quot;)
+<span class="nc" id="L171">    private String lastUpdatedBy;</span>
+
+    @Column(name = &quot;LAST_UPDATED_DATE&quot;)
+    @Temporal(TemporalType.DATE)
+<span class="nc" id="L175">    private Date lastUpdatedDate;</span>
+
+    @Lob
+    @Column(name = &quot;RECORD_INFO&quot;)
+<span class="nc" id="L179">    private String recordInfo;</span>
+
+    @Transient
+<span class="nc" id="L182">    private String designationName;</span>
+
+    @Transient
+<span class="nc" id="L185">    private String jobApplicantName;</span>
+
+    @Transient
+<span class="nc" id="L188">    private String departmentName;</span>
+
+    @Transient
+<span class="nc" id="L191">    private String HolidayName;</span>
+
+    @Transient
+<span class="nc" id="L194">    private String JobOfferName;</span>
+
+    @ManyToOne
+    @JoinColumn(name = &quot;DESIGNATION_ID&quot;, referencedColumnName = &quot;DESIGNATION_ID&quot;, insertable = false, updatable = false)
+<span class="nc" id="L198">    private Designation designationEntity;</span>
+
+    @ManyToOne
+    @JoinColumn(name = &quot;JOB_APPLICANT_ID&quot;, referencedColumnName = &quot;ID&quot;, insertable = false, updatable = false)
+<span class="nc" id="L202">    private JobApplicant employeeJobApplicant;</span>
+
+    @ManyToOne
+    @JoinColumn(name = &quot;DEPARTMENT_ID&quot;, referencedColumnName = &quot;ID&quot;, insertable = false, updatable = false)
+<span class="nc" id="L206">    private  Department departmentEntity;</span>
+
+    @ManyToOne
+    @JoinColumn(name = &quot;HOLIDAY_LIST_ID&quot;, referencedColumnName = &quot;HOLIDAY_CALENDAR_ID&quot;, insertable = false, updatable = false)
+<span class="nc" id="L210">    private HolidaysCalendar holidaysCalendar;</span>
+
+    @ManyToOne
+    @JoinColumn(name = &quot;JOB_OFFER_ID&quot;, referencedColumnName = &quot;JOB_OFFER_ID&quot;, insertable = false, updatable = false)
+<span class="nc" id="L214">    private JobOffer jobOfferEntity;</span>
+
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

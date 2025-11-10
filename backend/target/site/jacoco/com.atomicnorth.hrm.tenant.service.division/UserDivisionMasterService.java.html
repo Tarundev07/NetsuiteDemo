@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserDivisionMasterService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.division</a> &gt; <span class="el_source">UserDivisionMasterService.java</span></div><h1>UserDivisionMasterService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.division;
+
+import com.atomicnorth.hrm.tenant.domain.accessgroup.SesM00UserDivisionMaster;
+import com.atomicnorth.hrm.tenant.domain.designation.Designation;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.accessgroup.UserDivisionMasterRepository;
+import com.atomicnorth.hrm.tenant.service.dto.division.DivisionDropdownDTO;
+import com.atomicnorth.hrm.tenant.service.dto.division.UserDivisionMasterDTO;
+import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.persistence.EntityNotFoundException;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Path;
+import javax.persistence.criteria.Root;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@Service
+public class UserDivisionMasterService {
+
+    private final UserDivisionMasterRepository divisionRepo;
+    private final ModelMapper modelMapper;
+
+<span class="fc" id="L43">    public UserDivisionMasterService(UserDivisionMasterRepository divisionRepo, ModelMapper modelMapper) {</span>
+<span class="fc" id="L44">        this.divisionRepo = divisionRepo;</span>
+<span class="fc" id="L45">        this.modelMapper = modelMapper;</span>
+<span class="fc" id="L46">    }</span>
+
+
+    @Transactional
+    public UserDivisionMasterDTO saveOrUpdate(UserDivisionMasterDTO dto) {
+<span class="nc" id="L51">        UserLoginDetail token = SessionHolder.getUserLoginDetail();</span>
+        SesM00UserDivisionMaster entity;
+
+<span class="nc bnc" id="L54" title="All 2 branches missed.">        if (dto.getDivisionId() != null) {</span>
+            // ===== UPDATE =====
+<span class="nc" id="L56">            SesM00UserDivisionMaster existingEntity = divisionRepo.findById(dto.getDivisionId())</span>
+<span class="nc" id="L57">                    .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Division not found with ID: &quot; + dto.getDivisionId()));</span>
+
+            // Duplicate check (ignore case), excluding current ID
+<span class="nc bnc" id="L60" title="All 2 branches missed.">            if (divisionRepo.existsByNameIgnoreCaseAndDivisionIdNot(dto.getName(), dto.getDivisionId())) {</span>
+<span class="nc" id="L61">                throw new IllegalArgumentException(&quot;Division name already exists&quot;);</span>
+            }
+
+            // Map updated fields from DTO to existing entity
+<span class="nc" id="L65">            modelMapper.map(dto, existingEntity);</span>
+
+            // Preserve createdDate from DB
+<span class="nc" id="L68">            existingEntity.setCreatedDate(existingEntity.getCreatedDate());</span>
+
+            // Handle activeFlag
+<span class="nc bnc" id="L71" title="All 2 branches missed.">            if (dto.getActiveFlag() != null) {</span>
+<span class="nc" id="L72">                existingEntity.setActiveFlag(dto.getActiveFlag().toUpperCase());</span>
+            }
+
+            // Audit
+<span class="nc" id="L76">            existingEntity.setLastUpdatedBy(token.getUsername().toString());</span>
+<span class="nc" id="L77">            existingEntity.setLastUpdatedDate(Instant.now());</span>
+
+<span class="nc" id="L79">            entity = existingEntity;</span>
+
+<span class="nc" id="L81">        } else {</span>
+            // ===== INSERT =====
+<span class="nc bnc" id="L83" title="All 2 branches missed.">            if (divisionRepo.existsByNameIgnoreCase(dto.getName())) {</span>
+<span class="nc" id="L84">                throw new IllegalArgumentException(&quot;Division name already exists&quot;);</span>
+            }
+
+<span class="nc" id="L87">            entity = modelMapper.map(dto, SesM00UserDivisionMaster.class);</span>
+
+<span class="nc bnc" id="L89" title="All 2 branches missed.">            if (dto.getActiveFlag() != null) {</span>
+<span class="nc" id="L90">                entity.setActiveFlag(dto.getActiveFlag().toUpperCase());</span>
+            }
+
+<span class="nc" id="L93">            entity.setCreatedBy(token.getUsername().toString());</span>
+<span class="nc" id="L94">            entity.setCreatedDate(Instant.now());</span>
+
+<span class="nc" id="L96">            entity.setLastUpdatedBy(token.getUsername().toString());</span>
+<span class="nc" id="L97">            entity.setLastUpdatedDate(Instant.now());</span>
+        }
+
+<span class="nc" id="L100">        SesM00UserDivisionMaster saved = divisionRepo.save(entity);</span>
+<span class="nc" id="L101">        return modelMapper.map(saved, UserDivisionMasterDTO.class);</span>
+    }
+
+
+    public Map&lt;String, Object&gt; getAllUserDivisions(Pageable pageable, String searchColumn, String searchValue, String sortColumn, String sortDirection) {
+<span class="fc" id="L106">        Page&lt;SesM00UserDivisionMaster&gt; pageData = getFilteredActiveDivisions(pageable, searchColumn, searchValue, sortColumn, sortDirection);</span>
+
+<span class="fc" id="L108">        List&lt;UserDivisionMasterDTO&gt; dtoList = pageData.getContent()</span>
+<span class="fc" id="L109">                .stream()</span>
+<span class="fc" id="L110">                .map(entity -&gt; modelMapper.map(entity, UserDivisionMasterDTO.class))</span>
+<span class="fc" id="L111">                .collect(Collectors.toList());</span>
+
+<span class="fc" id="L113">        return Map.of(</span>
+                &quot;result&quot;, dtoList,
+<span class="fc" id="L115">                &quot;currentPage&quot;, pageData.getNumber() + 1,</span>
+<span class="fc" id="L116">                &quot;pageSize&quot;, pageData.getSize(),</span>
+<span class="fc" id="L117">                &quot;totalItems&quot;, pageData.getTotalElements(),</span>
+<span class="fc" id="L118">                &quot;totalPages&quot;, pageData.getTotalPages()</span>
+        );
+    }
+
+    private Page&lt;SesM00UserDivisionMaster&gt; getFilteredActiveDivisions(Pageable pageable, String column, String value, String sortColumn, String sortDirection) {
+<span class="fc" id="L123">        Sort sort = Sort.unsorted();</span>
+<span class="pc bpc" id="L124" title="3 of 4 branches missed.">        if (sortColumn != null &amp;&amp; !sortColumn.isBlank()) {</span>
+<span class="nc" id="L125">            sort = Sort.by(Sort.Direction.fromString(</span>
+<span class="nc bnc" id="L126" title="All 4 branches missed.">                    sortDirection != null &amp;&amp; sortDirection.equalsIgnoreCase(&quot;DESC&quot;) ? &quot;DESC&quot; : &quot;ASC&quot;</span>
+            ), sortColumn);
+        }
+
+<span class="fc" id="L130">        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);</span>
+
+<span class="fc" id="L132">        Specification&lt;SesM00UserDivisionMaster&gt; spec = Specification.where(null);</span>
+
+<span class="pc bpc" id="L134" title="7 of 8 branches missed.">        if (column != null &amp;&amp; value != null &amp;&amp; !column.isBlank() &amp;&amp; !value.isBlank()) {</span>
+<span class="nc bnc" id="L135" title="All 2 branches missed.">            if (&quot;activeFlag&quot;.equalsIgnoreCase(column)) {</span>
+<span class="nc bnc" id="L136" title="All 2 branches missed.">                if (&quot;active&quot;.contains(value)) {</span>
+<span class="nc" id="L137">                    value = &quot;A&quot;;</span>
+<span class="nc bnc" id="L138" title="All 2 branches missed.">                } else if (&quot;inactive&quot;.contains(value)) {</span>
+<span class="nc" id="L139">                    value = &quot;I&quot;;</span>
+                }
+            }
+<span class="nc" id="L142">            spec = spec.and(searchByColumn(column, value));</span>
+        }
+
+<span class="fc" id="L145">        return divisionRepo.findAll(spec, sortedPageable);</span>
+    }
+
+    private Specification&lt;SesM00UserDivisionMaster&gt; byActiveFlag(String activeFlag) {
+<span class="pc" id="L149">        return (root, query, cb) -&gt; cb.equal(root.get(&quot;activeFlag&quot;), activeFlag);</span>
+    }
+
+    private Specification&lt;SesM00UserDivisionMaster&gt; searchByColumn(String column, String value) {
+<span class="fc" id="L153">        return (Root&lt;SesM00UserDivisionMaster&gt; root, CriteriaQuery&lt;?&gt; query, CriteriaBuilder criteriaBuilder) -&gt; {</span>
+<span class="nc" id="L154">            Path&lt;?&gt; path = root.get(column);</span>
+
+<span class="nc bnc" id="L156" title="All 2 branches missed.">            if (path.getJavaType().equals(String.class)) {</span>
+<span class="nc" id="L157">                return criteriaBuilder.like(criteriaBuilder.lower(root.get(column)), &quot;%&quot; + value.toLowerCase() + &quot;%&quot;);</span>
+<span class="nc bnc" id="L158" title="All 2 branches missed.">            } else if (path.getJavaType().equals(Date.class)) {</span>
+                try {
+<span class="nc" id="L160">                    Date parsedDate = new SimpleDateFormat(&quot;yyyy-MM-dd&quot;).parse(value);</span>
+<span class="nc" id="L161">                    return criteriaBuilder.equal(root.get(column), parsedDate);</span>
+<span class="nc" id="L162">                } catch (ParseException e) {</span>
+<span class="nc" id="L163">                    throw new RuntimeException(&quot;Invalid date format for field: &quot; + column, e);</span>
+                }
+<span class="nc bnc" id="L165" title="All 2 branches missed.">            } else if (path.getJavaType().equals(Instant.class)) {</span>
+                try {
+<span class="nc" id="L167">                    LocalDate parsedLocalDate = LocalDate.parse(value);</span>
+<span class="nc" id="L168">                    Instant startOfDay = parsedLocalDate.atStartOfDay(ZoneId.systemDefault()).toInstant();</span>
+<span class="nc" id="L169">                    Instant endOfDay = parsedLocalDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant();</span>
+
+<span class="nc" id="L171">                    return criteriaBuilder.between(root.get(column), startOfDay, endOfDay);</span>
+<span class="nc" id="L172">                } catch (DateTimeParseException e) {</span>
+<span class="nc" id="L173">                    throw new RuntimeException(&quot;Invalid date format for field: &quot; + column + &quot;. Expected format: yyyy-MM-dd&quot;, e);</span>
+                }
+            } else {
+<span class="nc" id="L176">                return criteriaBuilder.equal(root.get(column), value);</span>
+            }
+        };
+    }
+
+
+    public UserDivisionMasterDTO getUserDivisionById(Long id) {
+<span class="fc" id="L183">        SesM00UserDivisionMaster entity = divisionRepo.findById(id)</span>
+<span class="fc" id="L184">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Division not found with ID: &quot; + id));</span>
+
+<span class="fc" id="L186">        return modelMapper.map(entity, UserDivisionMasterDTO.class);</span>
+    }
+
+
+    public Map&lt;String, Object&gt; getDivisionDropdownData(Pageable pageable, String searchColumn, String searchValue, String sortColumn, String sortDirection) {
+<span class="fc" id="L191">        Page&lt;SesM00UserDivisionMaster&gt; pageData = getFilteredDropdownDivisions(pageable, searchColumn, searchValue, sortColumn, sortDirection);</span>
+
+<span class="fc" id="L193">        List&lt;DivisionDropdownDTO&gt; dtoList = pageData.getContent()</span>
+<span class="fc" id="L194">                .stream()</span>
+<span class="fc" id="L195">                .map(entity -&gt; new DivisionDropdownDTO(entity.getDivisionId(), entity.getName()))</span>
+<span class="fc" id="L196">                .collect(Collectors.toList());</span>
+
+<span class="fc" id="L198">        return Map.of(</span>
+                &quot;result&quot;, dtoList,
+<span class="fc" id="L200">                &quot;currentPage&quot;, pageData.getNumber() + 1,</span>
+<span class="fc" id="L201">                &quot;pageSize&quot;, pageData.getSize(),</span>
+<span class="fc" id="L202">                &quot;totalItems&quot;, pageData.getTotalElements(),</span>
+<span class="fc" id="L203">                &quot;totalPages&quot;, pageData.getTotalPages()</span>
+        );
+    }
+
+    private Page&lt;SesM00UserDivisionMaster&gt; getFilteredDropdownDivisions(Pageable pageable, String column, String value, String sortColumn, String sortDirection) {
+<span class="fc" id="L208">        Sort sort = Sort.unsorted();</span>
+<span class="pc bpc" id="L209" title="2 of 4 branches missed.">        if (sortColumn != null &amp;&amp; !sortColumn.isBlank()) {</span>
+<span class="fc" id="L210">            sort = Sort.by(Sort.Direction.fromString(</span>
+<span class="pc bpc" id="L211" title="2 of 4 branches missed.">                    sortDirection != null &amp;&amp; sortDirection.equalsIgnoreCase(&quot;DESC&quot;) ? &quot;DESC&quot; : &quot;ASC&quot;</span>
+            ), sortColumn);
+        }
+
+<span class="fc" id="L215">        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);</span>
+
+<span class="fc" id="L217">        Specification&lt;SesM00UserDivisionMaster&gt; spec = byActiveFlag(&quot;Y&quot;);</span>
+
+<span class="pc bpc" id="L219" title="4 of 8 branches missed.">        if (column != null &amp;&amp; value != null &amp;&amp; !column.isBlank() &amp;&amp; !value.isBlank()) {</span>
+<span class="fc" id="L220">            spec = spec.and(searchByColumn(column, value));</span>
+        }
+
+<span class="fc" id="L223">        return divisionRepo.findAll(spec, sortedPageable);</span>
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; findDivisionIdAndName() {
+<span class="nc" id="L227">        return divisionRepo.findAll().stream()</span>
+<span class="nc" id="L228">                .filter(x -&gt; &quot;A&quot;.equalsIgnoreCase(x.getActiveFlag()))</span>
+<span class="nc" id="L229">                .sorted(Comparator.comparing(SesM00UserDivisionMaster::getName, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))</span>
+<span class="nc" id="L230">                .map(x -&gt; {</span>
+<span class="nc" id="L231">                    Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L232">                    result.put(&quot;divisionId&quot;, x.getDivisionId());</span>
+<span class="nc" id="L233">                    result.put(&quot;name&quot;, x.getName());</span>
+<span class="nc" id="L234">                    return result;</span>
+<span class="nc" id="L235">                }).collect(Collectors.toList());</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

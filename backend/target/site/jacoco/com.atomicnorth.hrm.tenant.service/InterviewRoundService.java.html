@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>InterviewRoundService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service</a> &gt; <span class="el_source">InterviewRoundService.java</span></div><h1>InterviewRoundService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service;
+
+import com.atomicnorth.hrm.tenant.domain.InterviewRound;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.repository.InterviewRoundRepository;
+import com.atomicnorth.hrm.tenant.repository.InterviewTypeRepository;
+import com.atomicnorth.hrm.tenant.repository.employement.EmployeeSkillSetRepo;
+import com.atomicnorth.hrm.tenant.repository.employement.employee_job_applicant.JobApplicantRepository;
+import com.atomicnorth.hrm.tenant.service.dto.InterviewRoundDTO;
+import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import javax.persistence.EntityNotFoundException;
+import javax.transaction.Transactional;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@Service
+<span class="fc" id="L31">public class InterviewRoundService {</span>
+
+<span class="fc" id="L33">    private final Logger log = LoggerFactory.getLogger(InterviewRoundService.class);</span>
+    @Autowired
+    private InterviewRoundRepository interviewRoundRepository;
+    @Autowired
+    private ModelMapper modelMapper;
+    @Autowired
+    private InterviewTypeRepository interviewTypeRepository;
+    @Autowired
+    private JobApplicantRepository employeeJobApplicantRepository;
+    @Autowired
+    private EmployeeSkillSetRepo employeeSkillSetRepo;
+    @Autowired
+    private EmployeeRepository employeeRepository;
+
+    @Transactional
+    public InterviewRoundDTO createInterviewRound(InterviewRoundDTO dto) {
+<span class="fc" id="L49">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="fc" id="L50">        InterviewRound interviewRound = modelMapper.map(dto, InterviewRound.class);</span>
+<span class="fc" id="L51">        interviewRound.setCreatedDate(LocalDate.now());</span>
+<span class="fc" id="L52">        interviewRound.setCreatedBy(tokenHolder.getUsername().toString());</span>
+<span class="fc" id="L53">        InterviewRound savedInterviewRound = interviewRoundRepository.save(interviewRound);</span>
+<span class="fc" id="L54">        log.info(&quot;Interview Round created with ID: {}&quot;, savedInterviewRound.getInterviewRoundId());</span>
+<span class="fc" id="L55">        return modelMapper.map(savedInterviewRound, InterviewRoundDTO.class);</span>
+    }
+
+    @Transactional
+    public InterviewRoundDTO updateInterviewRound(Long interviewRoundId, InterviewRoundDTO dto) {
+<span class="fc" id="L60">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="fc" id="L61">        Optional&lt;InterviewRound&gt; existingInterviewRoundOpt = interviewRoundRepository.findById(interviewRoundId);</span>
+<span class="pc bpc" id="L62" title="1 of 2 branches missed.">        if (existingInterviewRoundOpt.isEmpty()) {</span>
+<span class="nc" id="L63">            log.error(&quot;Interview Round with ID {} not found for update&quot;, interviewRoundId);</span>
+<span class="nc" id="L64">            throw new EntityNotFoundException(&quot;Interview Round not found for ID: &quot; + interviewRoundId);</span>
+        }
+<span class="fc" id="L66">        InterviewRound existingInterviewRound = existingInterviewRoundOpt.get();</span>
+<span class="fc" id="L67">        dto.setCreatedDate(existingInterviewRound.getCreatedDate());</span>
+<span class="fc" id="L68">        dto.setCreatedBy(existingInterviewRound.getCreatedBy());</span>
+<span class="fc" id="L69">        existingInterviewRound.getInterviewersId().clear();</span>
+<span class="fc" id="L70">        existingInterviewRound.getSkillsId().clear();</span>
+<span class="fc" id="L71">        modelMapper.map(dto, existingInterviewRound);</span>
+<span class="fc" id="L72">        existingInterviewRound.setUpdatedDate(LocalDate.now());</span>
+<span class="fc" id="L73">        existingInterviewRound.setUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="fc" id="L74">        InterviewRound updatedInterviewRound = interviewRoundRepository.save(existingInterviewRound);</span>
+<span class="fc" id="L75">        log.info(&quot;Interview Round with ID {} updated successfully&quot;, updatedInterviewRound.getInterviewRoundId());</span>
+<span class="fc" id="L76">        return modelMapper.map(updatedInterviewRound, InterviewRoundDTO.class);</span>
+    }
+
+    @Transactional
+    public Optional&lt;InterviewRoundDTO&gt; getInterviewRoundById(Long id) {
+<span class="fc" id="L81">        return interviewRoundRepository.findById(id)</span>
+<span class="fc" id="L82">                .map(this::mapToDTO);</span>
+    }
+
+    @Transactional
+    public List&lt;InterviewRoundDTO&gt; findAllInterviewRounds() {
+<span class="fc" id="L87">        List&lt;InterviewRound&gt; interviewRounds = interviewRoundRepository.findAll();</span>
+<span class="pc bpc" id="L88" title="1 of 2 branches missed.">        if (interviewRounds.isEmpty()) {</span>
+<span class="nc" id="L89">            log.info(&quot;No active Interview Rounds found&quot;);</span>
+        } else {
+<span class="fc" id="L91">            log.info(&quot;Active Interview Rounds retrieved: {}&quot;, interviewRounds.size());</span>
+        }
+<span class="fc" id="L93">        return interviewRounds.stream()</span>
+<span class="fc" id="L94">                .map(this::mapToDTO)</span>
+<span class="fc" id="L95">                .collect(Collectors.toList());</span>
+    }
+
+    private InterviewRoundDTO mapToDTO(InterviewRound interviewRound) {
+<span class="fc" id="L99">        InterviewRoundDTO dto = new InterviewRoundDTO();</span>
+<span class="fc" id="L100">        dto.setInterviewRoundId(interviewRound.getInterviewRoundId());</span>
+<span class="fc" id="L101">        dto.setInterviewRoundName(interviewRound.getInterviewRoundName());</span>
+<span class="fc" id="L102">        dto.setInterviewTypeId(interviewRound.getInterviewTypeId());</span>
+<span class="fc" id="L103">        dto.setInterviewersId(interviewRound.getInterviewersId());</span>
+<span class="fc" id="L104">        dto.setDesignationId(interviewRound.getDesignationId());</span>
+<span class="fc" id="L105">        dto.setSkillsId(interviewRound.getSkillsId());</span>
+<span class="fc" id="L106">        dto.setCreatedDate(interviewRound.getCreatedDate());</span>
+<span class="fc" id="L107">        dto.setCreatedBy(interviewRound.getCreatedBy());</span>
+<span class="fc" id="L108">        dto.setUpdatedDate(interviewRound.getUpdatedDate());</span>
+<span class="fc" id="L109">        dto.setUpdatedBy(interviewRound.getUpdatedBy());</span>
+<span class="fc" id="L110">        dto.setIsActive(interviewRound.getIsActive());</span>
+<span class="pc bpc" id="L111" title="1 of 2 branches missed.">        if (interviewRound.getInterviewTypeId() != null) {</span>
+<span class="fc" id="L112">            dto.setInterviewTypeName(</span>
+<span class="fc" id="L113">                    interviewTypeRepository.findInterviewTypeNameById(dto.getInterviewTypeId())</span>
+<span class="fc" id="L114">                            .orElseGet(() -&gt; {</span>
+<span class="nc" id="L115">                                log.warn(&quot;Interview Type name not found for ID: {}&quot;, interviewRound.getInterviewTypeId());</span>
+<span class="nc" id="L116">                                return &quot;Unknown Interview Type&quot;;</span>
+                            }));
+        }
+<span class="pc bpc" id="L119" title="1 of 2 branches missed.">        if (interviewRound.getInterviewersId() != null) {</span>
+<span class="fc" id="L120">            dto.setInterviewersName(</span>
+<span class="fc" id="L121">                    interviewRound.getInterviewersId().stream()</span>
+<span class="fc" id="L122">                            .map(id -&gt; employeeRepository.findEmployeeFullNameById(id).orElse(&quot;Unknown Employee&quot;))</span>
+<span class="fc" id="L123">                            .collect(Collectors.toList()));</span>
+        }
+<span class="pc bpc" id="L125" title="1 of 2 branches missed.">        if (interviewRound.getDesignationId() != null) {</span>
+<span class="fc" id="L126">            dto.setDesignationName(</span>
+<span class="fc" id="L127">                    employeeJobApplicantRepository.findCustomJobDesignationNameById(interviewRound.getDesignationId())</span>
+<span class="fc" id="L128">                            .orElseGet(() -&gt; {</span>
+<span class="nc" id="L129">                                log.warn(&quot;Designation name not found for ID: {}&quot;, interviewRound.getDesignationId());</span>
+<span class="nc" id="L130">                                return &quot;Unknown designation&quot;;</span>
+                            }));
+        }
+<span class="pc bpc" id="L133" title="1 of 2 branches missed.">        if (interviewRound.getSkillsId() != null) {</span>
+<span class="fc" id="L134">            dto.setSkillsName(</span>
+<span class="fc" id="L135">                    interviewRound.getSkillsId().stream()</span>
+<span class="fc" id="L136">                            .map(id -&gt; employeeSkillSetRepo.getSkillName(id).orElse(&quot;Unknown skill&quot;))</span>
+<span class="fc" id="L137">                            .collect(Collectors.toList()));</span>
+        }
+<span class="fc" id="L139">        return dto;</span>
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; findInterviewRoundNameAndId() {
+<span class="fc" id="L143">        List&lt;Object[]&gt; result = interviewRoundRepository.findAllInterviewRoundNameAndId();</span>
+<span class="fc" id="L144">        List&lt;Map&lt;String, Object&gt;&gt; responseList = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L145" title="All 2 branches covered.">        for (Object[] row : result) {</span>
+<span class="fc" id="L146">            Map&lt;String, Object&gt; map = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L147">            map.put(&quot;interviewRoundId&quot;, row[0]);</span>
+<span class="fc" id="L148">            map.put(&quot;interviewRoundName&quot;, row[1]);</span>
+<span class="fc" id="L149">            responseList.add(map);</span>
+<span class="fc" id="L150">        }</span>
+<span class="fc" id="L151">        return responseList;</span>
+    }
+
+    @Transactional
+    public List&lt;Map&lt;String, Object&gt;&gt; interviewRoundDropdownList() {
+<span class="nc" id="L156">        return interviewRoundRepository.findAll().stream()</span>
+<span class="nc" id="L157">                .filter(interviewRound -&gt; Boolean.TRUE.equals(interviewRound.getIsActive()))</span>
+<span class="nc" id="L158">                .map(interviewRound -&gt; {</span>
+<span class="nc" id="L159">                    Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L160">                    result.put(&quot;interviewRoundId&quot;, interviewRound.getInterviewRoundId());</span>
+<span class="nc" id="L161">                    result.put(&quot;interviewRoundName&quot;, interviewRound.getInterviewRoundName());</span>
+
+<span class="nc" id="L163">                    List&lt;Long&gt; interviewerIds = interviewRound.getInterviewersId();</span>
+<span class="nc" id="L164">                    result.put(&quot;interviewersId&quot;, interviewerIds);</span>
+
+<span class="nc bnc" id="L166" title="All 2 branches missed.">                    List&lt;String&gt; interviewerNames = (interviewerIds != null)</span>
+<span class="nc" id="L167">                            ? getInterviewerNames(interviewerIds)</span>
+<span class="nc" id="L168">                            : Collections.emptyList();</span>
+
+<span class="nc" id="L170">                    result.put(&quot;interviewersName&quot;, interviewerNames);</span>
+
+<span class="nc" id="L172">                    return result;</span>
+                })
+<span class="nc" id="L174">                .collect(Collectors.toList());</span>
+    }
+
+    public List&lt;String&gt; getInterviewerNames(List&lt;Long&gt; interviewIds) {
+<span class="nc bnc" id="L178" title="All 2 branches missed.">        if (interviewIds == null) return Collections.emptyList();</span>
+
+<span class="nc" id="L180">        return interviewIds.stream().map(employeeRepository::findEmployeeFullNameById)</span>
+<span class="nc" id="L181">                .filter(Optional::isPresent).map(Optional::get).collect(Collectors.toList());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

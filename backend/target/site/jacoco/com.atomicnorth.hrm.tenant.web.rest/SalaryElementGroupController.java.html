@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SalaryElementGroupController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest</a> &gt; <span class="el_source">SalaryElementGroupController.java</span></div><h1>SalaryElementGroupController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest;
+
+import com.atomicnorth.hrm.tenant.domain.SalaryElementGroup;
+import com.atomicnorth.hrm.tenant.repository.SalaryElementGroupRepository;
+import com.atomicnorth.hrm.tenant.service.SalaryElementGroupService;
+import com.atomicnorth.hrm.tenant.service.dto.SalaryElementDTO;
+import com.atomicnorth.hrm.tenant.service.dto.SalaryElementGroupDTO;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import javax.persistence.EntityNotFoundException;
+import javax.validation.Valid;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping(&quot;/api/salaryElementGroup&quot;)
+@EnableTransactionManagement
+<span class="nc" id="L42">public class SalaryElementGroupController {</span>
+
+<span class="nc" id="L44">    private final Logger log = LoggerFactory.getLogger(SalaryElementGroupController.class);</span>
+
+    @Autowired
+    private SalaryElementGroupService salaryElementGroupService;
+
+    @Autowired
+    private SalaryElementGroupRepository salaryElementGroupRepository;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+
+    private ResponseEntity&lt;ApiResponse&lt;?&gt;&gt; handleValidationErrors(BindingResult bindingResult) {
+<span class="nc" id="L57">        Map&lt;String, String&gt; errors = bindingResult.getFieldErrors().stream()</span>
+<span class="nc" id="L58">                .collect(Collectors.toMap(</span>
+                        FieldError::getField,
+<span class="nc" id="L60">                        fieldError -&gt; fieldError.getDefaultMessage()</span>
+                ));
+<span class="nc" id="L62">        return new ResponseEntity&lt;&gt;(</span>
+                new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_VALIDATION_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L64">                        new ArrayList&lt;&gt;(errors.values())),</span>
+                HttpStatus.BAD_REQUEST
+        );
+    }
+
+    @PostMapping(&quot;/create&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;?&gt;&gt; saveOrUpdateDepartment(
+            @Valid @RequestBody SalaryElementGroupDTO salaryElementGroupDTO,
+            BindingResult bindingResult) {
+<span class="nc bnc" id="L73" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L74">            return handleValidationErrors(bindingResult);</span>
+        }
+<span class="nc" id="L76">        Long id = salaryElementGroupDTO.getGroupId();</span>
+        try {
+            // Validate duplicate Element Type Code for same company in the request
+<span class="nc bnc" id="L79" title="All 4 branches missed.">            if (salaryElementGroupDTO.getSalaryElements() != null &amp;&amp; !salaryElementGroupDTO.getSalaryElements().isEmpty()) {</span>
+<span class="nc" id="L80">                Set&lt;Integer&gt; salaryElementSet = new HashSet&lt;&gt;();</span>
+<span class="nc bnc" id="L81" title="All 2 branches missed.">                for (SalaryElementDTO salaryElementDTO : salaryElementGroupDTO.getSalaryElements()) {</span>
+<span class="nc" id="L82">                    Integer uniqueKey = salaryElementDTO.getElementType();</span>
+<span class="nc bnc" id="L83" title="All 2 branches missed.">                    if (!salaryElementSet.add(uniqueKey)) {</span>
+<span class="nc" id="L84">                        return new ResponseEntity&lt;&gt;(</span>
+                                new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_SALARY_ELEMENT_TYPE_DUPLICATE_REQUEST&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L86">                                        Collections.singletonList(&quot;Salary Element with Element Type: &quot; + salaryElementDTO.getElementType() + &quot; is duplicated in the request.&quot;)),</span>
+                                HttpStatus.BAD_REQUEST);
+                    }
+<span class="nc" id="L89">                }</span>
+            }
+<span class="nc bnc" id="L91" title="All 2 branches missed.">            if (id == null) {</span>
+                // Create operation
+<span class="nc bnc" id="L93" title="All 2 branches missed.">                if (salaryElementGroupRepository.findByGroupNameIgnoreCaseAndCompany(salaryElementGroupDTO.getGroupName(), salaryElementGroupDTO.getCompany()).isPresent()) {</span>
+<span class="nc" id="L94">                    return new ResponseEntity&lt;&gt;(</span>
+                            new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_SALARY_ELEMENT_GROUP_DUPLICATE&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L96">                                    Collections.singletonList(&quot;A Salary Element Group with name '&quot; + salaryElementGroupDTO.getGroupName()</span>
+                                            + &quot;' already exists for the selected company.&quot;)),
+                            HttpStatus.CONFLICT);
+                }
+<span class="nc" id="L100">                SalaryElementGroupDTO savedElementGroupDTO = salaryElementGroupService.createSalaryElementGroup(salaryElementGroupDTO);</span>
+<span class="nc" id="L101">                return new ResponseEntity&lt;&gt;(</span>
+                        new ApiResponse&lt;&gt;(savedElementGroupDTO, true, &quot;ATMCMN_SALARY_ELEMENT_GROUP_CREATED&quot;, &quot;SUCCESS&quot;),
+                        HttpStatus.CREATED);
+            } else {
+                //Update Operation - Check for company + groupName uniqueness (excluding current record)
+<span class="nc" id="L106">                Optional&lt;SalaryElementGroup&gt; existingGroup = salaryElementGroupRepository.findByGroupNameIgnoreCaseAndCompany(</span>
+<span class="nc" id="L107">                        salaryElementGroupDTO.getGroupName(), salaryElementGroupDTO.getCompany());</span>
+<span class="nc bnc" id="L108" title="All 4 branches missed.">                if (existingGroup.isPresent() &amp;&amp; !existingGroup.get().getGroupId().equals(id)) {</span>
+<span class="nc" id="L109">                    return new ResponseEntity&lt;&gt;(</span>
+                            new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_SALARY_ELEMENT_GROUP_DUPLICATE&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L111">                                    Collections.singletonList(&quot;A Salary Element Group with name '&quot; + salaryElementGroupDTO.getGroupName()</span>
+                                            + &quot;' already exists for the selected company.&quot;)),
+                            HttpStatus.CONFLICT);
+                }
+<span class="nc" id="L115">                SalaryElementGroupDTO updatedElementGroupDTO = salaryElementGroupService.updateSalaryElementGroup(id, salaryElementGroupDTO);</span>
+<span class="nc" id="L116">                return ResponseEntity.ok(</span>
+                        new ApiResponse&lt;&gt;(updatedElementGroupDTO, true, &quot;ATMCMN_SALARY_ELEMENT_GROUP_UPDATED&quot;, &quot;SUCCESS&quot;));
+            }
+<span class="nc" id="L119">        } catch (EntityNotFoundException ex) {</span>
+<span class="nc" id="L120">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_SALARY_ELEMENT_GROUP_NOT_FOUND&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L122">                            Collections.singletonList(&quot;SALARY ELEMENT GROUP not found with ID: &quot; + id)),</span>
+                    HttpStatus.NOT_FOUND);
+<span class="nc" id="L124">        } catch (Exception e) {</span>
+<span class="nc" id="L125">            log.error(&quot;Error occurred while saving/updating SALARY ELEMENT GROUP&quot;, e);</span>
+<span class="nc" id="L126">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_SALARY_ELEMENT_GROUP_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L128">                            Collections.singletonList(e.getMessage())),</span>
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping(&quot;/findAll&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;ObjectNode&gt;&gt; getAllSalaryElementGroup(
+            @RequestParam(value = &quot;page&quot;, defaultValue = &quot;1&quot;) int page,
+            @RequestParam(value = &quot;size&quot;, defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;groupId&quot;) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;) String sortDir,
+            @RequestParam(value = &quot;searchKeyword&quot;, required = false) String searchKeyword,
+            @RequestParam(value = &quot;searchField&quot;, required = false) String searchField) {
+
+        try {
+<span class="nc" id="L143">            List&lt;SalaryElementGroupDTO&gt; salaryElementGroupDTOS = salaryElementGroupService.findAllSalaryElementGroup(</span>
+                    searchField, searchKeyword, sortBy, sortDir, page, size
+            );
+            // Pagination info
+<span class="nc" id="L147">            ObjectNode paginationInfo = objectMapper.createObjectNode();</span>
+<span class="nc" id="L148">            paginationInfo.put(&quot;totalElements&quot;, salaryElementGroupDTOS.size());</span>
+<span class="nc" id="L149">            paginationInfo.put(&quot;pageSize&quot;, size);</span>
+<span class="nc" id="L150">            paginationInfo.put(&quot;currentPage&quot;, page);</span>
+<span class="nc" id="L151">            paginationInfo.put(&quot;totalPages&quot;, (int) Math.ceil((double) salaryElementGroupDTOS.size() / size));</span>
+            // Build response
+<span class="nc" id="L153">            ObjectNode responseData = objectMapper.createObjectNode();</span>
+<span class="nc" id="L154">            responseData.set(&quot;salaryElementGroup&quot;, objectMapper.valueToTree(salaryElementGroupDTOS));</span>
+<span class="nc" id="L155">            responseData.set(&quot;paginationData&quot;, paginationInfo);</span>
+<span class="nc" id="L156">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(responseData, true, &quot;ATMCMN_SALARY_ELEMENT_GROUP_FETCHED&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L157">        } catch (RuntimeException e) {</span>
+<span class="nc" id="L158">            log.error(&quot;Error: {}&quot;, e.getMessage());</span>
+<span class="nc" id="L159">            return ResponseEntity.badRequest()</span>
+<span class="nc" id="L160">                    .body(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_SALARY_ELEMENT_GROUP_FETCH_ERROR&quot;, &quot;FAILURE&quot;,</span>
+<span class="nc" id="L161">                            Collections.singletonList(e.getMessage())));</span>
+<span class="nc" id="L162">        } catch (Exception e) {</span>
+<span class="nc" id="L163">            log.error(&quot;Unexpected error occurred while fetching Salary Element Group&quot;, e);</span>
+<span class="nc" id="L164">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L165">                    .body(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_SALARY_ELEMENT_GROUP_FETCH_ERROR&quot;, &quot;FAILURE&quot;,</span>
+<span class="nc" id="L166">                            Collections.singletonList(&quot;An unexpected error occurred while fetching Salary Element Group data&quot;)));</span>
+        }
+    }
+
+    @GetMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;SalaryElementGroupDTO&gt;&gt; getSalaryElementGroupById(@PathVariable Long id) {
+        try {
+<span class="nc" id="L173">            return salaryElementGroupService.getSalaryElementGroupById(id)</span>
+<span class="nc" id="L174">                    .map(salaryElementGroup -&gt; ResponseEntity.ok(new ApiResponse&lt;&gt;(salaryElementGroup, true, &quot;ATMCMN_SALARY_ELEMENT_GROUP_FETCHED&quot;, &quot;SUCCESS&quot;)))</span>
+<span class="nc" id="L175">                    .orElse(new ResponseEntity&lt;&gt;(</span>
+                            new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_SALARY_ELEMENT_GROUP_NOT_FOUND&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L177">                                    Collections.singletonList(&quot;Salary Element Group not found with ID: &quot; + id)),</span>
+                            HttpStatus.NOT_FOUND));
+<span class="nc" id="L179">        } catch (Exception e) {</span>
+<span class="nc" id="L180">            log.error(&quot;Error occurred while fetching Salary Element Group by ID&quot;, e);</span>
+<span class="nc" id="L181">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_SALARY_ELEMENT_GROUP_FETCH_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L183">                            Collections.singletonList(e.getMessage())),</span>
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @DeleteMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; deleteSalaryElementGroup(@PathVariable Long id) {
+        try {
+<span class="nc" id="L191">            salaryElementGroupService.deleteSalaryElementGroupById(id);</span>
+<span class="nc" id="L192">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(null, true, &quot;ATMCMN_SALARY_ELEMENT_GROUP_DELETED&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L193">        } catch (EntityNotFoundException ex) {</span>
+<span class="nc" id="L194">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_SALARY_ELEMENT_GROUP_NOT_FOUND&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L196">                            Collections.singletonList(&quot;Salary Element Group not found with ID: &quot; + id)),</span>
+                    HttpStatus.NOT_FOUND);
+<span class="nc" id="L198">        } catch (Exception e) {</span>
+<span class="nc" id="L199">            log.error(&quot;Error occurred while deleting Salary Element Group&quot;, e);</span>
+<span class="nc" id="L200">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_SALARY_ELEMENT_GROUP_DELETE_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L202">                            Collections.singletonList(e.getMessage())),</span>
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping(&quot;/findAllActiveSalaryElementGroup&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;ObjectNode&gt;&gt; getAllActiveSalaryElementGroups() {
+        try {
+<span class="nc" id="L210">            List&lt;SalaryElementGroup&gt; activeGroups = salaryElementGroupService.findAllActiveSalaryElementGroup();</span>
+
+<span class="nc" id="L212">            ObjectNode responseData = objectMapper.createObjectNode();</span>
+<span class="nc" id="L213">            responseData.set(&quot;salaryElementGroups&quot;, objectMapper.valueToTree(activeGroups));</span>
+
+<span class="nc" id="L215">            return ResponseEntity.ok(</span>
+                    new ApiResponse&lt;&gt;(responseData, true, &quot;ATMCMN_SALARY_ELEMENT_GROUP_FETCHED&quot;, &quot;SUCCESS&quot;)
+            );
+
+<span class="nc" id="L219">        } catch (RuntimeException e) {</span>
+<span class="nc" id="L220">            log.error(&quot;Runtime exception while fetching active Salary Element Groups: {}&quot;, e.getMessage());</span>
+<span class="nc" id="L221">            return ResponseEntity.badRequest().body(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_SALARY_ELEMENT_GROUP_FETCH_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L223">                            Collections.singletonList(e.getMessage()))</span>
+            );
+
+<span class="nc" id="L226">        } catch (Exception e) {</span>
+<span class="nc" id="L227">            log.error(&quot;Unexpected error occurred while fetching active Salary Element Groups&quot;, e);</span>
+<span class="nc" id="L228">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_SALARY_ELEMENT_GROUP_FETCH_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L230">                            Collections.singletonList(&quot;An unexpected error occurred while fetching Salary Element Group data&quot;))</span>
+            );
+        }
+    }
+
+    @DeleteMapping(&quot;deleteSalaryElementById/{groupId}/{elementId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; deleteById(@PathVariable Long groupId, @PathVariable Long elementId) {
+        try {
+<span class="nc" id="L238">            salaryElementGroupService.deleteSalaryElementById(groupId, elementId);</span>
+<span class="nc" id="L239">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(null, true, &quot;SALARY_ELEMENT_DELETED_SUCCESSFULLY&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L240">        } catch (Exception e) {</span>
+<span class="nc" id="L241">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;SALARY_ELEMENT_DELETION_ERROR&quot;, &quot;ERROR&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

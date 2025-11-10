@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>WebConfigurer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.configuration</a> &gt; <span class="el_source">WebConfigurer.java</span></div><h1>WebConfigurer.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.configuration;
+
+import com.atomicnorth.hrm.configuration.multitenant.MultiTenantDataSourceLookup;
+import com.atomicnorth.hrm.master.repository.DataSourceConfigRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.web.server.WebServerFactory;
+import org.springframework.boot.web.server.WebServerFactoryCustomizer;
+import org.springframework.boot.web.servlet.ServletContextInitializer;
+import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerFactory;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.util.CollectionUtils;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
+
+import javax.annotation.PostConstruct;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
+
+import static java.net.URLDecoder.decode;
+
+@Configuration
+public class WebConfigurer implements ServletContextInitializer, WebServerFactoryCustomizer&lt;WebServerFactory&gt; {
+
+<span class="nc" id="L31">    private final Logger log = LoggerFactory.getLogger(WebConfigurer.class);</span>
+
+    private final Environment env;
+
+    private final ApplicationProperties applicationProperties;
+
+<span class="nc" id="L37">    public WebConfigurer(Environment env, ApplicationProperties applicationProperties) {</span>
+<span class="nc" id="L38">        this.env = env;</span>
+<span class="nc" id="L39">        this.applicationProperties = applicationProperties;</span>
+<span class="nc" id="L40">    }</span>
+
+    @Override
+    public void onStartup(ServletContext servletContext) throws ServletException {
+<span class="nc bnc" id="L44" title="All 2 branches missed.">        if (env.getActiveProfiles().length != 0) {</span>
+<span class="nc" id="L45">            log.info(&quot;Web application configuration, using profiles: {}&quot;, (Object[]) env.getActiveProfiles());</span>
+        }
+<span class="nc" id="L47">        log.info(&quot;Web application fully configured&quot;);</span>
+<span class="nc" id="L48">    }</span>
+
+    @Override
+    public void customize(WebServerFactory server) {
+<span class="nc" id="L52">        setLocationForStaticAssets(server);</span>
+<span class="nc" id="L53">    }</span>
+
+    private void setLocationForStaticAssets(WebServerFactory server) {
+<span class="nc bnc" id="L56" title="All 2 branches missed.">        if (server instanceof ConfigurableServletWebServerFactory) {</span>
+<span class="nc" id="L57">            ConfigurableServletWebServerFactory servletWebServer = (ConfigurableServletWebServerFactory) server;</span>
+            File root;
+<span class="nc" id="L59">            String prefixPath = resolvePathPrefix();</span>
+<span class="nc" id="L60">            root = new File(prefixPath + &quot;target/classes/static/&quot;);</span>
+<span class="nc bnc" id="L61" title="All 4 branches missed.">            if (root.exists() &amp;&amp; root.isDirectory()) {</span>
+<span class="nc" id="L62">                servletWebServer.setDocumentRoot(root);</span>
+            }
+        }
+<span class="nc" id="L65">    }</span>
+
+    private String resolvePathPrefix() {
+<span class="nc" id="L68">        String fullExecutablePath = decode(this.getClass().getResource(&quot;&quot;).getPath(), StandardCharsets.UTF_8);</span>
+<span class="nc" id="L69">        String rootPath = Paths.get(&quot;.&quot;).toUri().normalize().getPath();</span>
+<span class="nc" id="L70">        String extractedPath = fullExecutablePath.replace(rootPath, &quot;&quot;);</span>
+<span class="nc" id="L71">        int extractionEndIndex = extractedPath.indexOf(&quot;target/&quot;);</span>
+<span class="nc bnc" id="L72" title="All 2 branches missed.">        if (extractionEndIndex &lt;= 0) {</span>
+<span class="nc" id="L73">            return &quot;&quot;;</span>
+        }
+<span class="nc" id="L75">        return extractedPath.substring(0, extractionEndIndex);</span>
+    }
+
+    @Bean
+    public CorsFilter corsFilter() {
+<span class="nc" id="L80">        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();</span>
+<span class="nc" id="L81">        CorsConfiguration config = applicationProperties.getCors();</span>
+<span class="nc bnc" id="L82" title="All 4 branches missed.">        if (!CollectionUtils.isEmpty(config.getAllowedOrigins()) || !CollectionUtils.isEmpty(config.getAllowedOriginPatterns())) {</span>
+<span class="nc" id="L83">            log.debug(&quot;Registering CORS filter&quot;);</span>
+<span class="nc" id="L84">            source.registerCorsConfiguration(&quot;/api/**&quot;, config);</span>
+<span class="nc" id="L85">            source.registerCorsConfiguration(&quot;/management/**&quot;, config);</span>
+<span class="nc" id="L86">            source.registerCorsConfiguration(&quot;/v3/api-docs&quot;, config);</span>
+<span class="nc" id="L87">            source.registerCorsConfiguration(&quot;/swagger-ui/**&quot;, config);</span>
+        }
+<span class="nc" id="L89">        return new CorsFilter(source);</span>
+    }
+
+    @PostConstruct
+    public void logCorsConfig() {
+<span class="nc" id="L94">        CorsConfiguration config = applicationProperties.getCors();</span>
+<span class="nc" id="L95">        log.info(&quot;CORS Origins: {}&quot;, config.getAllowedOrigins());</span>
+<span class="nc" id="L96">        log.info(&quot;CORS Methods: {}&quot;, config.getAllowedMethods());</span>
+<span class="nc" id="L97">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

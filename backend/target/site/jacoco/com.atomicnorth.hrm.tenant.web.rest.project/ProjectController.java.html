@@ -1,0 +1,1292 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProjectController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.project</a> &gt; <span class="el_source">ProjectController.java</span></div><h1>ProjectController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.project;
+
+import com.atomicnorth.hrm.tenant.domain.project.*;
+import com.atomicnorth.hrm.tenant.helper.Helper;
+import com.atomicnorth.hrm.tenant.helper.PageableResponse;
+import com.atomicnorth.hrm.tenant.service.dto.EmployeeProjectAllocationDTO;
+import com.atomicnorth.hrm.tenant.service.dto.EmployeeProjectDTO;
+import com.atomicnorth.hrm.tenant.service.dto.project.*;
+import com.atomicnorth.hrm.tenant.service.dto.project.ProjectResponse.ProjectDocumentResponseDTO;
+import com.atomicnorth.hrm.tenant.service.dto.project.ProjectResponse.ProjectRequestDTO;
+import com.atomicnorth.hrm.tenant.service.dto.project.ProjectResponse.ProjectResponseDTO;
+import com.atomicnorth.hrm.tenant.service.project.ProjectService;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import com.atomicnorth.hrm.util.commonClass.PaginatedResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
+
+import javax.persistence.EntityNotFoundException;
+import javax.servlet.http.HttpServletRequest;
+import javax.validation.Valid;
+import javax.validation.ValidationException;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+
+@RestController
+@RequestMapping(&quot;/api/project&quot;)
+<span class="fc" id="L49">public class ProjectController {</span>
+
+
+<span class="fc" id="L52">    private final Logger log = LoggerFactory.getLogger(ProjectController.class);</span>
+
+    @Autowired
+    private ProjectService projectService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @PostMapping
+    public ResponseEntity&lt;ApiResponse&lt;Project&gt;&gt; createProject(@RequestBody ProjectDTO projectDTO) {
+        try {
+<span class="nc" id="L63">            Project project = projectService.createProject(projectDTO);</span>
+<span class="nc bnc" id="L64" title="All 2 branches missed.">            if (project != null) {</span>
+<span class="nc" id="L65">                ApiResponse&lt;Project&gt; response = new ApiResponse&lt;&gt;(project, true, &quot;PROJECT-CREATION-SUCCESS&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L66">                return new ResponseEntity&lt;&gt;(response, HttpStatus.OK); // Use CREATED for a successful creation</span>
+            } else {
+<span class="nc" id="L68">                ApiResponse&lt;Project&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;PROJECT-CREATION-FAILURE&quot;, &quot;Failure&quot;);</span>
+<span class="nc" id="L69">                return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+            }
+<span class="nc" id="L71">        } catch (EntityNotFoundException e) {</span>
+<span class="nc" id="L72">            ApiResponse&lt;Project&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;PROJECT-CREATION-FAILURE&quot;, &quot;Failure&quot;, Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L73">            return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+<span class="nc" id="L74">        } catch (Exception e) {</span>
+<span class="nc" id="L75">            ApiResponse&lt;Project&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;PROJECT-CREATION-ERROR&quot;, &quot;Error&quot;, Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L76">            return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+        }
+    }
+
+    @GetMapping
+    public ResponseEntity&lt;ApiResponse&lt;PageableResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt;&gt; getAllProject(@RequestParam(value = &quot;pageNumber&quot;, defaultValue = &quot;1&quot;, required = false) int pageNumber, @RequestParam(value = &quot;pageSize&quot;, defaultValue = &quot;10&quot;, required = false) int pageSize, @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;creationDate&quot;, required = false) String sortBy, @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;asc&quot;, required = false) String sortDir) {
+<span class="nc" id="L82">        Pageable pageable = PageRequest.of(pageNumber - 1, pageSize, Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc" id="L83">        Page&lt;Map&lt;String, Object&gt;&gt; projectsPage = projectService.getAllActiveProjects(pageable);</span>
+<span class="nc" id="L84">        PageableResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; pageableResponse = Helper.getPageableResponse(projectsPage);</span>
+<span class="nc" id="L85">        ApiResponse&lt;PageableResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; response = new ApiResponse&lt;&gt;(pageableResponse, true, &quot;PROJECTS-FETCH-SUCCESS&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L86">        return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+    }
+    @GetMapping(&quot;{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Project&gt;&gt; getProjectDetails(@PathVariable String id) {
+        try {
+<span class="nc" id="L91">            Project project = projectService.getActiveProjectDetailsById(id);</span>
+<span class="nc bnc" id="L92" title="All 2 branches missed.">            if (project != null) {</span>
+<span class="nc" id="L93">                ApiResponse&lt;Project&gt; response = new ApiResponse&lt;&gt;(project, true, &quot;PROJECT-FOUND&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L94">                return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+            } else {
+<span class="nc" id="L96">                ApiResponse&lt;Project&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;PROJECT-NOT-FOUND&quot;, &quot;Failure&quot;);</span>
+<span class="nc" id="L97">                return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+            }
+<span class="nc" id="L99">        } catch (Exception e) {</span>
+<span class="nc" id="L100">            ApiResponse&lt;Project&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;PROJECT-RETRIEVAL-ERROR&quot;, &quot;Error&quot;, Collections.singletonList(&quot;An error occurred while retrieving the project.&quot;));</span>
+<span class="nc" id="L101">            return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+        }
+    }
+
+    @PutMapping(&quot;{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;String&gt;&gt; updateProjectDetails(@PathVariable String id, @RequestBody ProjectDTO projectDTO) {
+        try {
+<span class="nc" id="L108">            Project project = projectService.updateProjectById(id, projectDTO);</span>
+<span class="nc bnc" id="L109" title="All 2 branches missed.">            if (project != null) {</span>
+<span class="nc" id="L110">                ApiResponse&lt;String&gt; response = new ApiResponse&lt;&gt;(&quot;Project updated successfully.&quot;, true, &quot;PROJECT-UPDATED-SUCCESS&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L111">                return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+            } else {
+<span class="nc" id="L113">                ApiResponse&lt;String&gt; response = new ApiResponse&lt;&gt;(&quot;Project &quot; + id + &quot; not found.&quot;, false, &quot;PROJECT-NOT-FOUND&quot;, &quot;Failure&quot;);</span>
+<span class="nc" id="L114">                return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+            }
+<span class="nc" id="L116">        } catch (EntityNotFoundException e) {</span>
+<span class="nc" id="L117">            ApiResponse&lt;String&gt; response = new ApiResponse&lt;&gt;(&quot;Project not found.&quot;, false, &quot;PROJECT-NOT-FOUND&quot;, &quot;Failure&quot;, Collections.singletonList(&quot;Entity not found.&quot;));</span>
+<span class="nc" id="L118">            return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+<span class="nc" id="L119">        } catch (Exception e) {</span>
+<span class="nc" id="L120">            ApiResponse&lt;String&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;PROJECT-UPDATE-ERROR&quot;, &quot;Error&quot;, Collections.singletonList(&quot;An error occurred while updating the project.&quot;));</span>
+<span class="nc" id="L121">            return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+        }
+    }
+
+
+    @PostMapping(&quot;/task/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;String&gt;&gt; saveTaskStory(@PathVariable String id, @RequestBody TaskStoryDTO taskStoryDTO) {
+        try {
+<span class="nc" id="L129">            TaskStory taskStory = projectService.createTaskStory(id, taskStoryDTO);</span>
+
+<span class="nc bnc" id="L131" title="All 2 branches missed.">            if (taskStory != null) {</span>
+<span class="nc" id="L132">                ApiResponse&lt;String&gt; response = new ApiResponse&lt;&gt;(&quot;Task created successfully.&quot;, true, &quot;TASK-CREATED-SUCCESS&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L133">                return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+            } else {
+<span class="nc" id="L135">                ApiResponse&lt;String&gt; response = new ApiResponse&lt;&gt;(&quot;Task &quot; + id + &quot; not found.&quot;, false, &quot;TASK-NOT-FOUND&quot;, &quot;Failure&quot;);</span>
+<span class="nc" id="L136">                return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+            }
+<span class="nc" id="L138">        } catch (EntityNotFoundException e) {</span>
+<span class="nc" id="L139">            ApiResponse&lt;String&gt; response = new ApiResponse&lt;&gt;(&quot;Task not found.&quot;, false, &quot;TASK-NOT-FOUND&quot;, &quot;Failure&quot;, Collections.singletonList(&quot;Entity not found.&quot;));</span>
+<span class="nc" id="L140">            return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+<span class="nc" id="L141">        } catch (Exception e) {</span>
+<span class="nc" id="L142">            ApiResponse&lt;String&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;TASK-CREATION-ERROR&quot;, &quot;Error&quot;, Collections.singletonList(&quot;An error occurred while creating the task.&quot;));</span>
+<span class="nc" id="L143">            return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+        }
+    }
+
+    @PostMapping(&quot;/addUserIntoProject&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;String&gt;&gt; allocateUsersIntoProject(@RequestParam(value = &quot;projectRfNum&quot;, required = true) String projectRfNum, @RequestParam(value = &quot;userListPAlloc&quot;, required = true) String[] userListPAlloc) {
+        try {
+<span class="nc" id="L150">            ProjectAllocation projectAllocation = projectService.allocateUsersIntoProject(projectRfNum, userListPAlloc);</span>
+
+<span class="nc bnc" id="L152" title="All 2 branches missed.">            if (projectAllocation != null) {</span>
+<span class="nc" id="L153">                ApiResponse&lt;String&gt; response = new ApiResponse&lt;&gt;(&quot;Project assigned successfully.&quot;, true, &quot;PROJECT-ASSIGNED-SUCCESS&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L154">                return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+            } else {
+<span class="nc" id="L156">                ApiResponse&lt;String&gt; response = new ApiResponse&lt;&gt;(&quot;Project assignment not found.&quot;, false, &quot;PROJECT-ASSIGNED-NOT-FOUND&quot;, &quot;Failure&quot;);</span>
+<span class="nc" id="L157">                return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+            }
+<span class="nc" id="L159">        } catch (EntityNotFoundException e) {</span>
+<span class="nc" id="L160">            ApiResponse&lt;String&gt; response = new ApiResponse&lt;&gt;(&quot;Project assignment not found.&quot;, false, &quot;PROJECT-ASSIGNED-NOT-FOUND&quot;, &quot;Failure&quot;, Collections.singletonList(&quot;Entity not found.&quot;));</span>
+<span class="nc" id="L161">            return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+<span class="nc" id="L162">        } catch (Exception e) {</span>
+<span class="nc" id="L163">            ApiResponse&lt;String&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;PROJECT-ASSIGNMENT-ERROR&quot;, &quot;Error&quot;, Collections.singletonList(&quot;An error occurred while assigning the project.&quot;));</span>
+<span class="nc" id="L164">            return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+        }
+    }
+
+    @GetMapping(&quot;/taskRole&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; getAllProjectTaskRole() {
+        try {
+<span class="nc" id="L171">            List&lt;Map&lt;String, Object&gt;&gt; roles = projectService.findAllProjectTaskRole();</span>
+<span class="nc" id="L172">            ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; response = new ApiResponse&lt;&gt;(roles, true, &quot;TASK-ROLE-FETCH-SUCCESS&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L173">            return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+<span class="nc" id="L174">        } catch (Exception e) {</span>
+<span class="nc" id="L175">            ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;TASK-ROLE-FETCH-FAILURE&quot;, &quot;Failure&quot;, Collections.singletonList(&quot;An error occurred while fetching task roles.&quot;));</span>
+<span class="nc" id="L176">            return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+        }
+    }
+
+
+    @PostMapping(&quot;assignTask&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; allocateUsersIntoTask(@RequestParam(value = &quot;taskRfNum&quot;, required = true) String taskRfNum, @RequestParam(value = &quot;userListTAlloc&quot;, required = true) String[] userListTAlloc) {
+        try {
+            // Allocate users to task
+<span class="nc" id="L185">            ProjectTaskAllocation projectAllocation = projectService.allocateUsersIntoTask(taskRfNum, userListTAlloc);</span>
+
+<span class="nc bnc" id="L187" title="All 2 branches missed.">            if (projectAllocation != null) {</span>
+<span class="nc" id="L188">                ApiResponse&lt;Object&gt; responseMessage = new ApiResponse&lt;&gt;(null, true, &quot;TASK-ASSIGN-SUCCESS&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L189">                return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.OK);</span>
+            } else {
+<span class="nc" id="L191">                ApiResponse&lt;Object&gt; responseMessage = new ApiResponse&lt;&gt;(null, false, &quot;TASK-ASSIGN-NOT-FOUND&quot;, &quot;Failure&quot;);</span>
+<span class="nc" id="L192">                return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.OK);</span>
+            }
+<span class="nc" id="L194">        } catch (EntityNotFoundException e) {</span>
+<span class="nc" id="L195">            ApiResponse&lt;Object&gt; responseMessage = new ApiResponse&lt;&gt;(null, false, &quot;TASK-ASSIGN-NOT-FOUND&quot;, &quot;Failure&quot;, Collections.singletonList(&quot;Task assignment not found.&quot;));</span>
+<span class="nc" id="L196">            return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.OK);</span>
+<span class="nc" id="L197">        } catch (IllegalArgumentException e) {</span>
+<span class="nc" id="L198">            ApiResponse&lt;Object&gt; responseMessage = new ApiResponse&lt;&gt;(null, false, &quot;INVALID-INPUT&quot;, &quot;Failure&quot;, Collections.singletonList(&quot;Invalid input provided for task assignment.&quot;));</span>
+<span class="nc" id="L199">            return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.OK);</span>
+<span class="nc" id="L200">        } catch (Exception e) {</span>
+<span class="nc" id="L201">            log.error(&quot;Error allocating users to task: &quot;, e);</span>
+<span class="nc" id="L202">            ApiResponse&lt;Object&gt; responseMessage = new ApiResponse&lt;&gt;(null, false, &quot;TASK-ASSIGN-ERROR&quot;, &quot;Failure&quot;, Collections.singletonList(&quot;An unexpected error occurred while updating the task assignment.&quot;));</span>
+<span class="nc" id="L203">            return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.OK);</span>
+        }
+    }
+
+
+    @GetMapping(&quot;projectTask&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; findTaskBasedOnProject(@RequestParam(value = &quot;projectId&quot;) Integer projectRf, @RequestParam(defaultValue = &quot;1&quot;) int page, @RequestParam(defaultValue = &quot;10&quot;) int size, @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;taskRfNum&quot;, required = false) String sortBy, @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;, required = false) String sortDir, @RequestParam(value = &quot;searchField&quot;, required = false) String searchField, @RequestParam(value = &quot;searchKeyword&quot;, required = false) String searchKeyword) {
+
+        try {
+<span class="nc" id="L212">            Pageable pageable = PageRequest.of(Math.max(page - 1, 0), size, Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc" id="L213">            Map&lt;String, Object&gt; data = projectService.getTaskByProjectId(projectRf, searchField, searchKeyword, pageable);</span>
+<span class="nc bnc" id="L214" title="All 4 branches missed.">            if (data == null || data.isEmpty()) {</span>
+<span class="nc" id="L215">                ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;TASK-BY-PROJECT-NO-TASKS&quot;, &quot;No tasks found for the given project.&quot;);</span>
+<span class="nc" id="L216">                return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+            }
+<span class="nc" id="L218">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(data, true, &quot;TASK-BY-PROJECT-FETCH-SUCCESS&quot;, &quot;Tasks fetched successfully.&quot;);</span>
+<span class="nc" id="L219">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L220">        } catch (Exception ex) {</span>
+<span class="nc" id="L221">            ex.printStackTrace();</span>
+<span class="nc" id="L222">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;TASK-BY-PROJECT-FETCH-FAILURE&quot;, &quot;An error occurred while fetching tasks.&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L223">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+        }
+    }
+
+
+    @GetMapping(&quot;projectUser&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; findUserBasedOnProject(@RequestParam String projectRf) {
+        try {
+<span class="nc" id="L231">            List&lt;Map&lt;String, Object&gt;&gt; map = projectService.getUserByProjectRf(projectRf);</span>
+<span class="nc bnc" id="L232" title="All 2 branches missed.">            if (map.isEmpty()) {</span>
+<span class="nc" id="L233">                ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; response = new ApiResponse&lt;&gt;(map, true, &quot;NO-USERS-FOUND&quot;, &quot;No users found for the given project.&quot;);</span>
+<span class="nc" id="L234">                return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+            }
+<span class="nc" id="L236">            ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; response = new ApiResponse&lt;&gt;(map, true, &quot;USERS-FOUND&quot;, &quot;Users retrieved successfully.&quot;);</span>
+<span class="nc" id="L237">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L238">        } catch (EntityNotFoundException e) {</span>
+<span class="nc" id="L239">            ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;PROJECT-NOT-FOUND&quot;, &quot;Project not found for the given ID.&quot;);</span>
+<span class="nc" id="L240">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L241">        } catch (Exception e) {</span>
+<span class="nc" id="L242">            e.printStackTrace();</span>
+<span class="nc" id="L243">            ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;INTERNAL-SERVER-ERROR&quot;, &quot;An error occurred while fetching users for the project.&quot;);</span>
+<span class="nc" id="L244">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+        }
+    }
+
+
+    @GetMapping(&quot;taskUser&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; findUserBasedOnTask(@RequestParam Integer taskId) {
+        try {
+<span class="nc" id="L252">            List&lt;Map&lt;String, Object&gt;&gt; map = projectService.getUserByTaskId(taskId);</span>
+<span class="nc bnc" id="L253" title="All 2 branches missed.">            if (map.isEmpty()) {</span>
+<span class="nc" id="L254">                ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; response = new ApiResponse&lt;&gt;(map, true, &quot;NO-USERS-FOUND&quot;, &quot;No users found for the given task.&quot;);</span>
+<span class="nc" id="L255">                return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+            }
+<span class="nc" id="L257">            ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; response = new ApiResponse&lt;&gt;(map, true, &quot;USERS-FOUND&quot;, &quot;Users retrieved successfully.&quot;);</span>
+<span class="nc" id="L258">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L259">        } catch (EntityNotFoundException e) {</span>
+<span class="nc" id="L260">            ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;TASK-NOT-FOUND&quot;, &quot;Task not found for the given ID.&quot;);</span>
+<span class="nc" id="L261">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L262">        } catch (Exception e) {</span>
+<span class="nc" id="L263">            e.printStackTrace();</span>
+<span class="nc" id="L264">            ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;INTERNAL-SERVER-ERROR&quot;, &quot;An error occurred while fetching users for the task.&quot;);</span>
+<span class="nc" id="L265">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+        }
+    }
+
+    @GetMapping(&quot;/fetchUsersProjectRole&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; fetchUsersProjectRole(@RequestParam(value = &quot;projectRfNum&quot;, required = true) String projectRfNum, @RequestParam(value = &quot;username&quot;, required = true) String username) {
+
+        try {
+<span class="nc" id="L273">            List&lt;Map&lt;String, Object&gt;&gt; map = projectService.fetchAvailableProjectRole(projectRfNum, username);</span>
+<span class="nc bnc" id="L274" title="All 2 branches missed.">            if (map.isEmpty()) {</span>
+<span class="nc" id="L275">                ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; response = new ApiResponse&lt;&gt;(map, true, &quot;NO-ROLES-FOUND&quot;, &quot;No roles found for the given project and username.&quot;);</span>
+<span class="nc" id="L276">                return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+            }
+<span class="nc" id="L278">            ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; response = new ApiResponse&lt;&gt;(map, true, &quot;ROLES-FOUND&quot;, &quot;Roles fetched successfully.&quot;);</span>
+<span class="nc" id="L279">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L280">        } catch (EntityNotFoundException e) {</span>
+<span class="nc" id="L281">            ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;NOT-FOUND&quot;, &quot;Project or user not found.&quot;);</span>
+<span class="nc" id="L282">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L283">        } catch (Exception e) {</span>
+<span class="nc" id="L284">            e.printStackTrace();</span>
+<span class="nc" id="L285">            ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;INTERNAL-SERVER-ERROR&quot;, &quot;An error occurred while fetching project roles.&quot;);</span>
+<span class="nc" id="L286">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+        }
+    }
+
+
+    @PostMapping(&quot;/updateUsersProjectAssignment&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, String&gt;&gt;&gt; updateUsersProjectAssignment(@RequestParam(value = &quot;projectAllocationId&quot;, required = true) String projectAllocationId, @RequestParam(value = &quot;projectRfNum&quot;, required = true) String projectRfNum, @RequestParam(value = &quot;username&quot;, required = true) String username, @RequestParam(value = &quot;startDate&quot;, required = true) String startDate, @RequestParam(value = &quot;endDate&quot;, required = true) String endDate, @RequestParam(value = &quot;deputation&quot;, required = true) String deputation, @RequestParam(value = &quot;userpRole&quot;, required = false) String[] userpRole, @RequestParam(value = &quot;resourceUnitPricePerHour&quot;, required = false) String resourceUnitPricePerHour) {
+
+        try {
+<span class="nc" id="L295">            ResponseEntity&lt;String&gt; result = projectService.modifyUsersProjectAssignment(projectAllocationId, projectRfNum, username, startDate, endDate, deputation, userpRole, resourceUnitPricePerHour);</span>
+<span class="nc" id="L296">            Map&lt;String, String&gt; responseBody = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L297">            responseBody.put(&quot;message&quot;, result.getBody());</span>
+<span class="nc" id="L298">            ApiResponse&lt;Map&lt;String, String&gt;&gt; response = new ApiResponse&lt;&gt;(responseBody, true, &quot;ASSIGNMENT-UPDATED&quot;, &quot;Project assignment updated successfully.&quot;);</span>
+<span class="nc" id="L299">            return ResponseEntity.status(result.getStatusCode()).body(response);</span>
+<span class="nc" id="L300">        } catch (EntityNotFoundException e) {</span>
+<span class="nc" id="L301">            Map&lt;String, String&gt; errorResponse = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L302">            errorResponse.put(&quot;error&quot;, &quot;Project or user not found.&quot;);</span>
+<span class="nc" id="L303">            ApiResponse&lt;Map&lt;String, String&gt;&gt; response = new ApiResponse&lt;&gt;(errorResponse, false, &quot;NOT-FOUND&quot;, &quot;Project or user not found.&quot;);</span>
+<span class="nc" id="L304">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L305">        } catch (Exception e) {</span>
+<span class="nc" id="L306">            e.printStackTrace();</span>
+<span class="nc" id="L307">            Map&lt;String, String&gt; errorResponse = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L308">            errorResponse.put(&quot;error&quot;, &quot;An internal error occurred while updating project assignment.&quot;);</span>
+<span class="nc" id="L309">            ApiResponse&lt;Map&lt;String, String&gt;&gt; response = new ApiResponse&lt;&gt;(errorResponse, false, &quot;INTERNAL-SERVER-ERROR&quot;, &quot;An error occurred while processing the request.&quot;);</span>
+<span class="nc" id="L310">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+        }
+    }
+
+    @PostMapping(&quot;/projectAllocation&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getUserListForProjectAllocation(@RequestParam Integer projectRfNum, @RequestParam(defaultValue = &quot;false&quot;) Boolean allUserFlag) {
+
+        try {
+<span class="nc" id="L318">            List&lt;Map&lt;String, Object&gt;&gt; data = projectService.getActiveUsersForProject(projectRfNum, allUserFlag);</span>
+<span class="nc" id="L319">            Map&lt;String, Object&gt; responseData = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L320">            responseData.put(&quot;resultData&quot;, data);</span>
+<span class="nc" id="L321">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(responseData, true, &quot;USERS-FETCHED&quot;, &quot;Users fetched successfully for the project allocation.&quot;);</span>
+<span class="nc" id="L322">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L323">        } catch (Exception e) {</span>
+<span class="nc" id="L324">            e.printStackTrace();</span>
+<span class="nc" id="L325">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;INTERNAL-SERVER-ERROR&quot;, &quot;An error occurred while fetching the user list for project allocation.&quot;);</span>
+<span class="nc" id="L326">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+        }
+    }
+
+
+    @PostMapping(&quot;/addRemoveUsersFromProject&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; updateGroupMemberships(@RequestParam List&lt;Integer&gt; usernames, @RequestParam(value = &quot;projectRfNum&quot;, required = true) Integer projectRfNum, @RequestParam(defaultValue = &quot;false&quot;) Boolean addRemoveFlag) {
+
+        try {
+<span class="nc" id="L335">            List&lt;Map&lt;String, Object&gt;&gt; data = projectService.saveProjectAllocationToUser(usernames, projectRfNum, addRemoveFlag);</span>
+<span class="nc" id="L336">            Map&lt;String, Object&gt; responseData = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L337">            responseData.put(&quot;resultData&quot;, data);</span>
+<span class="nc" id="L338">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(responseData, true, &quot;USERS-UPDATED&quot;, &quot;Users successfully added/removed from the project.&quot;);</span>
+<span class="nc" id="L339">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L340">        } catch (Exception e) {</span>
+<span class="nc" id="L341">            e.printStackTrace();</span>
+<span class="nc" id="L342">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;INTERNAL-SERVER-ERROR&quot;, &quot;An error occurred while updating the group memberships.&quot;);</span>
+<span class="nc" id="L343">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+        }
+    }
+
+    @PostMapping(&quot;/removeTaskFromProject&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; removeTaskFromProject(@RequestParam(value = &quot;taskRfNum&quot;) String taskRfNum) {
+        try {
+<span class="nc" id="L350">            projectService.deleteProjectTask(taskRfNum);</span>
+<span class="nc" id="L351">            ApiResponse&lt;Void&gt; response = new ApiResponse&lt;&gt;(null, true, &quot;TASK-REMOVED&quot;, &quot;Task deleted successfully.&quot;);</span>
+<span class="nc" id="L352">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L353">        } catch (Exception e) {</span>
+<span class="nc" id="L354">            e.printStackTrace();</span>
+<span class="nc" id="L355">            ApiResponse&lt;Void&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;INTERNAL-SERVER-ERROR&quot;, &quot;An error occurred while deleting the task.&quot;);</span>
+<span class="nc" id="L356">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+        }
+    }
+
+
+    @PutMapping(&quot;/taskDetail/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;TaskStory&gt;&gt; updateTaskDetails(@PathVariable Integer id, @RequestBody TaskStoryDTO taskStoryDTO) {
+        try {
+<span class="nc" id="L364">            TaskStory taskStory = projectService.updateTaskById(id, taskStoryDTO);</span>
+<span class="nc bnc" id="L365" title="All 2 branches missed.">            if (taskStory != null) {</span>
+<span class="nc" id="L366">                return ResponseEntity.ok(new ApiResponse&lt;&gt;(taskStory, true, &quot;TASK-UPDATED&quot;, &quot;Task updated successfully.&quot;));</span>
+            } else {
+<span class="nc" id="L368">                return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;TASK-NOT-FOUND&quot;, &quot;Task &quot; + id + &quot; not found.&quot;));</span>
+            }
+<span class="nc" id="L370">        } catch (EntityNotFoundException e) {</span>
+<span class="nc" id="L371">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;TASK-NOT-FOUND&quot;, &quot;Task not found.&quot;));</span>
+<span class="nc" id="L372">        } catch (Exception e) {</span>
+<span class="nc" id="L373">            e.printStackTrace();</span>
+<span class="nc" id="L374">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;INTERNAL-SERVER-ERROR&quot;, &quot;An error occurred while updating the task.&quot;));</span>
+        }
+    }
+
+
+    /*Here*/
+
+    @GetMapping(&quot;/taskDetails/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;TaskStoryDTO&gt;&gt; getTaskById(@PathVariable(&quot;id&quot;) Integer taskId) {
+        try {
+<span class="nc" id="L384">            TaskStoryDTO taskById = projectService.getTaskById(taskId);</span>
+<span class="nc" id="L385">            ApiResponse&lt;TaskStoryDTO&gt; response = new ApiResponse&lt;&gt;(taskById, true, &quot;TASK-BY-ID-DATA-FOUND&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L386">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L387">        } catch (ResponseStatusException ex) {</span>
+<span class="nc" id="L388">            ApiResponse&lt;TaskStoryDTO&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;TASK-BY-ID-DATA-FOUND-NOT-FOUND&quot;, &quot;Error&quot;, Collections.singletonList(ex.getReason()));</span>
+<span class="nc" id="L389">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @PostMapping(&quot;/addUsersProjectAssignment&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; addUsersProjectAssignment(@RequestParam(value = &quot;projectRfNum&quot;, required = true) String projectRfNum, @RequestParam(value = &quot;username&quot;, required = true) String username, @RequestParam(value = &quot;startDate&quot;, required = true) String startDate, @RequestParam(value = &quot;endDate&quot;, required = true) @DateTimeFormat(pattern = &quot;yyyy-MM-dd&quot;) Date endDate, @RequestParam(value = &quot;unitPricePerHour&quot;, required = false) Long unitPricePerHour) {
+
+        try {
+<span class="nc" id="L397">            Object data = projectService.addUsersProjectAssignment(projectRfNum, username, startDate, endDate, unitPricePerHour);</span>
+<span class="nc" id="L398">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(data, true, &quot;ASSIGNMENT-ADDED&quot;, &quot;User's project assignment added successfully.&quot;));</span>
+<span class="nc" id="L399">        } catch (Exception e) {</span>
+<span class="nc" id="L400">            e.printStackTrace();</span>
+<span class="nc" id="L401">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;INTERNAL-SERVER-ERROR&quot;, &quot;An error occurred while processing the request&quot;));</span>
+        }
+    }
+
+
+    @PostMapping(&quot;/removeUsersProjectAssignment&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;String&gt;&gt; removeUsersProjectAssignment(@RequestParam(value = &quot;projectAllocationId&quot;, required = true) Integer projectAllocationId, @RequestParam(value = &quot;taskCount&quot;, required = true) Integer taskCount) {
+        try {
+<span class="nc bnc" id="L409" title="All 2 branches missed.">            if (projectAllocationId == null) {</span>
+<span class="nc" id="L410">                return ResponseEntity.badRequest().body(new ApiResponse&lt;&gt;(null, false, &quot;INVALID-ALLOCATION&quot;, &quot;Invalid allocation&quot;));</span>
+            }
+<span class="nc bnc" id="L412" title="All 4 branches missed.">            if (taskCount != null &amp;&amp; taskCount &gt; 0) {</span>
+<span class="nc" id="L413">                return ResponseEntity.badRequest().body(new ApiResponse&lt;&gt;(null, false, &quot;TASK-ASSIGNED&quot;, taskCount + &quot; task(s) allocated to user.&quot;));</span>
+            }
+<span class="nc" id="L415">            String message = projectService.removeUsersProjectAssignment(projectAllocationId);</span>
+<span class="nc" id="L416">            return ResponseEntity.ok().body(new ApiResponse&lt;&gt;(message, true, &quot;ASSIGNMENT-REMOVED&quot;, &quot;User's project assignment removed successfully&quot;));</span>
+<span class="nc" id="L417">        } catch (Exception e) {</span>
+<span class="nc" id="L418">            e.printStackTrace();</span>
+<span class="nc" id="L419">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;INTERNAL-SERVER-ERROR&quot;, &quot;An error occurred while processing the request&quot;));</span>
+        }
+    }
+
+
+    @GetMapping(&quot;/openProjectDetails/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; projectDetails(@PathVariable(&quot;id&quot;) String id) {
+        try {
+<span class="nc" id="L427">            List&lt;Map&lt;String, Object&gt;&gt; details = projectService.getProjectDetails(id);</span>
+<span class="nc bnc" id="L428" title="All 4 branches missed.">            if (details != null &amp;&amp; !details.isEmpty()) {</span>
+<span class="nc" id="L429">                return ResponseEntity.ok(new ApiResponse&lt;&gt;(details, true, &quot;PROJECT-DETAILS-FOUND&quot;, &quot;Project details retrieved successfully&quot;));</span>
+            } else {
+<span class="nc" id="L431">                return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;PROJECT-DETAILS-NOT-FOUND&quot;, &quot;No details found for the specified project ID&quot;));</span>
+            }
+<span class="nc" id="L433">        } catch (Exception e) {</span>
+<span class="nc" id="L434">            e.printStackTrace();</span>
+<span class="nc" id="L435">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;ERROR-RETRIEVING-PROJECT-DETAILS&quot;, &quot;An error occurred while retrieving project details: &quot; + e.getMessage()));</span>
+        }
+    }
+
+
+    /*nwe project document start*/
+
+
+    @PostMapping(&quot;/uploadProjectScannedDoc&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;String&gt;&gt; uploadProjectScannedDoc(
+            @RequestParam(&quot;doc&quot;) MultipartFile doc,
+            @RequestParam(&quot;projectRfNum&quot;) String projectRfNum,
+            @RequestParam(value = &quot;docType&quot;, required = false) String docType,
+            @RequestParam(value = &quot;docName&quot;, required = false) String docName,
+            @RequestParam(value = &quot;docNumber&quot;, required = false) String docNumber,
+            @RequestParam(value = &quot;remark&quot;, required = false) String remark,
+            @RequestParam(value = &quot;id&quot;, required = false) Integer id,
+            HttpServletRequest request) {
+
+        try {
+<span class="fc" id="L455">            log.info(&quot;Received doc upload/update request for projectRfNum: {}, docName: {}, id: {}&quot;, projectRfNum, docName, id);</span>
+
+            //  File size validation (max 2MB = 2 * 1024 * 1024 bytes)
+<span class="pc bpc" id="L458" title="2 of 4 branches missed.">            if (doc == null || doc.isEmpty()) {</span>
+<span class="nc" id="L459">                return ResponseEntity.ok().body(</span>
+                        new ApiResponse&lt;&gt;(null, false, &quot;FILE-MISSING&quot;, &quot;Error&quot;,
+<span class="nc" id="L461">                                List.of(&quot;No file uploaded. Please attach a valid document.&quot;)));</span>
+            }
+
+<span class="pc bpc" id="L464" title="1 of 2 branches missed.">            if (doc.getSize() &gt; 2 * 1024 * 1024) {</span>
+<span class="nc" id="L465">                return ResponseEntity.ok().body(</span>
+                        new ApiResponse&lt;&gt;(null, false, &quot;FILE-SIZE-EXCEEDED&quot;, &quot;Error&quot;,
+<span class="nc" id="L467">                                List.of(&quot;File size exceeds the maximum allowed limit of 2MB. Please upload a smaller file.&quot;)));</span>
+            }
+
+<span class="pc bpc" id="L470" title="2 of 4 branches missed.">            if (projectRfNum == null || projectRfNum.trim().isEmpty()) {</span>
+<span class="nc" id="L471">                return ResponseEntity.ok().body(</span>
+                        new ApiResponse&lt;&gt;(null, false, &quot;PROJECT-RFNUM-MISSING&quot;, &quot;Error&quot;,
+<span class="nc" id="L473">                                List.of(&quot;Project reference number is required.&quot;)));</span>
+            }
+
+<span class="fc" id="L476">            String result = projectService.uploadProjectScannedDocument(</span>
+                    id, doc, projectRfNum, docType, docName, docNumber, remark, request);
+
+<span class="fc bfc" id="L479" title="All 2 branches covered.">            if (result.startsWith(&quot;Error&quot;)) {</span>
+<span class="fc" id="L480">                return ResponseEntity.ok().body(</span>
+<span class="fc" id="L481">                        new ApiResponse&lt;&gt;(null, false, &quot;FILE-UPLOAD-FAILURE&quot;, &quot;Error&quot;, List.of(result)));</span>
+            }
+
+<span class="fc" id="L484">            return ResponseEntity.ok(</span>
+                    new ApiResponse&lt;&gt;(result, true, &quot;FILE-UPLOAD-SUCCESS&quot;, &quot;Document uploaded successfully&quot;));
+
+<span class="nc" id="L487">        } catch (Exception ex) {</span>
+<span class="nc" id="L488">            log.error(&quot;Exception in uploadProjectScannedDoc&quot;, ex);</span>
+<span class="nc" id="L489">            return ResponseEntity.ok().body(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;OK&quot;, &quot;Error&quot;,
+<span class="nc" id="L491">                            List.of(&quot;Unexpected error occurred.&quot;, ex.getMessage())));</span>
+        }
+    }
+
+
+
+
+
+
+    @GetMapping(&quot;/getAllDocuments&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;PaginatedResponse&lt;ProjectDocumentResponseDTO&gt;&gt;&gt; getAllProjectDocuments(
+            @RequestParam(defaultValue = &quot;1&quot;) int pageNumber,
+            @RequestParam(defaultValue = &quot;10&quot;) int pageSize,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;id&quot;, required = false) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;, required = false) String sortDir,
+            @RequestParam(required = false) String searchColumn,
+            @RequestParam(required = false) String searchValue) {
+
+        try {
+<span class="nc bnc" id="L510" title="All 2 branches missed.">            if (pageNumber &lt; 1) {</span>
+<span class="nc" id="L511">                throw new IllegalArgumentException(&quot;Page number must be 1 or greater.&quot;);</span>
+            }
+
+<span class="nc" id="L514">            PaginatedResponse&lt;ProjectDocumentResponseDTO&gt; paginatedDocs =</span>
+<span class="nc" id="L515">                    projectService.getAllProjectDocuments(pageNumber, pageSize, sortBy, sortDir, searchColumn, searchValue);</span>
+
+<span class="nc" id="L517">            ApiResponse&lt;PaginatedResponse&lt;ProjectDocumentResponseDTO&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    paginatedDocs, true, &quot;PROJECT-DOCUMENTS-RETRIEVED-SUCCESSFULLY&quot;, &quot;Information&quot;);
+
+<span class="nc" id="L520">            return ResponseEntity.ok(response);</span>
+
+<span class="nc" id="L522">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L523">            ApiResponse&lt;PaginatedResponse&lt;ProjectDocumentResponseDTO&gt;&gt; warningResponse = new ApiResponse&lt;&gt;(</span>
+                    null, false, &quot;PROJECT-DOCUMENTS-RETRIEVAL-FAILED&quot;, &quot;Warning&quot;,
+<span class="nc" id="L525">                    List.of(ex.getMessage()));</span>
+<span class="nc" id="L526">            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(warningResponse);</span>
+
+<span class="nc" id="L528">        } catch (Exception ex) {</span>
+<span class="nc" id="L529">            ApiResponse&lt;PaginatedResponse&lt;ProjectDocumentResponseDTO&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null, false, &quot;PROJECT-DOCUMENTS-RETRIEVAL-FAILED&quot;, &quot;Error&quot;,
+<span class="nc" id="L531">                    List.of(ex.getMessage(), &quot;Please contact support.&quot;));</span>
+<span class="nc" id="L532">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);</span>
+        }
+    }
+
+
+    @GetMapping(&quot;/download/**&quot;)
+    public ResponseEntity&lt;Resource&gt; downloadFile(HttpServletRequest request, @RequestHeader(&quot;Authorization&quot;) String token) {
+        try {
+            // 1. Token validation - aap apni logic yahan likh sakte hain
+<span class="nc bnc" id="L541" title="All 2 branches missed.">            if (!isValidToken(token)) {</span>
+<span class="nc" id="L542">                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();</span>
+            }
+
+            // 2. Extract the relative path after &quot;/download/&quot;
+<span class="nc" id="L546">            String requestURI = request.getRequestURI(); // /hr-management/api/project/download/PRC01/2025/05/16/filename.pdf</span>
+<span class="nc" id="L547">            String basePath = &quot;/api/project/download/&quot;;</span>
+<span class="nc" id="L548">            int index = requestURI.indexOf(basePath);</span>
+<span class="nc bnc" id="L549" title="All 2 branches missed.">            if (index == -1) {</span>
+<span class="nc" id="L550">                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();</span>
+            }
+<span class="nc" id="L552">            String relativeFilePath = requestURI.substring(index + basePath.length());</span>
+
+            // 3. Base directory jahan se serve karna hai
+<span class="nc" id="L555">            Path baseDir = Paths.get(&quot;src/main/resources/assets/projectScannedDocuments&quot;).toAbsolutePath().normalize();</span>
+<span class="nc" id="L556">            Path resolvedPath = baseDir.resolve(relativeFilePath).normalize();</span>
+
+            // 4. Security check - ensure file is inside baseDir
+<span class="nc bnc" id="L559" title="All 2 branches missed.">            if (!resolvedPath.startsWith(baseDir)) {</span>
+<span class="nc" id="L560">                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();</span>
+            }
+
+            // 5. Check file existence
+<span class="nc" id="L564">            File file = resolvedPath.toFile();</span>
+<span class="nc bnc" id="L565" title="All 4 branches missed.">            if (!file.exists() || !file.isFile()) {</span>
+<span class="nc" id="L566">                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();</span>
+            }
+
+            // 6. Serve file as Resource
+<span class="nc" id="L570">            Resource resource = new UrlResource(file.toURI());</span>
+<span class="nc" id="L571">            String contentType = Files.probeContentType(resolvedPath);</span>
+<span class="nc bnc" id="L572" title="All 2 branches missed.">            if (contentType == null) contentType = &quot;application/octet-stream&quot;;</span>
+
+<span class="nc" id="L574">            return ResponseEntity.ok()</span>
+<span class="nc" id="L575">                    .contentType(MediaType.parseMediaType(contentType))</span>
+<span class="nc" id="L576">                    .header(HttpHeaders.CONTENT_DISPOSITION, &quot;attachment; filename=\&quot;&quot; + file.getName() + &quot;\&quot;&quot;)</span>
+<span class="nc" id="L577">                    .body(resource);</span>
+
+<span class="nc" id="L579">        } catch (Exception e) {</span>
+<span class="nc" id="L580">            e.printStackTrace();</span>
+<span class="nc" id="L581">            return ResponseEntity.status(HttpStatus.OK).build();</span>
+        }
+    }
+
+    // Dummy token validation method (aap apni real validation lagayen)
+    private boolean isValidToken(String token) {
+        // Token validation logic here
+<span class="nc bnc" id="L588" title="All 4 branches missed.">        return token != null &amp;&amp; token.startsWith(&quot;Bearer &quot;);</span>
+    }
+
+
+
+
+
+    @GetMapping(&quot;/document&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getDocumentsByProjectRfNum(
+            @RequestParam String projectRfNum,
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(required = false) String searchColumn,
+            @RequestParam(required = false) String searchValue,
+            @RequestParam(defaultValue = &quot;id&quot;) String sortBy,
+            @RequestParam(defaultValue = &quot;desc&quot;) String sortDir) {
+
+        try {
+<span class="nc" id="L606">            Map&lt;String, Object&gt; result = projectService.getDocumentsByProjectRfNumWithPagination(</span>
+                    projectRfNum, page, size, searchColumn, searchValue, sortBy, sortDir);
+
+<span class="nc" id="L609">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    result, true, &quot;PENDING_EXPENSE_REQUESTS_FETCHED&quot;, &quot;SUCCESS&quot;);
+
+<span class="nc" id="L612">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L613">        } catch (Exception ex) {</span>
+<span class="nc" id="L614">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null, false, &quot;DOCUMENTS-RETRIEVAL-FAILED&quot;, &quot;Error&quot;,
+<span class="nc" id="L616">                    List.of(ex.getMessage(), &quot;Please contact support.&quot;));</span>
+<span class="nc" id="L617">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+
+
+    @GetMapping(&quot;/documentFetchByIdAndProjectRfNo&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getDocumentsByProjectRfNum(
+            @RequestParam (required = true) String projectRfNum,
+            @RequestParam(required = true) Integer id,
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(required = false) String searchColumn,
+            @RequestParam(required = false) String searchValue,
+            @RequestParam(defaultValue = &quot;id&quot;) String sortBy,
+            @RequestParam(defaultValue = &quot;asc&quot;) String sortDir) {
+
+        try {
+<span class="nc" id="L635">            Map&lt;String, Object&gt; result = projectService.documentFetchByIdAndProjectRfNo(</span>
+                    projectRfNum, id, page, size, searchColumn, searchValue, sortBy, sortDir);
+
+<span class="nc" id="L638">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    result, true, &quot;PENDING_EXPENSE_REQUESTS_FETCHED&quot;, &quot;SUCCESS&quot;);
+
+<span class="nc" id="L641">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L642">        } catch (Exception ex) {</span>
+<span class="nc" id="L643">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null, false, &quot;DOCUMENTS-RETRIEVAL-FAILED&quot;, &quot;Error&quot;,
+<span class="nc" id="L645">                    List.of(ex.getMessage(), &quot;Please contact support.&quot;));</span>
+<span class="nc" id="L646">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/openProjectDocumentDetails/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; projectDocumentDetails(@PathVariable(&quot;id&quot;) String id) {
+        try {
+<span class="nc" id="L653">            List&lt;Map&lt;String, Object&gt;&gt; details = projectService.getProjectDocumentDetails(id);</span>
+
+<span class="nc" id="L655">            ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; response = new ApiResponse&lt;&gt;(details, true, &quot;PROJECT-DOCS-FOUND&quot;, &quot;Project document details fetched successfully&quot;);</span>
+
+<span class="nc" id="L657">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L658">        } catch (Exception e) {</span>
+<span class="nc" id="L659">            e.printStackTrace();</span>
+
+<span class="nc" id="L661">            ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;PROJECT-DOCS-ERROR&quot;, &quot;Failed to fetch project document details&quot;, List.of(e.getMessage()));</span>
+
+<span class="nc" id="L663">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+
+    @GetMapping(&quot;/openProjectPriceDetails/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; projectPriceDetails(@PathVariable(&quot;id&quot;) String id) {
+        try {
+<span class="nc" id="L671">            List&lt;Map&lt;String, Object&gt;&gt; details = projectService.getProjectPriceDetails(id);</span>
+
+<span class="nc" id="L673">            ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; response = new ApiResponse&lt;&gt;(details, true, &quot;PROJECT-PRICE-FOUND&quot;, &quot;Project price details fetched successfully&quot;);</span>
+
+<span class="nc" id="L675">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L676">        } catch (Exception e) {</span>
+<span class="nc" id="L677">            e.printStackTrace();</span>
+
+<span class="nc" id="L679">            ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;PROJECT-PRICE-ERROR&quot;, &quot;Failed to fetch project price details&quot;, List.of(e.getMessage()));</span>
+
+<span class="nc" id="L681">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+
+    @PostMapping(&quot;/updateUsersTaskAssignment&quot;)
+    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; updateUsersTaskAssignment(@RequestParam(value = &quot;taskAssignmentName&quot;, required = true) String taskAssignmentName, @RequestParam(value = &quot;taskAllocationPercentage&quot;, required = true) String taskAllocationPercentage, @RequestParam(value = &quot;taskAllocationId&quot;, required = true) String taskAllocationId, @RequestParam(value = &quot;taskRfNum&quot;, required = true) String taskRfNum, @RequestParam(value = &quot;username&quot;, required = true) String username, @RequestParam(value = &quot;startDate&quot;, required = true) String startDate, @RequestParam(value = &quot;endDate&quot;, required = true) String endDate, @RequestParam(value = &quot;deputation&quot;, required = true) String deputation, @RequestParam(value = &quot;userTRole&quot;, required = false) String[] userTRole) {
+<span class="nc" id="L688">        ResponseEntity&lt;Map&lt;String, String&gt;&gt; resultEntity = null;</span>
+
+        try {
+<span class="nc" id="L691">            ResponseEntity&lt;String&gt; result = projectService.modifyUsersTaskAssignment(taskAssignmentName, taskAllocationPercentage, taskAllocationId, taskRfNum, username, startDate, endDate, deputation, userTRole);</span>
+
+<span class="nc" id="L693">            Map&lt;String, String&gt; responseBody = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L694">            responseBody.put(&quot;message&quot;, result.getBody());</span>
+
+<span class="nc" id="L696">            resultEntity = ResponseEntity.status(result.getStatusCode()).body(responseBody);</span>
+<span class="nc" id="L697">        } catch (Exception e) {</span>
+<span class="nc" id="L698">            e.printStackTrace();</span>
+<span class="nc" id="L699">            Map&lt;String, String&gt; errorResponse = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L700">            errorResponse.put(&quot;error&quot;, e.getMessage());</span>
+
+<span class="nc" id="L702">            resultEntity = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);</span>
+<span class="nc" id="L703">        }</span>
+
+<span class="nc" id="L705">        return resultEntity;</span>
+    }
+
+    @PostMapping(&quot;/addUsersTaskAssignment&quot;)
+    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; addUsersTaskAssignment(@RequestParam(value = &quot;taskAssignmentName&quot;) String taskAssignmentName, @RequestParam(value = &quot;taskAllocationPercentage&quot;) String taskAllocationPercentage, @RequestParam(value = &quot;taskRfNum&quot;) String taskRfNum, @RequestParam(value = &quot;username&quot;) String username, @RequestParam(value = &quot;startDate&quot;) @DateTimeFormat(pattern = &quot;yyyy-MM-dd&quot;) Date startDate, @RequestParam(value = &quot;endDate&quot;) @DateTimeFormat(pattern = &quot;yyyy-MM-dd&quot;) Date endDate) {
+
+<span class="nc" id="L711">        Map&lt;String, String&gt; resultEntity = new HashMap&lt;&gt;();</span>
+
+        try {
+<span class="nc" id="L714">            SimpleDateFormat sdf = new SimpleDateFormat(&quot;yyyy-MM-dd&quot;);</span>
+<span class="nc bnc" id="L715" title="All 2 branches missed.">            if (Double.parseDouble(taskAllocationPercentage) &lt; 0) {</span>
+<span class="nc" id="L716">                resultEntity.put(&quot;message&quot;, &quot;Invalid allocation weightage.&quot;);</span>
+<span class="nc" id="L717">                return ResponseEntity.badRequest().body(resultEntity);</span>
+            }
+<span class="nc bnc" id="L719" title="All 4 branches missed.">            if (taskRfNum == null || Integer.valueOf(taskRfNum) &lt;= 0) {</span>
+<span class="nc" id="L720">                resultEntity.put(&quot;message&quot;, &quot;Invalid project.&quot;);</span>
+<span class="nc" id="L721">                return ResponseEntity.badRequest().body(resultEntity);</span>
+            }
+<span class="nc bnc" id="L723" title="All 4 branches missed.">            if (username == null || username.isEmpty()) {</span>
+<span class="nc" id="L724">                resultEntity.put(&quot;message&quot;, &quot;Invalid user.&quot;);</span>
+<span class="nc" id="L725">                return ResponseEntity.badRequest().body(resultEntity);</span>
+            }
+<span class="nc bnc" id="L727" title="All 4 branches missed.">            if (startDate == null || endDate == null) {</span>
+<span class="nc" id="L728">                resultEntity.put(&quot;message&quot;, &quot;Invalid start date or end date.&quot;);</span>
+<span class="nc" id="L729">                return ResponseEntity.badRequest().body(resultEntity);</span>
+            } else {
+<span class="nc bnc" id="L731" title="All 2 branches missed.">                if (startDate.after(endDate)) {</span>
+<span class="nc" id="L732">                    resultEntity.put(&quot;message&quot;, &quot;Start date must be less than or equal to end date.&quot;);</span>
+<span class="nc" id="L733">                    return ResponseEntity.badRequest().body(resultEntity);</span>
+                }
+            }
+
+<span class="nc" id="L737">            ResponseEntity&lt;String&gt; result = projectService.addUsersTaskAssignment(taskAssignmentName.trim(), taskAllocationPercentage, taskRfNum, username, sdf.format(startDate), sdf.format(endDate));</span>
+
+<span class="nc" id="L739">            Map&lt;String, String&gt; responseBody = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L740">            responseBody.put(&quot;message&quot;, result.getBody());</span>
+
+<span class="nc" id="L742">            return ResponseEntity.status(result.getStatusCode()).body(responseBody);</span>
+<span class="nc" id="L743">        } catch (NumberFormatException e) {</span>
+<span class="nc" id="L744">            resultEntity.put(&quot;message&quot;, &quot;Invalid task allocation percentage format.&quot;);</span>
+<span class="nc" id="L745">            return ResponseEntity.badRequest().body(resultEntity);</span>
+<span class="nc" id="L746">        } catch (Exception e) {</span>
+<span class="nc" id="L747">            e.printStackTrace();</span>
+<span class="nc" id="L748">            Map&lt;String, String&gt; errorResponse = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L749">            errorResponse.put(&quot;error&quot;, e.getMessage());</span>
+
+<span class="nc" id="L751">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @PostMapping(&quot;/removeUsersTaskAssignment&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;String&gt;&gt; removeUsersTaskAssignment(@RequestParam(&quot;taskAllocationId&quot;) String taskAllocationId) {
+
+        try {
+<span class="nc" id="L759">            ResponseEntity&lt;String&gt; result = projectService.removeUsersTaskAssignment(taskAllocationId);</span>
+
+<span class="nc" id="L761">            ApiResponse&lt;String&gt; response = new ApiResponse&lt;&gt;(result.getBody(), true, &quot;TASK-REMOVED&quot;, &quot;Task assignment removed successfully&quot;);</span>
+
+<span class="nc" id="L763">            return ResponseEntity.status(result.getStatusCode()).body(response);</span>
+
+<span class="nc" id="L765">        } catch (Exception e) {</span>
+<span class="nc" id="L766">            e.printStackTrace();</span>
+
+<span class="nc" id="L768">            ApiResponse&lt;String&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;TASK-REMOVAL-FAILED&quot;, &quot;Failed to remove task assignment&quot;, List.of(e.getMessage()));</span>
+<span class="nc" id="L769">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+
+    @PostMapping(&quot;/createAndUpdateTaskStory&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;TaskStoryDTO&gt;&gt; saveOrUpdateTask(@Valid @RequestBody TaskStoryDTO taskStoryDTO) {
+        try {
+<span class="nc bnc" id="L777" title="All 4 branches missed.">            if (taskStoryDTO.getSubTaskStoryDTOList() != null &amp;&amp; !taskStoryDTO.getSubTaskStoryDTOList().isEmpty()) {</span>
+<span class="nc" id="L778">                Set&lt;String&gt; set = new HashSet&lt;&gt;();</span>
+<span class="nc bnc" id="L779" title="All 2 branches missed.">                for (SubTaskStoryDTO subTaskStory : taskStoryDTO.getSubTaskStoryDTOList()) {</span>
+<span class="nc" id="L780">                    String uniqueKey = subTaskStory.getSubTaskId();</span>
+<span class="nc bnc" id="L781" title="All 2 branches missed.">                    if (!set.add(uniqueKey)) {</span>
+<span class="nc" id="L782">                        return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_SUB_TASK_DUPLICATE_REQUEST&quot;, &quot;FAILURE&quot;, Collections.singletonList(&quot;Duplicate sub tasks selected.&quot;)), HttpStatus.OK);</span>
+                    }
+<span class="nc" id="L784">                }</span>
+            }
+<span class="nc" id="L786">            TaskStoryDTO taskStoryDTO1 = projectService.saveOrUpdateTaskStory(taskStoryDTO);</span>
+<span class="nc bnc" id="L787" title="All 2 branches missed.">            String message = (taskStoryDTO.getTaskRfNum() != null) ? &quot;TASK_STORY-UPDATED-SUCCESS&quot; : &quot;TASK_STORY-CREATED-SUCCESS&quot;;</span>
+<span class="nc" id="L788">            ApiResponse&lt;TaskStoryDTO&gt; response = new ApiResponse&lt;&gt;(taskStoryDTO1, true, message, &quot;Information&quot;);</span>
+<span class="nc" id="L789">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L790">        }  catch (Exception e) {</span>
+<span class="nc" id="L791">            ApiResponse&lt;TaskStoryDTO&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;TASK_STORY-CREATION-FAILURE&quot;, &quot;Error&quot;, Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L792">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getAllTaskStories&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getPaginatedTaskStories(@RequestParam(defaultValue = &quot;1&quot;) int page, @RequestParam(defaultValue = &quot;10&quot;) int size, @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;taskRfNum&quot;, required = false) String sortBy, @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;, required = false) String sortDir, @RequestParam(value = &quot;searchField&quot;, required = false) String searchField, @RequestParam(value = &quot;searchKeyword&quot;, required = false) String searchKeyword) {
+        try {
+<span class="nc" id="L799">            Pageable pageable = PageRequest.of(Math.max(page - 1, 0), size, Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc" id="L800">            Map&lt;String, Object&gt; taskStoryDTOList = projectService.getPaginatedTaskStories(searchField, searchKeyword, pageable);</span>
+<span class="nc" id="L801">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(taskStoryDTOList, true, &quot;TASK-STORY-RETRIEVED-SUCCESS&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L802">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L803">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L804">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;TASK-STORY-RETRIEVAL-FAILURE&quot;, &quot;Warning&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L805">            return ResponseEntity.ok(errorResponse);</span>
+<span class="nc" id="L806">        } catch (Exception ex) {</span>
+<span class="nc" id="L807">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;TASK-STORY-RETRIEVAL-FAILURE&quot;, &quot;Error&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L808">            return ResponseEntity.ok(errorResponse);</span>
+        }
+    }
+    @DeleteMapping(&quot;softDeleteTaskStory/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; deleteDepartment(@PathVariable Integer id) {
+        try {
+<span class="nc" id="L814">            projectService.deleteById(id);</span>
+<span class="nc" id="L815">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(null, true, &quot;ATMCMN_TASK_STORY_DELETED&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L816">        } catch (EntityNotFoundException ex) {</span>
+<span class="nc" id="L817">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_TASK_STORY_NOT_FOUND&quot;, &quot;FAILURE&quot;, Collections.singletonList(&quot;Tasks tory not found with ID: &quot; + id)), HttpStatus.NOT_FOUND);</span>
+<span class="nc" id="L818">        } catch (Exception e) {</span>
+<span class="nc" id="L819">            log.error(&quot;Error occurred while deleting task story&quot;, e);</span>
+<span class="nc" id="L820">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_TASK_STORY_DELETE_ERROR&quot;, &quot;FAILURE&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+    @DeleteMapping(&quot;softDeleteSubTaskStory/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; deleteSubTaskStory(@PathVariable Integer id) {
+        try {
+<span class="nc" id="L826">            projectService.deleteSubTaskById(id);</span>
+<span class="nc" id="L827">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(null, true, &quot;ATMCMN_SUBTASK_STORY_DELETED&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L828">        } catch (EntityNotFoundException ex) {</span>
+<span class="nc" id="L829">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_SUBTASK_STORY_NOT_FOUND&quot;, &quot;FAILURE&quot;, Collections.singletonList(&quot;SubTasks tory not found with ID: &quot; + id)), HttpStatus.OK);</span>
+<span class="nc" id="L830">        } catch (Exception e) {</span>
+<span class="nc" id="L831">            log.error(&quot;Error occurred while deleting SubTasks story&quot;, e);</span>
+<span class="nc" id="L832">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_SUBTASK_STORY_DELETE_ERROR&quot;, &quot;FAILURE&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+    @GetMapping(&quot;/findAllTaskStory&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;TaskStoryDTO&gt;&gt;&gt; getTaskSummary() {
+        try {
+<span class="nc" id="L838">            List&lt;TaskStoryDTO&gt; taskSummary = projectService.getTaskSummary();</span>
+<span class="nc" id="L839">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(taskSummary, true, &quot;ATMCMN_TASK_SUMMARY_FETCHED&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L840">        } catch (Exception e) {</span>
+<span class="nc" id="L841">            log.error(&quot;Error occurred while fetching task summary&quot;, e);</span>
+<span class="nc" id="L842">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_TASK_SUMMARY_FETCH_ERROR&quot;, &quot;FAILURE&quot;, Collections.singletonList(e.getMessage())), HttpStatus.INTERNAL_SERVER_ERROR);</span>
+        }
+    }
+
+    @PostMapping(&quot;/createOrUpdateProjectTemplates&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;ProjectTemplateDTO&gt;&gt; saveOrUpdateProjectTemplate(@Valid @RequestBody ProjectTemplateDTO projectTemplateDTO) {
+        try {
+<span class="nc" id="L849">            ProjectTemplateDTO savedDto = projectService.saveOrUpdateProjectTemplate(projectTemplateDTO);</span>
+<span class="nc bnc" id="L850" title="All 2 branches missed.">            String message = (projectTemplateDTO.getTemplateId() != null) ? &quot;PROJECT_TEMPLATE-UPDATED-SUCCESS&quot; : &quot;PROJECT_TEMPLATE-CREATED-SUCCESS&quot;;</span>
+<span class="nc" id="L851">            ApiResponse&lt;ProjectTemplateDTO&gt; response = new ApiResponse&lt;&gt;(savedDto, true, message, &quot;Information&quot;);</span>
+<span class="nc" id="L852">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L853">        } catch (ValidationException e) {</span>
+<span class="nc" id="L854">            ApiResponse&lt;ProjectTemplateDTO&gt; validationErrorResponse = new ApiResponse&lt;&gt;(null, false, &quot;PROJECT_TEMPLATE_VALIDATION_FAILURE&quot;, &quot;Error&quot;, Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L855">            return ResponseEntity.status(HttpStatus.OK).body(validationErrorResponse);</span>
+<span class="nc" id="L856">        } catch (Exception e) {</span>
+<span class="nc" id="L857">            ApiResponse&lt;ProjectTemplateDTO&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;PROJECT_TEMPLATE_CREATION_FAILURE&quot;, &quot;Error&quot;, Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L858">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getAllProjectTemplates&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getPaginatedProjectTemplates(@RequestParam(defaultValue = &quot;1&quot;) int page, @RequestParam(defaultValue = &quot;10&quot;) int size, @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;templateId&quot;, required = false) String sortBy, @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;, required = false) String sortDir, @RequestParam(value = &quot;searchField&quot;, required = false) String searchField, @RequestParam(value = &quot;searchKeyword&quot;, required = false) String searchKeyword) {
+        try {
+<span class="nc" id="L865">            Pageable pageable = PageRequest.of(Math.max(page - 1, 0), size, Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc" id="L866">            Map&lt;String, Object&gt; projectTemplateList = projectService.getPaginatedProjectTemplates(searchField, searchKeyword, pageable);</span>
+<span class="nc" id="L867">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(projectTemplateList, true, &quot;PROJECT-TEMPLATE-RETRIEVED-SUCCESS&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L868">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L869">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L870">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;PROJECT_TEMPLATE_RETRIEVAL_FAILURE&quot;, &quot;Warning&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L871">            return ResponseEntity.ok(errorResponse);</span>
+<span class="nc" id="L872">        } catch (Exception ex) {</span>
+<span class="nc" id="L873">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;PROJECT_TEMPLATE_RETRIEVAL_FAILURE&quot;, &quot;Error&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L874">            return ResponseEntity.ok(errorResponse);</span>
+        }
+    }
+
+    @DeleteMapping(&quot;/softDeleteProjectTemplate/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; deleteProjectTemplates(@PathVariable Integer id) {
+        try {
+<span class="nc" id="L881">            projectService.deleteByTemplateId(id);</span>
+<span class="nc" id="L882">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(null, true, &quot;ATMCMN_PROJECT_TEMPLATES_DELETED&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L883">        } catch (EntityNotFoundException ex) {</span>
+<span class="nc" id="L884">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_PROJECT_TEMPLATES_FOUND&quot;, &quot;FAILURE&quot;, Collections.singletonList(&quot;Project templates not found with ID: &quot; + id)), HttpStatus.NOT_FOUND);</span>
+<span class="nc" id="L885">        } catch (Exception e) {</span>
+<span class="nc" id="L886">            log.error(&quot;Error occurred while deleting project templates&quot;, e);</span>
+<span class="nc" id="L887">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_PROJECT_TEMPLATES_DELETE_ERROR&quot;, &quot;FAILURE&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+    /*    ------------------------------------------------------------------------------------------*/
+    @PostMapping(&quot;/saveOrUpdate&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;ProjectResponseDTO&gt;&gt; saveOrUpdateProject(@Valid @RequestBody ProjectRequestDTO request) {
+        try {
+<span class="nc" id="L894">            ProjectResponseDTO responseDTO = projectService.saveOrUpdateProject(request);</span>
+<span class="nc bnc" id="L895" title="All 2 branches missed.">            String message = (request.getProjectRfNum() != null) ? &quot;PROJECT-UPDATED-SUCCESS&quot; : &quot;PROJECT-CREATED-SUCCESS&quot;;</span>
+<span class="nc" id="L896">            ApiResponse&lt;ProjectResponseDTO&gt; response = new ApiResponse&lt;&gt;(responseDTO, true, message, &quot;Information&quot;);</span>
+<span class="nc" id="L897">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L898">        } catch (EntityNotFoundException ex) {</span>
+<span class="nc" id="L899">            ApiResponse&lt;ProjectResponseDTO&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;PROJECT-SAVE-OR-UPDATE-FAILURE&quot;, &quot;Warning&quot;, List.of(ex.getMessage()));</span>
+<span class="nc" id="L900">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+<span class="nc" id="L901">        } catch (Exception ex) {</span>
+<span class="nc" id="L902">            ApiResponse&lt;ProjectResponseDTO&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;PROJECT-SAVE-OR-UPDATE-FAILURE&quot;, &quot;Error&quot;, List.of(ex.getMessage()));</span>
+<span class="nc" id="L903">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+    @GetMapping(&quot;getAllData&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getProjectList(@RequestParam(defaultValue = &quot;1&quot;) int page, @RequestParam(defaultValue = &quot;10&quot;) int size, @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;creationDate&quot;, required = false) String sortBy, @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;, required = false) String sortDir, @RequestParam(required = false) String searchColumn, @RequestParam(required = false) String searchValue) {
+        try {
+<span class="nc bnc" id="L909" title="All 2 branches missed.">            if (page &lt; 1) {</span>
+<span class="nc" id="L910">                throw new IllegalArgumentException(&quot;Page index must be 1 or greater.&quot;);</span>
+            }
+
+<span class="nc" id="L913">            Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc" id="L914">            Map&lt;String, Object&gt; projectList = projectService.getPaginatedProjects(pageable, searchColumn, searchValue);</span>
+
+<span class="nc" id="L916">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(projectList, true, &quot;PROJECT-LIST-SUCCESS&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L917">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+
+<span class="nc" id="L919">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L920">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;PROJECT-LIST-FAILURE&quot;, &quot;Warning&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L921">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+<span class="nc" id="L922">        } catch (Exception ex) {</span>
+<span class="nc" id="L923">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;PROJECT-LIST-FAILURE&quot;, &quot;Error&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L924">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getDataById/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;ProjectResponseDTO&gt;&gt; getProjectById(@PathVariable Integer id) {
+        try {
+<span class="nc" id="L931">            ProjectResponseDTO project = projectService.getProjectById(id);</span>
+<span class="nc" id="L932">            ApiResponse&lt;ProjectResponseDTO&gt; response = new ApiResponse&lt;&gt;(project, true, &quot;PROJECT-FOUND&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L933">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L934">        } catch (ResponseStatusException ex) {</span>
+<span class="nc" id="L935">            ApiResponse&lt;ProjectResponseDTO&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;PROJECT-NOT-FOUND&quot;, &quot;Error&quot;, Collections.singletonList(ex.getReason()));</span>
+<span class="nc" id="L936">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/allTasks&quot;)
+    public ResponseEntity&lt;Object&gt; getAllTasks() {
+        try {
+<span class="nc" id="L943">            List&lt;TaskStory&gt; tasks = projectService.getAllTasks();</span>
+
+<span class="nc" id="L945">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(tasks, true, &quot;ALL-TASKS-FETCH-SUCCESS&quot;, &quot;Success&quot;), HttpStatus.OK);</span>
+<span class="nc" id="L946">        } catch (Exception ex) {</span>
+<span class="nc" id="L947">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ALL-TASKS-FETCH-FAILURE&quot;, &quot;ERROR&quot;, Collections.singletonList(ex.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getProjectTemplateById/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;ProjectTemplateDTO&gt;&gt; getProjectTemplateById(@PathVariable Integer id) {
+        try {
+<span class="nc" id="L954">            ProjectTemplateDTO dto = projectService.getProjectTemplateById(id);</span>
+<span class="nc" id="L955">            ApiResponse&lt;ProjectTemplateDTO&gt; response = new ApiResponse&lt;&gt;(dto, true, &quot;PROJECT-TEMPLATE-FETCH-SUCCESS&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L956">            return ResponseEntity.ok(response);</span>
+
+<span class="nc" id="L958">        } catch (EntityNotFoundException e) {</span>
+<span class="nc" id="L959">            ApiResponse&lt;ProjectTemplateDTO&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;PROJECT-TEMPLATE-NOT-FOUND&quot;, &quot;NotFound&quot;, Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L960">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+
+<span class="nc" id="L962">        } catch (Exception e) {</span>
+<span class="nc" id="L963">            ApiResponse&lt;ProjectTemplateDTO&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;PROJECT-TEMPLATE-FETCH-ERROR&quot;, &quot;Error&quot;, Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L964">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+        }
+    }
+
+    @GetMapping(&quot;/nonAssociateEmployeesByProjectId/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; getNonAssociateEmployees(@PathVariable Integer id) {
+        try {
+<span class="nc" id="L971">            List&lt;Map&lt;String, Object&gt;&gt; nonAssociateEmployees = projectService.getNonAssociateEmployees(id);</span>
+<span class="nc" id="L972">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(nonAssociateEmployees, true, &quot;EMPLOYEE_LIST_FETCHED&quot;, &quot;Success&quot;));</span>
+<span class="nc" id="L973">        } catch (Exception e) {</span>
+<span class="nc" id="L974">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;EMPLOYEE_LIST_FETCHED_ERROR&quot;, &quot;Error&quot;, Collections.singletonList(&quot;Error fetching employee list.&quot;)));</span>
+        }
+    }
+
+    @PostMapping(&quot;/addEmployeeInProject/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; saveEmployeeInProject(@PathVariable Integer id, @RequestParam(&quot;employeeIds&quot;) Integer[] employeeIds) {
+        try {
+<span class="nc" id="L981">            List&lt;ProjectAllocation&gt; projectAllocations = projectService.saveEmployeeInProject(id, employeeIds);</span>
+<span class="nc" id="L982">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(projectAllocations, true, &quot;EMPLOYEES_ADDED_SUCCESS&quot;, &quot;Success&quot;));</span>
+<span class="nc" id="L983">        } catch (Exception e) {</span>
+<span class="nc" id="L984">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;EMPLOYEES_ADDED_ERROR&quot;, &quot;Error&quot;, Collections.singletonList(&quot;Error saving employees.&quot;)));</span>
+        }
+    }
+
+    @GetMapping(&quot;/getAllProjectAllocation/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; getAllProjectAllocation(
+            @PathVariable Integer id,
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;projectAllocationId&quot;, required = false) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;, required = false) String sortDir,
+            @RequestParam(value = &quot;searchKeyword&quot;, required = false) String searchKeyword,
+            @RequestParam(value = &quot;searchField&quot;, required = false) String searchField
+    ) {
+       try {
+<span class="nc" id="L999">           Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc bnc" id="L1000" title="All 2 branches missed.">           if (&quot;employeeName&quot;.equals(sortBy)) {</span>
+<span class="nc" id="L1001">               sort = Sort.by(Sort.Direction.fromString(sortDir), &quot;employee.firstName&quot;);</span>
+<span class="nc bnc" id="L1002" title="All 2 branches missed.">           } else if (&quot;employeeNumber&quot;.equals(sortBy)) {</span>
+<span class="nc" id="L1003">               sort = Sort.by(Sort.Direction.fromString(sortDir), &quot;employee.employeeNumber&quot;);</span>
+<span class="nc bnc" id="L1004" title="All 2 branches missed.">           } else if (&quot;projectId&quot;.equals(sortBy)) {</span>
+<span class="nc" id="L1005">               sort = Sort.by(Sort.Direction.fromString(sortDir), &quot;project.projectId&quot;);</span>
+           }
+<span class="nc" id="L1007">           Pageable pageable = PageRequest.of(page - 1, size, sort);</span>
+<span class="nc" id="L1008">           Map&lt;String, Object&gt; allProjectAllocation = projectService.getAllProjectAllocation(pageable, searchField, searchKeyword, id);</span>
+<span class="nc" id="L1009">           return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(allProjectAllocation, true, &quot;PROJECT_ALLOCATION_LIST_FETCHED_SUCCESS&quot;, &quot;Success&quot;));</span>
+<span class="nc" id="L1010">       } catch (Exception e) {</span>
+<span class="nc" id="L1011">           return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;PROJECT_ALLOCATION_LIST_FETCHED_ERROR&quot;, &quot;Error&quot;, Collections.singletonList(&quot;Error fetching project allocation list.&quot;)));</span>
+       }
+    }
+
+    @GetMapping(&quot;/findSubTaskByProjectId/{projectId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;TaskStoryDTO&gt;&gt;&gt; getSubTaskListByProjectId(@PathVariable Integer projectId) {
+        try {
+<span class="nc" id="L1018">            List&lt;TaskStoryDTO&gt; taskSummary = projectService.getSubTaskByProjectId(projectId);</span>
+<span class="nc" id="L1019">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(taskSummary, true, &quot;SUB_TASK_BY_PROJECT_ID_FETCHED&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L1020">        } catch (Exception e) {</span>
+<span class="nc" id="L1021">            log.error(&quot;Error occurred while fetching sub task list by project id&quot;, e);</span>
+<span class="nc" id="L1022">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;SUB_TASK_BY_PROJECT_ID_FETCHED_ERROR&quot;, &quot;FAILURE&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+
+    @PostMapping(&quot;/updateAllocatedEmployee&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;ProjectAllocation&gt;&gt; updateAllocatedEmployee(@RequestBody ProjectAllocationDTO dto) {
+        try {
+<span class="nc" id="L1029">            ProjectAllocation allocation = projectService.updateAllocatedEmployee(dto);</span>
+<span class="nc" id="L1030">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(allocation, true, &quot;ALLOCATION_UPDATED_SUCCESSFULLY&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L1031">        } catch (Exception e) {</span>
+<span class="nc" id="L1032">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ALLOCATION_UPDATE_ERROR&quot;, &quot;ERROR&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+
+    @DeleteMapping(&quot;/deleteAllocatedEmployees/{projectAllocationId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; deleteAllocatedEmployees(@PathVariable Integer projectAllocationId) {
+        try {
+<span class="nc" id="L1039">            projectService.deleteProjectAllocationId(projectAllocationId);</span>
+<span class="nc" id="L1040">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(null, true, &quot;PROJECT_ALLOCATION_DELETED_SUCCESSFULLY&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L1041">        } catch (Exception e) {</span>
+<span class="nc" id="L1042">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;PROJECT_ALLOCATION_DELETION_ERROR&quot;, &quot;ERROR&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+    @GetMapping(&quot;/getPriceElement&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;PriceElementDTO&gt;&gt;&gt; getAllPriceElements() {
+        try {
+<span class="nc" id="L1048">            List&lt;PriceElementDTO&gt; priceElements = projectService.getAllPriceElements();</span>
+<span class="nc" id="L1049">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(priceElements, true, &quot;PRICE_ELEMENTS_FETCHED&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L1050">        } catch (Exception e) {</span>
+<span class="nc" id="L1051">            log.error(&quot;Error occurred while fetching price elements&quot;, e);</span>
+<span class="nc" id="L1052">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;PRICE_ELEMENTS_FETCH_ERROR&quot;, &quot;FAILURE&quot;, Collections.singletonList(e.getMessage())), HttpStatus.INTERNAL_SERVER_ERROR);</span>
+        }
+    }
+    @GetMapping(&quot;/findUserProjectAllocations&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;ObjectNode&gt;&gt; getAllEmployeesAccount(
+            @RequestParam(value = &quot;page&quot;, defaultValue = &quot;1&quot;) int page,
+            @RequestParam(value = &quot;size&quot;, defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;employeeId&quot;) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;) String sortDir,
+            @RequestParam(value = &quot;searchKeyword&quot;, required = false) String searchKeyword,
+            @RequestParam(value = &quot;searchField&quot;, required = false) String searchField) {
+        try {
+<span class="nc" id="L1064">            Page&lt;EmployeeProjectDTO&gt; employeePage = projectService.getEmployeeProjectDetails(</span>
+                    page, size, sortBy, sortDir, searchKeyword, searchField);
+<span class="nc" id="L1066">            ObjectNode responseData = objectMapper.createObjectNode();</span>
+<span class="nc" id="L1067">            responseData.set(&quot;result&quot;, objectMapper.valueToTree(employeePage.getContent()));</span>
+<span class="nc" id="L1068">            responseData.put(&quot;totalElements&quot;, employeePage.getTotalElements());</span>
+<span class="nc" id="L1069">            responseData.put(&quot;totalPages&quot;, employeePage.getTotalPages());</span>
+<span class="nc" id="L1070">            responseData.put(&quot;pageSize&quot;, size);</span>
+<span class="nc" id="L1071">            responseData.put(&quot;currentPage&quot;, page);</span>
+<span class="nc" id="L1072">            ApiResponse&lt;ObjectNode&gt; apiResponse = new ApiResponse&lt;&gt;(</span>
+                    responseData, true, &quot;EMPLOYEE-PROJECT-DETAILS-FOUND&quot;, &quot;SUCCESS&quot;);
+<span class="nc" id="L1074">            return ResponseEntity.ok(apiResponse);</span>
+<span class="nc" id="L1075">        } catch (Exception e) {</span>
+<span class="nc" id="L1076">            log.error(&quot;Failed to fetch employee project details&quot;, e);</span>
+<span class="nc" id="L1077">            ApiResponse&lt;ObjectNode&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null, false, &quot;EMPLOYEE-PROJECT-DETAILS-FETCH-ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L1079">                    Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L1080">            return new ResponseEntity&lt;&gt;(errorResponse, HttpStatus.OK);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getUserProjectAllocationDetails&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;ObjectNode&gt;&gt; getUserProjectAllocationDetails(
+            @RequestParam Integer employeeId,
+            @RequestParam(value = &quot;page&quot;, defaultValue = &quot;1&quot;) int page,
+            @RequestParam(value = &quot;size&quot;, defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;startDate&quot;) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;) String sortDir,
+            @RequestParam(value = &quot;searchField&quot;, required = false) String searchField,
+            @RequestParam(value = &quot;searchKeyword&quot;, required = false) String searchKeyword) {
+        try {
+<span class="nc" id="L1094">            Page&lt;EmployeeProjectAllocationDTO&gt; allocationPage = projectService.getProjectAllocationsByEmployeeId(</span>
+                    employeeId, page, size, sortBy, sortDir,searchField, searchKeyword);
+<span class="nc" id="L1096">            ObjectNode responseData = objectMapper.createObjectNode();</span>
+<span class="nc" id="L1097">            responseData.set(&quot;result&quot;, objectMapper.valueToTree(allocationPage.getContent()));</span>
+<span class="nc" id="L1098">            responseData.put(&quot;totalElements&quot;, allocationPage.getTotalElements());</span>
+<span class="nc" id="L1099">            responseData.put(&quot;totalPages&quot;, allocationPage.getTotalPages());</span>
+<span class="nc" id="L1100">            responseData.put(&quot;pageSize&quot;, size);</span>
+<span class="nc" id="L1101">            responseData.put(&quot;currentPage&quot;, page);</span>
+<span class="nc" id="L1102">            ApiResponse&lt;ObjectNode&gt; apiResponse = new ApiResponse&lt;&gt;(</span>
+                    responseData, true, &quot;USER-PROJECT-ALLOCATIONS-FOUND&quot;, &quot;SUCCESS&quot;);
+<span class="nc" id="L1104">            return ResponseEntity.ok(apiResponse);</span>
+<span class="nc" id="L1105">        } catch (Exception e) {</span>
+<span class="nc" id="L1106">            ApiResponse&lt;ObjectNode&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null, false, &quot;USER-PROJECT-ALLOCATIONS-FETCH-ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L1108">                    Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L1109">            return new ResponseEntity&lt;&gt;(errorResponse, HttpStatus.OK);</span>
+        }
+    }
+
+    @GetMapping(&quot;/projectDropdownList&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; getProjectDropdownList() {
+        try {
+<span class="nc" id="L1116">            List&lt;Map&lt;String, Object&gt;&gt; projectDropdownList = projectService.getProjectDropdownList();</span>
+<span class="nc" id="L1117">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(projectDropdownList, true, &quot;PROJECT_LIST_FETCHED_SUCCESS&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L1118">        } catch (Exception e) {</span>
+<span class="nc" id="L1119">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;PROJECT_LIST_FETCHED_ERROR&quot;, &quot;ERROR&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getAllMilestoneList&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getAllProjectMilestones(
+            @RequestParam(value = &quot;page&quot;, defaultValue = &quot;1&quot;) int page,
+            @RequestParam(value = &quot;size&quot;, defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;projectMilestoneId&quot;) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;) String sortDir,
+            @RequestParam(value = &quot;searchKeyword&quot;, required = false) String searchKeyword,
+            @RequestParam(value = &quot;searchField&quot;, required = false) String searchField,
+            @RequestParam(value = &quot;projectRfNum&quot;) Integer projectRfNum
+    ) {
+<span class="nc" id="L1133">        log.debug(&quot;REST request to get paginated project milestones&quot;);</span>
+        try {
+<span class="nc" id="L1135">            Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc" id="L1136">            Map&lt;String, Object&gt; milestoneMap = projectService.getPaginatedMilestonesByProjectRfNum(projectRfNum, pageable, searchField, searchKeyword);</span>
+
+
+<span class="nc" id="L1139">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    milestoneMap,
+                    true,
+                    &quot;PROJECT-MILESTONES-FETCHED&quot;,
+                    &quot;SUCCESS&quot;
+            );
+<span class="nc" id="L1145">            return ResponseEntity.ok(response);</span>
+
+<span class="nc" id="L1147">        } catch (Exception e) {</span>
+<span class="nc" id="L1148">            log.error(&quot;Error fetching project milestones&quot;, e);</span>
+<span class="nc" id="L1149">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;PROJECT-MILESTONES-FETCH-ERROR&quot;,
+                    &quot;FAILURE&quot;,
+<span class="nc" id="L1154">                    Collections.singletonList(e.getMessage())</span>
+            );
+<span class="nc" id="L1156">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+    @GetMapping(&quot;/milestones/byprojectrfnum&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getMilestonesByProjectRfNum(
+            @RequestParam Integer projectRfNum) {
+
+        try {
+<span class="nc" id="L1164">            Map&lt;String, Object&gt; responseData = projectService.getProjectMilestonesByProjectRfNum(projectRfNum);</span>
+
+<span class="nc" id="L1166">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(responseData, true, &quot;PROJECT-MILESTONES-FETCHED&quot;, &quot;SUCCESS&quot;);</span>
+<span class="nc" id="L1167">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L1168">        } catch (Exception e) {</span>
+<span class="nc" id="L1169">            log.error(&quot;Error fetching milestones by project RF number&quot;, e);</span>
+<span class="nc" id="L1170">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;PROJECT-MILESTONES-FETCH-ERROR&quot;, &quot;FAILURE&quot;, Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L1171">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);</span>
+        }
+    }
+
+
+
+    @GetMapping(&quot;/projectListBasedOnLoggedInUser&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Project&gt;&gt;&gt; projectListLoggedInUser() {
+        try {
+<span class="nc" id="L1180">            List&lt;Project&gt; projects = projectService.projectLIstLoggedInUser();</span>
+<span class="nc" id="L1181">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(projects, true, &quot;PROJECT_LIST_FETCHED_SUCCESS&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L1182">        } catch (Exception e) {</span>
+<span class="nc" id="L1183">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;PROJECT_LIST_FETCHED_ERROR&quot;, &quot;ERROR&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+
+    @PostMapping(&quot;/milestones/save&quot;)
+    public ResponseEntity&lt;?&gt; saveOrUpdateMilestone(@RequestBody ProjectMilestoneDTO dto) {
+        try {
+<span class="nc" id="L1190">            ProjectMilestone savedMilestone = projectService.saveOrUpdateProjectMilestone(dto);</span>
+
+<span class="nc bnc" id="L1192" title="All 2 branches missed.">            String responseCode = (dto.getProjectMilestoneId() == null)</span>
+<span class="nc" id="L1193">                    ? &quot;PROJECT_MILESTONE_CREATED&quot;</span>
+<span class="nc" id="L1194">                    : &quot;PROJECT_MILESTONE_UPDATED&quot;;</span>
+<span class="nc" id="L1195">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(savedMilestone, true, responseCode, &quot;SUCCESS&quot;),
+                    HttpStatus.CREATED
+            );
+<span class="nc" id="L1199">        } catch (IllegalArgumentException e) {</span>
+<span class="nc" id="L1200">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_PROJECT_MILESTONE_DUPLICATE&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L1202">                            Collections.singletonList(e.getMessage())),</span>
+                    HttpStatus.OK
+            );
+<span class="nc" id="L1205">        } catch (Exception e) {</span>
+<span class="nc" id="L1206">            log.error(&quot;Error occurred while saving Project Milestone&quot;, e);</span>
+<span class="nc" id="L1207">            return new ResponseEntity&lt;&gt;(</span>
+<span class="nc" id="L1208">                    new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_PROJECT_MILESTONE_SAVE_ERROR&quot;, &quot;FAILURE&quot;, Collections.singletonList(e.getMessage())), HttpStatus.INTERNAL_SERVER_ERROR</span>
+            );
+        }
+    }
+
+    @GetMapping(&quot;/milestone/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;ProjectMilestoneDTO&gt;&gt; getProjectMilestoneById(@PathVariable Integer id) {
+        try {
+<span class="nc" id="L1216">            ProjectMilestoneDTO dto = projectService.getProjectMilestoneById(id);</span>
+<span class="nc" id="L1217">            ApiResponse&lt;ProjectMilestoneDTO&gt; response = new ApiResponse&lt;&gt;(dto, true, &quot;MILESTONE-FETCHED&quot;, &quot;SUCCESS&quot;);</span>
+<span class="nc" id="L1218">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L1219">        } catch (EntityNotFoundException ex) {</span>
+<span class="nc" id="L1220">            ApiResponse&lt;ProjectMilestoneDTO&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;MILESTONE-NOT-FOUND&quot;, &quot;FAILURE&quot;, List.of(ex.getMessage()));</span>
+<span class="nc" id="L1221">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L1222">        } catch (Exception e) {</span>
+<span class="nc" id="L1223">            ApiResponse&lt;ProjectMilestoneDTO&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;MILESTONE-FETCH-ERROR&quot;, &quot;FAILURE&quot;, List.of(e.getMessage()));</span>
+<span class="nc" id="L1224">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);</span>
+        }
+    }
+
+    @PutMapping(&quot;/milestones/remove/{id}&quot;)
+    public ResponseEntity&lt;?&gt; softDeleteMilestone(@PathVariable Integer id) {
+        try {
+<span class="nc" id="L1231">            projectService.softDeleteProjectMilestone(id);</span>
+<span class="nc" id="L1232">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(null, true, &quot;PROJECT_MILESTONE_REMOVED&quot;, &quot;SUCCESS&quot;),
+                    HttpStatus.OK
+            );
+<span class="nc" id="L1236">        } catch (EntityNotFoundException e) {</span>
+<span class="nc" id="L1237">            return new ResponseEntity&lt;&gt;(</span>
+<span class="nc" id="L1238">                    new ApiResponse&lt;&gt;(null, false, &quot;PROJECT_MILESTONE_NOT_FOUND&quot;, &quot;FAILURE&quot;, List.of(e.getMessage())),</span>
+                    HttpStatus.NOT_FOUND
+            );
+<span class="nc" id="L1241">        } catch (Exception e) {</span>
+<span class="nc" id="L1242">            return new ResponseEntity&lt;&gt;(</span>
+<span class="nc" id="L1243">                    new ApiResponse&lt;&gt;(null, false, &quot;PROJECT_MILESTONE_REMOVE_ERROR&quot;, &quot;FAILURE&quot;, List.of(e.getMessage())),</span>
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    @GetMapping(&quot;/taskByMilestoneId/{projectMilestoneId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;TaskStoryDTO&gt;&gt;&gt; findTaskByMilestoneId(@PathVariable Integer projectMilestoneId) {
+        try {
+<span class="nc" id="L1252">            List&lt;TaskStoryDTO&gt; taskSummary = projectService.getTaskByProjectMilestoneId(projectMilestoneId);</span>
+
+<span class="nc bnc" id="L1254" title="All 4 branches missed.">            if (taskSummary == null || taskSummary.isEmpty()) {</span>
+<span class="nc" id="L1255">                return ResponseEntity.ok(new ApiResponse&lt;&gt;(</span>
+                        null,
+                        false,
+                        &quot;NO_TASK_FOUND_FOR_GIVEN_PROJECT_MILESTONE_ID&quot;,
+                        &quot;FAILURE&quot;,
+<span class="nc" id="L1260">                        Collections.singletonList(&quot;No task found for Project Milestone ID: &quot; + projectMilestoneId)</span>
+                ));
+            }
+<span class="nc" id="L1263">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(</span>
+                    taskSummary,
+                    true,
+                    &quot;TASK_BY_PROJECT_MILESTONE_ID_FETCHED&quot;,
+                    &quot;SUCCESS&quot;
+            ));
+<span class="nc" id="L1269">        } catch (Exception e) {</span>
+<span class="nc" id="L1270">            log.error(&quot;Error occurred while fetching task list by Project Milestone Id&quot;, e);</span>
+<span class="nc" id="L1271">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;TASK_BY_PROJECT_MILESTONE_ID_FETCHED_ERROR&quot;,
+                    &quot;FAILURE&quot;,
+<span class="nc" id="L1276">                    Collections.singletonList(e.getMessage())</span>
+            ));
+        }
+    }
+
+    @GetMapping(&quot;/projectTemplateDropdownList&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; getProjectTemplateDropdownList() {
+        try {
+<span class="nc" id="L1284">            List&lt;Map&lt;String, Object&gt;&gt; projectDropdownList = projectService.getProjectTemplateDropdownList();</span>
+<span class="nc" id="L1285">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(projectDropdownList, true, &quot;PROJECT_TEMPLATE_LIST_FETCHED_SUCCESS&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L1286">        } catch (Exception e) {</span>
+<span class="nc" id="L1287">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;PROJECT_TEMPLATE_LIST_FETCHED_ERROR&quot;, &quot;ERROR&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

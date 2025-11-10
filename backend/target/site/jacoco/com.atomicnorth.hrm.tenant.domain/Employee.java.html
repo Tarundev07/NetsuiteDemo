@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Employee.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.domain</a> &gt; <span class="el_source">Employee.java</span></div><h1>Employee.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.domain;
+
+
+import com.atomicnorth.hrm.tenant.domain.accessgroup.SesM00UserDivisionMaster;
+import com.atomicnorth.hrm.tenant.domain.attendance.AttendanceMoaf;
+import com.atomicnorth.hrm.tenant.domain.designation.Designation;
+import com.atomicnorth.hrm.tenant.domain.project.ProjectAllocationHistory;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+
+import javax.persistence.*;
+import java.io.Serializable;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+<span class="pc" id="L27">@Setter</span>
+@Getter
+<span class="nc" id="L29">@AllArgsConstructor</span>
+<span class="fc" id="L30">@NoArgsConstructor</span>
+<span class="nc" id="L31">@ToString</span>
+@Entity
+@Table(name = &quot;emp_employee_master&quot;)
+@Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
+public class Employee implements Serializable {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = &quot;EMPLOYEE_ID&quot;)
+<span class="fc" id="L40">    private Integer employeeId;</span>
+
+    @Column(name = &quot;EMPLOYEE_NUMBER&quot;, length = 50, nullable = false, unique = true)
+<span class="fc" id="L43">    private String employeeNumber;  // list</span>
+
+    @Column(name = &quot;SALUTATION&quot;, nullable = false, length = 10)
+<span class="fc" id="L46">    private String salutation;</span>
+
+    @Column(name = &quot;FIRST_NAME&quot;, nullable = false)
+<span class="fc" id="L49">    private String firstName; //list</span>
+
+    @Column(name = &quot;MIDDLE_NAME&quot;, length = 100)
+<span class="fc" id="L52">    private String middleName;</span>
+
+    @Column(name = &quot;LAST_NAME&quot;)
+<span class="fc" id="L55">    private String lastName; //list</span>
+
+    @Column(name = &quot;DISPLAY_NAME&quot;, length = 100)
+<span class="fc" id="L58">    private String displayName; //list</span>
+
+    @Column(name = &quot;DOB&quot;, nullable = false)
+<span class="fc" id="L61">    private LocalDate dob;</span>
+
+    @Column(name = &quot;GENDER_CODE&quot;, nullable = false, length = 50)
+<span class="fc" id="L64">    private String genderCode;</span>
+
+    @Column(name = &quot;DIVISION_ID&quot;, nullable = false)
+<span class="fc" id="L67">    private Integer divisionId; // Id or Primary Key</span>
+
+    @Column(name = &quot;DEPARTMENT_ID&quot;, nullable = false)
+<span class="fc" id="L70">    private Long departmentId; //name list</span>
+
+    @Column(name = &quot;DESIGNATION_ID&quot;)
+<span class="fc" id="L73">    private Integer designationId;</span>
+
+    @Column(name = &quot;REPORTING_MANAGER_ID&quot;)
+<span class="fc" id="L76">    private Integer reportingManagerId; //name list</span>
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = &quot;REPORTING_MANAGER_ID&quot;, referencedColumnName = &quot;EMPLOYEE_ID&quot;, insertable = false, updatable = false)
+<span class="nc" id="L80">    private Employee reportingManager;</span>
+
+    @OneToMany(mappedBy = &quot;employee&quot;)
+<span class="nc" id="L83">    private Set&lt;ProjectAllocationHistory&gt; allocations;</span>
+
+    @Column(name = &quot;HR_MANAGER_ID&quot;)
+<span class="fc" id="L86">    private Integer hrManagerId; // name list</span>
+
+    @Column(name = &quot;IS_VERIFIED&quot;, length = 1)
+<span class="fc" id="L89">    private String isVerified;</span>
+
+    @Column(name = &quot;NATIONALITY&quot;, nullable = false, length = 50)
+<span class="fc" id="L92">    private Integer nationality;</span>
+
+    @Column(name = &quot;IS_ACTIVE&quot;, length = 50)
+<span class="fc" id="L95">    private String isActive;  //list</span>
+
+    @Column(name = &quot;EMPLOYEE_TYPE&quot;, length = 50)
+<span class="fc" id="L98">    private String employeeType; //list</span>
+
+    @Column(name = &quot;EMPLOYMENT_TYPE_CODE&quot;, length = 50)
+<span class="nc" id="L101">    private String employmentType; //list</span>
+
+    @Column(name = &quot;EFFECTIVE_START_DATE&quot;)
+<span class="fc" id="L104">    private LocalDate effectiveStartDate; //list</span>
+
+    @Column(name = &quot;EFFECTIVE_END_DATE&quot;)
+<span class="fc" id="L107">    private LocalDate effectiveEndDate; //list</span>
+
+    @Column(name = &quot;UNIQUE_IDENTIFIER&quot;, length = 50)
+<span class="fc" id="L110">    private String uniqueIdentifier;</span>
+
+    @Column(name = &quot;PAN&quot;, length = 50, unique = true, nullable = false)
+<span class="fc" id="L113">    private String panNumber;</span>
+
+    @Column(name = &quot;AADHAR_NUMBER&quot;, unique = true, length = 50, nullable = false)
+<span class="fc" id="L116">    private String aadhaarNumber;</span>
+
+    @Column(name = &quot;PASSPORT_NUMBER&quot;, length = 50)
+<span class="fc" id="L119">    private String passportNumber;</span>
+
+    @Column(name = &quot;DL_NUMBER&quot;, length = 50)
+<span class="fc" id="L122">    private String dlNumber;</span>
+
+    @Column(name = &quot;BUSINESS_GROUP_ID&quot;, nullable = false, length = 50)
+<span class="fc" id="L125">    private String businessGroupId;</span>
+
+    @Column(name = &quot;POLICY_GROUP&quot;, nullable = false, length = 50)
+<span class="fc" id="L128">    private String policyGroup;</span>
+
+    @Column(name = &quot;MOTHER_TONGUE&quot;, length = 50)
+<span class="fc" id="L131">    private String motherTongue;</span>
+
+    @Column(name = &quot;MARITAL_STATUS&quot;, length = 50, nullable = false)
+<span class="fc" id="L134">    private String maritalStatus;</span>
+
+    @Column(name = &quot;MARRIAGE_DATE&quot;)
+<span class="fc" id="L137">    private LocalDate marriageDate;</span>
+
+    @Column(name = &quot;SPOUSE_NAME&quot;, length = 50)
+<span class="fc" id="L140">    private String spouseName;</span>
+
+    @Column(name = &quot;FATHER_NAME&quot;, length = 100)
+<span class="fc" id="L143">    private String fatherName;</span>
+
+    @Column(name = &quot;MOTHER_NAME&quot;, length = 100)
+<span class="fc" id="L146">    private String motherName;</span>
+
+    @Column(name = &quot;PERSONAL_EMAIL&quot;, length = 100)
+<span class="fc" id="L149">    private String personalEmail;  //list</span>
+
+    @Column(name = &quot;WORK_EMAIL&quot;, length = 100)
+<span class="fc" id="L152">    private String workEmail;</span>
+
+    @Column(name = &quot;PRIMARY_CONTACT_NUMBER&quot;, length = 100)
+<span class="fc" id="L155">    private String primaryContactNumber; //list</span>
+
+    @Column(name = &quot;PRIMARY_CONTACT_COUNTRY_CODE&quot;, length = 5)
+<span class="fc" id="L158">    private String primaryContactCountryCode;</span>
+
+    @Column(name = &quot;SECONDARY_CONTACT_NUMBER&quot;, length = 100)
+<span class="fc" id="L161">    private String secondaryContactNumber;</span>
+
+    @Column(name = &quot;SECONDARY_CONTACT_COUNTRY_CODE&quot;, length = 5)
+<span class="fc" id="L164">    private String secondaryContactCountryCode;</span>
+
+    @Column(name = &quot;PRIMARY_EMERGENCY_CONTACT_NAME&quot;, length = 100)
+<span class="fc" id="L167">    private String primaryEmergencyContactName;</span>
+
+    @Column(name = &quot;PRIMARY_EMERGENCY_CONTACT_RELATION&quot;, length = 100)
+<span class="fc" id="L170">    private String primaryEmergencyContactRelation;</span>
+
+    @Column(name = &quot;PRIMARY_EMERGENCY_CONTACT_NUMBER&quot;, length = 100)
+<span class="fc" id="L173">    private String primaryEmergencyContactNumber;</span>
+
+    @Column(name = &quot;PRIMARY_EMERGENCY_CONTACT_COUNTRY_CODE&quot;, length = 5)
+<span class="fc" id="L176">    private String primaryEmergencyContactCountryCode;</span>
+
+    @Column(name = &quot;SECONDARY_EMERGENCY_CONTACT_NAME&quot;, length = 100)
+<span class="fc" id="L179">    private String secondaryEmergencyContactName;</span>
+
+    @Column(name = &quot;SECONDARY_EMERGENCY_CONTACT_RELATION&quot;, length = 100)
+<span class="fc" id="L182">    private String secondaryEmergencyContactRelation;</span>
+
+    @Column(name = &quot;SECONDARY_EMERGENCY_CONTACT_NUMBER&quot;, length = 100)
+<span class="fc" id="L185">    private String secondaryEmergencyContactNumber;</span>
+
+    @Column(name = &quot;SECONDARY_EMERGENCY_CONTACT_COUNTRY_CODE&quot;, length = 5)
+<span class="fc" id="L188">    private String secondaryEmergencyContactCountryCode;</span>
+
+    @Column(name = &quot;WEBSITE_URL&quot;, length = 100)
+<span class="fc" id="L191">    private String websiteUrl;</span>
+
+    @Column(name = &quot;LINKEDIN_URL&quot;, length = 100)
+<span class="fc" id="L194">    private String linkedinUrl;</span>
+
+    @Column(name = &quot;BIRTH_PLACE&quot;, length = 200)
+<span class="fc" id="L197">    private String birthPlace;</span>
+
+    @Column(name = &quot;ON_BOARDING_DATE&quot;)
+<span class="fc" id="L200">    private LocalDate onBoardingDate;  //list</span>
+
+    @Column(name = &quot;OFF_BOARDING_DATE&quot;)
+<span class="fc" id="L203">    private LocalDate offBoardingDate;  //list</span>
+
+    @Column(name = &quot;BASE_LOCATION&quot;, columnDefinition = &quot;TEXT&quot;)
+<span class="fc" id="L206">    private String baseLocation;</span>
+
+    /*MEDICAL INFO*/
+    @Column(name = &quot;BLOOD_GROUP&quot;, columnDefinition = &quot;TEXT&quot;)
+<span class="fc" id="L210">    private String bloodGroup;</span>
+
+    @Column(name = &quot;FITNESS_LEVEL&quot;, columnDefinition = &quot;TEXT&quot;)
+<span class="fc" id="L213">    private String fitnessLevel;</span>
+
+    @Column(name = &quot;DISABILITY&quot;, columnDefinition = &quot;TEXT&quot;)
+<span class="fc" id="L216">    private String disability;</span>
+
+    @Column(name = &quot;DISABILITY_PERCENTAGE&quot;, columnDefinition = &quot;TEXT&quot;)
+<span class="fc" id="L219">    private String disabilityPercentage;</span>
+
+    @Column(name = &quot;DESCRIPTION_MEDICAL_INFO&quot;, columnDefinition = &quot;TEXT&quot;)
+<span class="fc" id="L222">    private String descriptionMedicalInfo;</span>
+
+    @Column(name = &quot;RETIREMENT_DATE&quot;)
+<span class="fc" id="L225">    private LocalDate retirementDate;</span>
+    @Column(name = &quot;CONFIRMATION_DATE&quot;)
+<span class="fc" id="L227">    private LocalDate confirmationDate;</span>
+    @Column(name = &quot;NOTICE_DAYS&quot;)
+<span class="fc" id="L229">    private Integer noticeDays;//list</span>
+
+    @Column(name = &quot;PAYROLL_COST_CENTER_CODE&quot;, nullable = false, length = 100)
+<span class="fc" id="L232">    private String payrollCostCenterCode;  //lookup done</span>
+    @Column(name = &quot;CTC&quot;)
+<span class="fc" id="L234">    private Long ctc;</span>
+    @Column(name = &quot;CURRENCY_CODE&quot;, nullable = false)
+<span class="fc" id="L236">    private String currencyCode; //lookup Done</span>
+    @Column(name = &quot;SALARY_MODE_CODE&quot;, nullable = false)
+<span class="fc" id="L238">    private String salaryModeCode; // lookup done</span>
+    @Column(name = &quot;PF_NUM&quot;)
+<span class="fc" id="L240">    private String pfNum;</span>
+    @Column(name = &quot;DATE_OF_ISSUE_PASSPORT&quot;)
+<span class="fc" id="L242">    private LocalDate dateOfIssuePassport;</span>
+    @Column(name = &quot;PLACE_OF_ISSUE_PASSPORT&quot;)
+<span class="fc" id="L244">    private String placeOfIssuePassport;</span>
+    @Column(name = &quot;VALID_UPTO_PASSPORT&quot;)
+<span class="fc" id="L246">    private LocalDate validUpToPassport;</span>
+    @Column(name = &quot;RESIGNATION_DATE&quot;)
+<span class="fc" id="L248">    private LocalDate resignationDate;</span>
+
+    @Column(name = &quot;EMP_GRADE_ID&quot;)
+<span class="fc" id="L251">    private String empGradeId; //list</span>
+    @Column(name = &quot;EMP_BRANCH&quot;)
+<span class="fc" id="L253">    private String empBranch; //list</span>
+    @Column(name = &quot;HOLIDAY_LIST_ID&quot;, nullable = false)
+<span class="fc" id="L255">    private Integer holidayListId;//pending</span>
+    @Column(name = &quot;DEFAULT_SHIFT_ID&quot;, nullable = false)
+<span class="fc" id="L257">    private Integer defaultShiftId;// list</span>
+    @Column(name = &quot;JOB_APPLICANT_ID&quot;, nullable = false)
+<span class="fc" id="L259">    private Integer jobApplicantId;</span>
+    @Column(name = &quot;OFFER_DATE&quot;)
+<span class="fc" id="L261">    private LocalDate offerDate;</span>
+
+
+    @Column(name = &quot;CREATION_DATE&quot;)
+<span class="fc" id="L265">    private LocalDate creationDate;</span>
+
+    @Column(name = &quot;CREATED_BY&quot;, length = 30)
+<span class="fc" id="L268">    private String createdBy;</span>
+
+    @Column(name = &quot;LAST_UPDATED_BY&quot;, length = 50)
+<span class="fc" id="L271">    private String lastUpdatedBy;</span>
+
+    @Column(name = &quot;LAST_UPDATED_DATE&quot;)
+<span class="fc" id="L274">    private LocalDate lastUpdateDate;</span>
+
+    @Transient
+<span class="nc" id="L277">    private String departmentName;</span>
+    @Transient
+<span class="nc" id="L279">    private String designationName;</span>
+    @Transient
+<span class="fc" id="L281">    private String divisionName;</span>
+
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = &quot;DEPARTMENT_ID&quot;, referencedColumnName = &quot;ID&quot;, insertable = false, updatable = false)
+<span class="fc" id="L286">    private Department department;</span>
+
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = &quot;DESIGNATION_ID&quot;, referencedColumnName = &quot;DESIGNATION_ID&quot;, insertable = false, updatable = false)
+<span class="fc" id="L291">    private Designation designation;</span>
+
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = &quot;DIVISION_ID&quot;, referencedColumnName = &quot;DIVISION_ID&quot;, insertable = false, updatable = false)
+<span class="nc" id="L296">    private SesM00UserDivisionMaster divisionMaster;</span>
+
+    @JsonIgnore
+    @OneToMany(fetch = FetchType.LAZY)
+    @JoinColumn(name = &quot;EMPLOYEE_ID&quot;, referencedColumnName = &quot;EMPLOYEE_ID&quot;, insertable = false, updatable = false)
+<span class="nc" id="L301">    private List&lt;AttendanceMoaf&gt; attendanceMoafList;</span>
+
+    public String getFullName() {
+<span class="fc" id="L304">        return Stream.of(firstName, middleName, lastName)</span>
+<span class="fc" id="L305">                .filter(Objects::nonNull)</span>
+<span class="pc bnc" id="L306" title="All 2 branches missed.">                .filter(name -&gt; !name.isEmpty())</span>
+<span class="fc" id="L307">                .collect(Collectors.joining(&quot; &quot;));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

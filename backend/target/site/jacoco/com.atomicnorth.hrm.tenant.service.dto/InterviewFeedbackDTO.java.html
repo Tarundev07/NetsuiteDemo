@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>InterviewFeedbackDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.dto</a> &gt; <span class="el_source">InterviewFeedbackDTO.java</span></div><h1>InterviewFeedbackDTO.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.dto;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.validation.constraints.NotNull;
+import java.io.Serializable;
+import java.time.LocalDate;
+import java.util.Map;
+
+<span class="pc bnc" id="L13" title="All 102 branches missed.">@Data</span>
+@JsonInclude(JsonInclude.Include.ALWAYS)
+<span class="fc" id="L15">@NoArgsConstructor</span>
+public class InterviewFeedbackDTO implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+<span class="nc" id="L20">    private Long interviewFeedbackId;</span>
+    @NotNull(message = &quot;Interview ID cannot be null&quot;)
+<span class="nc" id="L22">    private Long interviewId;</span>
+    @NotNull(message = &quot;Job Applicant ID cannot be blank&quot;)
+<span class="nc" id="L24">    private Integer jobApplicantId;</span>
+<span class="nc" id="L25">    private String interviewResultCode;</span>
+    @NotNull(message = &quot;Is_Active_cannot_be_null&quot;)
+<span class="nc" id="L27">    private Boolean isActive;</span>
+    @JsonFormat(pattern = &quot;yyyy-MM-dd&quot;)
+<span class="nc" id="L29">    private LocalDate createdDate;</span>
+<span class="nc" id="L30">    private String createdBy;</span>
+    @JsonFormat(pattern = &quot;yyyy-MM-dd&quot;)
+<span class="nc" id="L32">    private LocalDate updatedDate;</span>
+<span class="nc" id="L33">    private String updatedBy;</span>
+<span class="nc" id="L34">    private Map&lt;String, Integer&gt; skillFeedback;</span>
+<span class="fc" id="L35">    private String jobApplicantName;</span>
+<span class="fc" id="L36">    private String interviewResult;</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

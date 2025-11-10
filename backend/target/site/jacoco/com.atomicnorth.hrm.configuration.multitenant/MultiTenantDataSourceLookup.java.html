@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MultiTenantDataSourceLookup.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.configuration.multitenant</a> &gt; <span class="el_source">MultiTenantDataSourceLookup.java</span></div><h1>MultiTenantDataSourceLookup.java</h1><pre class="source lang-java linenums">
+package com.atomicnorth.hrm.configuration.multitenant;
+
+import com.atomicnorth.hrm.master.domain.DataSourceConfig;
+import com.atomicnorth.hrm.master.repository.DataSourceConfigRepository;
+import com.zaxxer.hikari.HikariDataSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.jdbc.datasource.lookup.MapDataSourceLookup;
+import org.springframework.stereotype.Component;
+
+import javax.sql.DataSource;
+import java.util.List;
+
+@Component
+<span class="nc" id="L22">public class MultiTenantDataSourceLookup extends MapDataSourceLookup {</span>
+
+    private static final String DEFAULT_TENANTID = &quot;public&quot;;
+<span class="nc" id="L25">    private final Logger logger = LoggerFactory.getLogger(MultiTenantDataSourceLookup.class);</span>
+    @Autowired
+    ApplicationContext context;
+//    @Value(&quot;${application.datasource.id}&quot;)
+//    String id;
+//
+//    @Value(&quot;${application.datasource.name}&quot;)
+//    String name;
+//
+//    @Value(&quot;${application.datasource.url}&quot;)
+//    String url;
+//
+//    @Value(&quot;${application.datasource.username}&quot;)
+//    String username;
+//
+//    @Value(&quot;${application.datasource.password}&quot;)
+//    String password;
+
+    @EventListener
+    public void handleContextRefresh(ContextRefreshedEvent event) {
+<span class="nc" id="L45">        DataSourceConfigRepository configRepository = context.getBean(DataSourceConfigRepository.class);</span>
+<span class="nc" id="L46">        addTenantDataSources(configRepository.findAll());</span>
+<span class="nc" id="L47">    }</span>
+
+    @Bean
+    public DataSource masterDataSource() {
+//        DataSourceConfig dataSourceConfig = new DataSourceConfig(&quot;public&quot;, &quot;public&quot;, &quot;jdbc:mysql://103.174.54.23:3306/publicUAT?useSSL=false&amp;allowPublicKeyRetrieval=true&quot;, username, password,true);
+        //      DataSourceConfig dataSourceConfig = new DataSourceConfig(&quot;public&quot;, &quot;public&quot;, &quot;jdbc:mysql://localhost:3306/public?useSSL=false&amp;allowPublicKeyRetrieval=true&quot;, username, password,true);
+//        DataSourceConfig dataSourceConfig = new DataSourceConfig(id, name, url, username, password,true);
+<span class="nc" id="L54">        DataSourceConfig dataSourceConfig = new DataSourceConfig(&quot;public&quot;, &quot;public&quot;, &quot;jdbc:mysql://103.174.54.23:3306/public?useSSL=false&amp;allowPublicKeyRetrieval=true&quot;, &quot;supra_usr2&quot;, &quot;sUprA#321&quot;,true);</span>
+<span class="nc" id="L55">        HikariDataSource customDataSource = createTenantDataSource(dataSourceConfig);</span>
+<span class="nc" id="L56">        customDataSource.setPoolName(DEFAULT_TENANTID + &quot;DataSource&quot;);</span>
+<span class="nc" id="L57">        customDataSource.setDriverClassName(&quot;com.mysql.jdbc.Driver&quot;);</span>
+<span class="nc" id="L58">        addDataSource(DEFAULT_TENANTID, customDataSource);</span>
+<span class="nc" id="L59">        return customDataSource;</span>
+    }
+
+    public void addTenantDataSources(List&lt;DataSourceConfig&gt; dataSources) {
+<span class="nc bnc" id="L63" title="All 2 branches missed.">        for (DataSourceConfig dataSource : dataSources) {</span>
+<span class="nc" id="L64">            HikariDataSource customDataSource = createTenantDataSource(dataSource);</span>
+<span class="nc" id="L65">            customDataSource.setPoolName(dataSource.getId() + &quot;DataSource&quot;);</span>
+<span class="nc" id="L66">            addDataSource(dataSource.getId(), customDataSource);</span>
+<span class="nc" id="L67">            logger.info(&quot;Configured tenant: &quot; + dataSource.getName());</span>
+<span class="nc" id="L68">        }</span>
+<span class="nc" id="L69">    }</span>
+
+    private HikariDataSource createTenantDataSource(DataSourceConfig dataSource) {
+<span class="nc" id="L72">        HikariDataSource customDataSource = new HikariDataSource();</span>
+<span class="nc" id="L73">        customDataSource.setJdbcUrl(dataSource.getUrl());</span>
+<span class="nc" id="L74">        customDataSource.setUsername(dataSource.getUsername());</span>
+<span class="nc" id="L75">        customDataSource.setPassword(dataSource.getPassword());</span>
+<span class="nc" id="L76">        customDataSource.setDriverClassName(&quot;com.mysql.jdbc.Driver&quot;);</span>
+<span class="nc" id="L77">        customDataSource.setMaximumPoolSize(20); // Max 20 connections per tenant</span>
+<span class="nc" id="L78">        customDataSource.setMinimumIdle(5); // Keep 5 idle connections</span>
+<span class="nc" id="L79">        customDataSource.setIdleTimeout(30000); // Close idle connections after 30 seconds</span>
+<span class="nc" id="L80">        customDataSource.setMaxLifetime(1800000); // Recycle connections every 30 minutes</span>
+<span class="nc" id="L81">        customDataSource.setConnectionTimeout(30000); // 30s timeout for acquiring connections</span>
+<span class="nc" id="L82">        customDataSource.setLeakDetectionThreshold(60000);</span>
+
+<span class="nc" id="L84">        return customDataSource;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

@@ -1,0 +1,467 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmployeeDocumentService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.employement.employeeDocument</a> &gt; <span class="el_source">EmployeeDocumentService.java</span></div><h1>EmployeeDocumentService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.employement.employeeDocument;
+
+
+import com.atomicnorth.hrm.tenant.domain.employement.employeeDocument.EmployeeDocument;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.employement.employeeDocumentRepo.EmployeeDocumentRepository;
+import com.atomicnorth.hrm.tenant.service.dto.employement.employeeDocument.EmployeeDocumentResponseDTO;
+import com.atomicnorth.hrm.util.commonClass.PaginatedResponse;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.beanutils.BeanUtils;
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.persistence.EntityManager;
+import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
+
+
+<span class="fc" id="L39">@Slf4j</span>
+<span class="fc" id="L40">@RequiredArgsConstructor</span>
+@Service
+public class EmployeeDocumentService {
+
+    @Autowired
+    private EmployeeDocumentRepository repository;
+
+    @Autowired
+    private ModelMapper modelMapper;
+    @Autowired
+    private EntityManager entityManager;
+
+    @Autowired
+    private HttpServletRequest httpServletRequest;
+
+
+    @Transactional
+    public String uploadEmployeeScannedDocument(Integer id,
+                                                MultipartFile doc,
+                                                Integer employeeId,
+                                                String docType,
+                                                String docName,
+                                                String docNumber,
+                                                String remark,
+                                                HttpServletRequest request) {
+        try {
+<span class="nc bnc" id="L66" title="All 4 branches missed.">            if (doc == null || doc.isEmpty()) {</span>
+<span class="nc" id="L67">                return &quot;Error: Uploaded document is missing or empty. Please select a valid file.&quot;;</span>
+            }
+
+<span class="nc" id="L70">            String originalFileName = doc.getOriginalFilename();</span>
+<span class="nc bnc" id="L71" title="All 4 branches missed.">            if (originalFileName == null || !originalFileName.contains(&quot;.&quot;)) {</span>
+<span class="nc" id="L72">                return &quot;Error: The uploaded file has an invalid name or no extension.&quot;;</span>
+            }
+
+<span class="nc" id="L75">            String extension = originalFileName.substring(originalFileName.lastIndexOf('.') + 1).toLowerCase();</span>
+<span class="nc" id="L76">            List&lt;String&gt; allowedExtensions = Arrays.asList(&quot;pdf&quot;, &quot;doc&quot;, &quot;jpeg&quot;, &quot;jpg&quot;, &quot;png&quot;, &quot;rtf&quot;, &quot;txt&quot;, &quot;docx&quot;);</span>
+<span class="nc bnc" id="L77" title="All 2 branches missed.">            if (!allowedExtensions.contains(extension)) {</span>
+<span class="nc" id="L78">                return &quot;Error: Unsupported file type. Allowed formats: pdf, doc, jpeg, jpg, png, rtf, txt, docx.&quot;;</span>
+            }
+
+<span class="nc bnc" id="L81" title="All 2 branches missed.">            if (employeeId == null) {</span>
+<span class="nc" id="L82">                return &quot;Error: Employee ID is required and cannot be null.&quot;;</span>
+            }
+
+<span class="nc" id="L85">            List&lt;EmployeeDocument&gt; existingDocs = repository.findByEmployeeId(employeeId);</span>
+<span class="nc" id="L86">            UserLoginDetail loginUser = SessionHolder.getUserLoginDetail();</span>
+
+<span class="nc bnc" id="L88" title="All 2 branches missed.">            if (id == null) {</span>
+<span class="nc bnc" id="L89" title="All 2 branches missed.">                for (EmployeeDocument existingDoc : existingDocs) {</span>
+<span class="nc bnc" id="L90" title="All 4 branches missed.">                    if (docName != null &amp;&amp; docName.equalsIgnoreCase(existingDoc.getDocName())) {</span>
+<span class="nc" id="L91">                        return &quot;Error: Document name already exists. Please use a different name.&quot;;</span>
+                    }
+<span class="nc bnc" id="L93" title="All 4 branches missed.">                    if (docNumber != null &amp;&amp; docNumber.equalsIgnoreCase(existingDoc.getDocNumber())) {</span>
+<span class="nc" id="L94">                        return &quot;Error: Document number already exists. Please use a different number.&quot;;</span>
+                    }
+<span class="nc" id="L96">                }</span>
+            }
+
+<span class="nc" id="L99">            LocalDate today = LocalDate.now();</span>
+<span class="nc" id="L100">            String timestamp = String.valueOf(System.currentTimeMillis());</span>
+<span class="nc" id="L101">            String renamedFileName = employeeId + &quot;_&quot; + timestamp + &quot;.&quot; + extension;</span>
+
+<span class="nc" id="L103">            Path baseAssetsPath = Paths.get(&quot;src/main/resources/assets&quot;);</span>
+<span class="nc" id="L104">            Path scannedDocsBasePath = baseAssetsPath.resolve(&quot;employeeScannedDocuments&quot;);</span>
+
+<span class="nc" id="L106">            String relativeFolderPath = employeeId + &quot;/&quot; +</span>
+<span class="nc" id="L107">                    today.getYear() + &quot;/&quot; +</span>
+<span class="nc" id="L108">                    String.format(&quot;%02d&quot;, today.getMonthValue()) + &quot;/&quot; +</span>
+<span class="nc" id="L109">                    String.format(&quot;%02d&quot;, today.getDayOfMonth());</span>
+
+<span class="nc" id="L111">            Path folderPath = scannedDocsBasePath.resolve(relativeFolderPath);</span>
+<span class="nc" id="L112">            Path finalPath = folderPath.resolve(renamedFileName);</span>
+<span class="nc" id="L113">            String serverDocPath = &quot;employeeScannedDocuments/&quot; + relativeFolderPath + &quot;/&quot; + renamedFileName;</span>
+
+<span class="nc" id="L115">            final byte[] fileBytes = doc.getBytes();</span>
+
+<span class="nc bnc" id="L117" title="All 2 branches missed.">            if (id != null) {</span>
+<span class="nc" id="L118">                Optional&lt;EmployeeDocument&gt; optionalDoc = repository.findById(Long.valueOf(id));</span>
+<span class="nc bnc" id="L119" title="All 2 branches missed.">                if (optionalDoc.isEmpty()) {</span>
+<span class="nc" id="L120">                    return &quot;Error: No document found with the provided ID.&quot;;</span>
+                }
+
+<span class="nc" id="L123">                EmployeeDocument existingDoc = optionalDoc.get();</span>
+
+<span class="nc bnc" id="L125" title="All 2 branches missed.">                boolean isFileDifferent = !existingDoc.getDocName().equalsIgnoreCase(docName) ||</span>
+<span class="nc bnc" id="L126" title="All 2 branches missed.">                        !existingDoc.getDocNumber().equalsIgnoreCase(docNumber) ||</span>
+<span class="nc bnc" id="L127" title="All 2 branches missed.">                        !existingDoc.getDocType().equalsIgnoreCase(extension) ||</span>
+<span class="nc bnc" id="L128" title="All 2 branches missed.">                        !existingDoc.getEmployeeId().equals(employeeId);</span>
+
+<span class="nc bnc" id="L130" title="All 2 branches missed.">                if (isFileDifferent) {</span>
+<span class="nc" id="L131">                    Path finalPathCopy = finalPath;</span>
+<span class="nc" id="L132">                    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {</span>
+                        @Override
+                        public void afterCommit() {
+                            try {
+<span class="nc" id="L136">                                Files.createDirectories(finalPathCopy.getParent());</span>
+<span class="nc" id="L137">                                Files.write(finalPathCopy, fileBytes);</span>
+<span class="nc" id="L138">                                log.info(&quot;File uploaded to: {}&quot;, finalPathCopy);</span>
+<span class="nc" id="L139">                            } catch (IOException e) {</span>
+<span class="nc" id="L140">                                log.error(&quot;File upload failed after DB commit&quot;, e);</span>
+<span class="nc" id="L141">                            }</span>
+<span class="nc" id="L142">                        }</span>
+                    });
+<span class="nc" id="L144">                    existingDoc.setServerDocName(serverDocPath);</span>
+                }
+
+<span class="nc" id="L147">                existingDoc.setEmployeeId(employeeId);</span>
+<span class="nc" id="L148">                existingDoc.setDocName(docName);</span>
+<span class="nc" id="L149">                existingDoc.setDocNumber(docNumber);</span>
+<span class="nc" id="L150">                existingDoc.setRemark(remark);</span>
+<span class="nc" id="L151">                existingDoc.setDocType(extension);</span>
+<span class="nc" id="L152">                existingDoc.setLastUpdatedBy(String.valueOf(loginUser.getUsername()));</span>
+<span class="nc" id="L153">                existingDoc.setLastUpdatedDate(Instant.now());</span>
+
+<span class="nc" id="L155">                repository.save(existingDoc);</span>
+<span class="nc" id="L156">            } else {</span>
+<span class="nc" id="L157">                Path finalPathCopy = finalPath;</span>
+<span class="nc" id="L158">                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {</span>
+                    @Override
+                    public void afterCommit() {
+                        try {
+<span class="nc" id="L162">                            Files.createDirectories(finalPathCopy.getParent());</span>
+<span class="nc" id="L163">                            Files.write(finalPathCopy, fileBytes);</span>
+<span class="nc" id="L164">                            log.info(&quot;File uploaded to: {}&quot;, finalPathCopy);</span>
+<span class="nc" id="L165">                        } catch (IOException e) {</span>
+<span class="nc" id="L166">                            log.error(&quot;File upload failed after DB commit&quot;, e);</span>
+<span class="nc" id="L167">                        }</span>
+<span class="nc" id="L168">                    }</span>
+                });
+
+<span class="nc" id="L171">                EmployeeDocument newDoc = new EmployeeDocument();</span>
+<span class="nc" id="L172">                newDoc.setIsActive(&quot;Y&quot;);</span>
+<span class="nc" id="L173">                newDoc.setIsDeleted(&quot;N&quot;);</span>
+<span class="nc" id="L174">                newDoc.setCreatedBy(String.valueOf(loginUser.getUsername()));</span>
+<span class="nc" id="L175">                newDoc.setCreatedDate(Instant.now());</span>
+<span class="nc" id="L176">                newDoc.setEmployeeId(employeeId);</span>
+<span class="nc" id="L177">                newDoc.setDocName(docName);</span>
+<span class="nc" id="L178">                newDoc.setDocNumber(docNumber);</span>
+<span class="nc" id="L179">                newDoc.setRemark(remark);</span>
+<span class="nc" id="L180">                newDoc.setDocType(extension);</span>
+<span class="nc" id="L181">                newDoc.setServerDocName(serverDocPath);</span>
+
+<span class="nc" id="L183">                repository.save(newDoc);</span>
+            }
+
+<span class="nc" id="L186">            String baseUrl = request.getScheme() + &quot;://&quot; + request.getServerName() +</span>
+<span class="nc bnc" id="L187" title="All 4 branches missed.">                    ((request.getServerPort() == 80 || request.getServerPort() == 443) ? &quot;&quot; : &quot;:&quot; + request.getServerPort()) +</span>
+<span class="nc" id="L188">                    request.getContextPath();</span>
+
+<span class="nc" id="L190">            String encodedPath = URLEncoder.encode(serverDocPath, StandardCharsets.UTF_8);</span>
+<span class="nc" id="L191">            return baseUrl + &quot;/api/employees/documents/download/&quot; + encodedPath;</span>
+
+<span class="nc" id="L193">        } catch (Exception e) {</span>
+<span class="nc" id="L194">            log.error(&quot;Exception in uploadEmployeeScannedDocument&quot;, e);</span>
+<span class="nc" id="L195">            throw new RuntimeException(&quot;Failed to upload or update the document.&quot;, e);</span>
+        }
+    }
+
+
+    public PaginatedResponse&lt;EmployeeDocumentResponseDTO&gt; getAllEmployeeDocuments(
+            int pageNumber, int pageSize, String sortBy, String sortDir,
+            String searchColumn, String searchValue) {
+
+        // Validate sorting direction
+<span class="fc" id="L205">        Sort.Direction direction = Sort.Direction.fromString(sortDir);</span>
+<span class="fc" id="L206">        Pageable pageable = PageRequest.of(pageNumber - 1, pageSize, direction, sortBy);</span>
+
+        // Fetch paginated data
+<span class="fc" id="L209">        Page&lt;EmployeeDocument&gt; projectDocPage = repository.findAll(pageable);</span>
+
+        // Base URL for downloads
+<span class="fc" id="L212">        String baseUrl = httpServletRequest.getScheme() + &quot;://&quot; + httpServletRequest.getServerName() +</span>
+<span class="pc bpc" id="L213" title="2 of 4 branches missed.">                ((httpServletRequest.getServerPort() == 80 || httpServletRequest.getServerPort() == 443) ? &quot;&quot; : &quot;:&quot; + httpServletRequest.getServerPort()) +</span>
+<span class="fc" id="L214">                httpServletRequest.getContextPath();</span>
+
+        // Convert to DTOs
+<span class="fc" id="L217">        List&lt;EmployeeDocumentResponseDTO&gt; mappedDocs = projectDocPage.getContent().stream()</span>
+<span class="fc" id="L218">                .map(doc -&gt; {</span>
+<span class="fc" id="L219">                    EmployeeDocumentResponseDTO dto = modelMapper.map(doc, EmployeeDocumentResponseDTO.class);</span>
+
+                    // Ensure serverDocName doesn't include &quot;projectScannedDocuments/&quot;
+<span class="fc" id="L222">                    String serverPath = doc.getServerDocName();</span>
+<span class="pc bpc" id="L223" title="2 of 4 branches missed.">                    if (serverPath != null &amp;&amp; serverPath.startsWith(&quot;employeeScannedDocuments/&quot;)) {</span>
+<span class="fc" id="L224">                        serverPath = serverPath.replaceFirst(&quot;employeeScannedDocuments/&quot;, &quot;&quot;);</span>
+                    }
+
+<span class="pc bpc" id="L227" title="2 of 4 branches missed.">                    if (serverPath != null &amp;&amp; !serverPath.isEmpty()) {</span>
+<span class="fc" id="L228">                        dto.setDownloadUrl(baseUrl + &quot;/api/employees/documents/download/&quot; + serverPath);</span>
+                    }
+
+<span class="fc" id="L231">                    return dto;</span>
+                })
+<span class="fc" id="L233">                .filter(dto -&gt; {</span>
+                    // Search filtering (case-insensitive)
+<span class="pc bpc" id="L235" title="5 of 6 branches missed.">                    if (searchColumn == null || searchValue == null || searchValue.isEmpty()) return true;</span>
+<span class="nc" id="L236">                    String lowerSearchValue = searchValue.toLowerCase();</span>
+
+<span class="nc bnc" id="L238" title="All 5 branches missed.">                    switch (searchColumn) {</span>
+                        case &quot;employeeId&quot;:
+<span class="nc bnc" id="L240" title="All 2 branches missed.">                            return dto.getEmployeeId() != null;//&amp;&amp; dto.getEmployeeId().toLowerCase().contains(lowerSearchValue);</span>
+                        case &quot;docName&quot;:
+<span class="nc bnc" id="L242" title="All 4 branches missed.">                            return dto.getDocName() != null &amp;&amp; dto.getDocName().toLowerCase().contains(lowerSearchValue);</span>
+                        case &quot;docType&quot;:
+<span class="nc bnc" id="L244" title="All 4 branches missed.">                            return dto.getDocType() != null &amp;&amp; dto.getDocType().toLowerCase().contains(lowerSearchValue);</span>
+                        case &quot;remark&quot;:
+<span class="nc bnc" id="L246" title="All 4 branches missed.">                            return dto.getRemark() != null &amp;&amp; dto.getRemark().toLowerCase().contains(lowerSearchValue);</span>
+                        default:
+<span class="nc" id="L248">                            return false;</span>
+                    }
+                })
+<span class="fc" id="L251">                .collect(Collectors.toList());</span>
+
+        // Manual pagination after filtering
+<span class="fc" id="L254">        int totalFiltered = mappedDocs.size();</span>
+<span class="fc" id="L255">        int start = Math.min((pageNumber - 1) * pageSize, totalFiltered);</span>
+<span class="fc" id="L256">        int end = Math.min(start + pageSize, totalFiltered);</span>
+<span class="fc" id="L257">        List&lt;EmployeeDocumentResponseDTO&gt; paginatedList = mappedDocs.subList(start, end);</span>
+
+        // Build response
+<span class="fc" id="L260">        PaginatedResponse&lt;EmployeeDocumentResponseDTO&gt; response = new PaginatedResponse&lt;&gt;();</span>
+<span class="fc" id="L261">        response.setPaginationData(paginatedList);</span>
+<span class="fc" id="L262">        response.setTotalPages((int) Math.ceil((double) totalFiltered / pageSize));</span>
+<span class="fc" id="L263">        response.setTotalElements(totalFiltered);</span>
+<span class="fc" id="L264">        response.setPageSize(pageSize);</span>
+<span class="fc" id="L265">        response.setCurrentPage(pageNumber);</span>
+
+<span class="fc" id="L267">        return response;</span>
+    }
+
+
+    public Map&lt;String, Object&gt; getEmployeeIdDocument(Integer employeeId,
+                                                     int page,
+                                                     int size,
+                                                     String searchColumn,
+                                                     String searchValue,
+                                                     String sortBy,
+                                                     String sortDir) {
+
+<span class="fc" id="L279">        List&lt;EmployeeDocument&gt; documentList = repository.findByEmployeeId(employeeId);</span>
+
+        // Convert to DTO
+<span class="fc" id="L282">        String baseUrl = httpServletRequest.getScheme() + &quot;://&quot; + httpServletRequest.getServerName() +</span>
+<span class="pc bpc" id="L283" title="2 of 4 branches missed.">                ((httpServletRequest.getServerPort() == 80 || httpServletRequest.getServerPort() == 443) ? &quot;&quot; : &quot;:&quot; + httpServletRequest.getServerPort()) +</span>
+<span class="fc" id="L284">                httpServletRequest.getContextPath();</span>
+
+<span class="fc" id="L286">        List&lt;EmployeeDocumentResponseDTO&gt; dtoList = documentList.stream()</span>
+<span class="fc" id="L287">                .map(doc -&gt; {</span>
+<span class="fc" id="L288">                    EmployeeDocumentResponseDTO dto = modelMapper.map(doc, EmployeeDocumentResponseDTO.class);</span>
+<span class="fc" id="L289">                    String serverPath = doc.getServerDocName();</span>
+
+<span class="pc bpc" id="L291" title="2 of 4 branches missed.">                    if (serverPath != null &amp;&amp; !serverPath.isEmpty()) {</span>
+<span class="pc bpc" id="L292" title="1 of 2 branches missed.">                        if (serverPath.startsWith(&quot;employeeScannedDocuments/&quot;)) {</span>
+<span class="fc" id="L293">                            serverPath = serverPath.replaceFirst(&quot;employeeScannedDocuments/&quot;, &quot;&quot;);</span>
+                        }
+<span class="fc" id="L295">                        dto.setDownloadUrl(baseUrl + &quot;/api/employees/documents/download/&quot; + serverPath);</span>
+                    }
+
+<span class="fc" id="L298">                    return dto;</span>
+                })
+<span class="fc" id="L300">                .collect(Collectors.toList());</span>
+
+        // Search filter
+<span class="pc bpc" id="L303" title="3 of 4 branches missed.">        if (searchColumn != null &amp;&amp; searchValue != null) {</span>
+<span class="nc" id="L304">            dtoList = dtoList.stream()</span>
+<span class="nc" id="L305">                    .filter(dto -&gt; {</span>
+                        try {
+<span class="nc" id="L307">                            String fieldValue = Optional.ofNullable(</span>
+<span class="nc" id="L308">                                    BeanUtils.getProperty(dto, searchColumn)).orElse(&quot;&quot;);</span>
+<span class="nc" id="L309">                            return fieldValue.toLowerCase().contains(searchValue.toLowerCase());</span>
+<span class="nc" id="L310">                        } catch (Exception e) {</span>
+<span class="nc" id="L311">                            return false;</span>
+                        }
+                    })
+<span class="nc" id="L314">                    .collect(Collectors.toList());</span>
+        }
+
+        // Proper sort logic (handle numeric fields like `id`)
+        Comparator&lt;EmployeeDocumentResponseDTO&gt; comparator;
+
+<span class="pc bpc" id="L320" title="2 of 3 branches missed.">        switch (sortBy) {</span>
+            case &quot;id&quot;:
+<span class="fc" id="L322">                comparator = Comparator.comparing(EmployeeDocumentResponseDTO::getId);</span>
+<span class="fc" id="L323">                break;</span>
+            case &quot;creationDate&quot;:
+<span class="nc" id="L325">                comparator = Comparator.comparing(EmployeeDocumentResponseDTO::getCreationDate);</span>
+<span class="nc" id="L326">                break;</span>
+            default:
+<span class="nc" id="L328">                comparator = Comparator.comparing(dto -&gt; {</span>
+                    try {
+<span class="nc" id="L330">                        return Optional.ofNullable(BeanUtils.getProperty(dto, sortBy)).orElse(&quot;&quot;);</span>
+<span class="nc" id="L331">                    } catch (Exception e) {</span>
+<span class="nc" id="L332">                        return &quot;&quot;;</span>
+                    }
+                });
+        }
+
+<span class="pc bpc" id="L337" title="1 of 2 branches missed.">        if (&quot;desc&quot;.equalsIgnoreCase(sortDir)) {</span>
+<span class="nc" id="L338">            comparator = comparator.reversed();</span>
+        }
+
+<span class="fc" id="L341">        dtoList.sort(comparator);</span>
+
+        // Pagination
+<span class="fc" id="L344">        int totalElements = dtoList.size();</span>
+<span class="fc" id="L345">        int totalPages = (int) Math.ceil((double) totalElements / size);</span>
+<span class="fc" id="L346">        int fromIndex = (page - 1) * size;</span>
+<span class="fc" id="L347">        int toIndex = Math.min(fromIndex + size, totalElements);</span>
+
+<span class="pc bpc" id="L349" title="1 of 2 branches missed.">        List&lt;EmployeeDocumentResponseDTO&gt; paginatedList = fromIndex &gt;= totalElements</span>
+<span class="nc" id="L350">                ? Collections.emptyList()</span>
+<span class="fc" id="L351">                : dtoList.subList(fromIndex, toIndex);</span>
+
+<span class="fc" id="L353">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L354">        response.put(&quot;result&quot;, paginatedList);</span>
+<span class="fc" id="L355">        response.put(&quot;totalElements&quot;, totalElements);</span>
+<span class="fc" id="L356">        response.put(&quot;totalPages&quot;, totalPages);</span>
+<span class="fc" id="L357">        response.put(&quot;pageSize&quot;, size);</span>
+<span class="fc" id="L358">        response.put(&quot;currentPage&quot;, page);</span>
+
+<span class="fc" id="L360">        return response;</span>
+    }
+
+
+    public Map&lt;String, Object&gt; documentFetchByIdAndEmployeeId(
+            Integer employeeId,
+            Integer id,
+            int page,
+            int size,
+            String searchColumn,
+            String searchValue,
+            String sortBy,
+            String sortDir) {
+
+        // Step 1: Fetch from DB
+<span class="fc" id="L375">        List&lt;EmployeeDocument&gt; documentList = repository.findByEmployeeId(employeeId);</span>
+
+        // Step 2: Build base download URL
+<span class="fc" id="L378">        String baseUrl = httpServletRequest.getScheme() + &quot;://&quot; + httpServletRequest.getServerName() +</span>
+<span class="pc bpc" id="L379" title="2 of 4 branches missed.">                ((httpServletRequest.getServerPort() == 80 || httpServletRequest.getServerPort() == 443) ? &quot;&quot; : &quot;:&quot; + httpServletRequest.getServerPort()) +</span>
+<span class="fc" id="L380">                httpServletRequest.getContextPath();</span>
+
+        // Step 3: Manually convert to DTO
+<span class="fc" id="L383">        List&lt;EmployeeDocumentResponseDTO&gt; dtoList = documentList.stream()</span>
+<span class="fc" id="L384">                .map(doc -&gt; {</span>
+<span class="fc" id="L385">                    EmployeeDocumentResponseDTO dto = new EmployeeDocumentResponseDTO();</span>
+<span class="fc" id="L386">                    dto.setId(doc.getId());</span>
+<span class="fc" id="L387">                    dto.setEmployeeId(doc.getEmployeeId());</span>
+<span class="fc" id="L388">                    dto.setDocName(doc.getDocName());</span>
+<span class="fc" id="L389">                    dto.setDocNumber(doc.getDocNumber());</span>
+<span class="fc" id="L390">                    dto.setDocType(doc.getDocType());</span>
+<span class="fc" id="L391">                    dto.setRemark(doc.getRemark());</span>
+                    // dto.setCreationDate(LocalDateTime.from(doc.getCreatedDate()));
+<span class="fc" id="L393">                    dto.setCreatedBy(doc.getCreatedBy());</span>
+
+<span class="fc" id="L395">                    String serverPath = doc.getServerDocName();</span>
+<span class="pc bpc" id="L396" title="2 of 4 branches missed.">                    if (serverPath != null &amp;&amp; !serverPath.isEmpty()) {</span>
+<span class="pc bpc" id="L397" title="1 of 2 branches missed.">                        if (serverPath.startsWith(&quot;employeeScannedDocuments/&quot;)) {</span>
+<span class="fc" id="L398">                            serverPath = serverPath.replaceFirst(&quot;employeeScannedDocuments/&quot;, &quot;&quot;);</span>
+                        }
+<span class="fc" id="L400">                        dto.setDownloadUrl(baseUrl + &quot;/api/employees/documents/download/&quot; + serverPath);</span>
+                    }
+
+<span class="fc" id="L403">                    return dto;</span>
+                })
+<span class="fc" id="L405">                .collect(Collectors.toList());</span>
+
+        // Step 4: Optional filtering by id
+<span class="pc bpc" id="L408" title="1 of 2 branches missed.">        if (id != null) {</span>
+<span class="fc" id="L409">            dtoList = dtoList.stream()</span>
+<span class="fc" id="L410">                    .filter(dto -&gt; Objects.equals(dto.getId(), Long.valueOf(id)))</span>
+<span class="fc" id="L411">                    .collect(Collectors.toList());</span>
+        }
+
+        // Step 5: Optional search filter
+<span class="pc bpc" id="L415" title="3 of 4 branches missed.">        if (searchColumn != null &amp;&amp; searchValue != null) {</span>
+<span class="nc" id="L416">            dtoList = dtoList.stream()</span>
+<span class="nc" id="L417">                    .filter(dto -&gt; {</span>
+                        try {
+<span class="nc" id="L419">                            String fieldValue = Optional.ofNullable(</span>
+<span class="nc" id="L420">                                    org.apache.commons.beanutils.BeanUtils.getProperty(dto, searchColumn)).orElse(&quot;&quot;);</span>
+<span class="nc" id="L421">                            return fieldValue.toLowerCase().contains(searchValue.toLowerCase());</span>
+<span class="nc" id="L422">                        } catch (Exception e) {</span>
+<span class="nc" id="L423">                            return false;</span>
+                        }
+                    })
+<span class="nc" id="L426">                    .collect(Collectors.toList());</span>
+        }
+
+        // Step 6: Sorting
+<span class="fc" id="L430">        Comparator&lt;EmployeeDocumentResponseDTO&gt; comparator = Comparator.comparing(dto -&gt; {</span>
+            try {
+<span class="nc" id="L432">                return Optional.ofNullable(org.apache.commons.beanutils.BeanUtils.getProperty(dto, sortBy)).orElse(&quot;&quot;);</span>
+<span class="nc" id="L433">            } catch (Exception e) {</span>
+<span class="nc" id="L434">                return &quot;&quot;;</span>
+            }
+        });
+
+<span class="pc bpc" id="L438" title="1 of 2 branches missed.">        if (&quot;desc&quot;.equalsIgnoreCase(sortDir)) {</span>
+<span class="nc" id="L439">            comparator = comparator.reversed();</span>
+        }
+
+<span class="fc" id="L442">        dtoList.sort(comparator);</span>
+
+        // Step 7: Pagination
+<span class="fc" id="L445">        int totalElements = dtoList.size();</span>
+<span class="fc" id="L446">        int totalPages = (int) Math.ceil((double) totalElements / size);</span>
+<span class="fc" id="L447">        int fromIndex = (page - 1) * size;</span>
+<span class="fc" id="L448">        int toIndex = Math.min(fromIndex + size, totalElements);</span>
+
+<span class="pc bpc" id="L450" title="1 of 2 branches missed.">        List&lt;EmployeeDocumentResponseDTO&gt; paginatedList = fromIndex &gt;= totalElements</span>
+<span class="nc" id="L451">                ? Collections.emptyList()</span>
+<span class="fc" id="L452">                : dtoList.subList(fromIndex, toIndex);</span>
+
+        // Step 8: Prepare final response
+<span class="fc" id="L455">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L456">        response.put(&quot;result&quot;, paginatedList);</span>
+<span class="fc" id="L457">        response.put(&quot;totalElements&quot;, totalElements);</span>
+<span class="fc" id="L458">        response.put(&quot;totalPages&quot;, totalPages);</span>
+<span class="fc" id="L459">        response.put(&quot;pageSize&quot;, size);</span>
+<span class="fc" id="L460">        response.put(&quot;currentPage&quot;, page);</span>
+
+<span class="fc" id="L462">        return response;</span>
+    }
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

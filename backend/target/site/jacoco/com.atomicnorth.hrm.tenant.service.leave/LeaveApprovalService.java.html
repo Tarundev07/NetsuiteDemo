@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LeaveApprovalService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.leave</a> &gt; <span class="el_source">LeaveApprovalService.java</span></div><h1>LeaveApprovalService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.leave;
+
+import com.atomicnorth.hrm.tenant.domain.Employee;
+import com.atomicnorth.hrm.tenant.domain.LeaveAllocation;
+import com.atomicnorth.hrm.tenant.domain.LeaveAllocationDetails;
+import com.atomicnorth.hrm.tenant.domain.LeaveRequest;
+import com.atomicnorth.hrm.tenant.domain.approvalflow.WorkflowRequest;
+import com.atomicnorth.hrm.tenant.domain.leave.LeaveLedgerEntity;
+import com.atomicnorth.hrm.tenant.helper.Constant;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.repository.LeaveAllocationRepository;
+import com.atomicnorth.hrm.tenant.repository.LeaveRequestRepository;
+import com.atomicnorth.hrm.tenant.repository.leave.LeaveLedgerRepository;
+import com.atomicnorth.hrm.tenant.service.approvalflow.ApprovalFlowService;
+import com.atomicnorth.hrm.tenant.service.dto.leave.LeaveRequestDTO;
+import com.atomicnorth.hrm.tenant.service.timesheet.TimeSheetApprovalService;
+import lombok.AllArgsConstructor;
+import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import javax.persistence.EntityNotFoundException;
+import java.time.DateTimeException;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L39">@AllArgsConstructor</span>
+public class LeaveApprovalService {
+
+    private final LeaveRequestRepository leaveRequestRepository;
+    private final ModelMapper modelMapper;
+    private final EmployeeRepository employeeRepository;
+    private final LeaveAllocationRepository leaveAllocationRepository;
+    private final LeaveLedgerRepository ledgerRepository;
+    private final LeaveAllocationRepository allocationRepository;
+    private final TimeSheetApprovalService timeSheetApprovalService;
+    private final ApprovalFlowService approvalFlowService;
+
+    public Map&lt;String, Object&gt; getLeaveRequestList(Integer empId, String status, String startDate, String endDate, String sortBy, String sortDir, String searchField, String searchKeyword, Pageable pageable) throws DateTimeException {
+<span class="nc bnc" id="L52" title="All 2 branches missed.">        if (empId == null) {</span>
+<span class="nc" id="L53">            empId = SessionHolder.getUserLoginDetail().getEmpId();</span>
+        }
+<span class="nc" id="L55">        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd&quot;);</span>
+<span class="nc" id="L56">        LocalDate parsedStartDate = LocalDate.parse(startDate, formatter);</span>
+<span class="nc" id="L57">        LocalDate parsedEndDate = LocalDate.parse(endDate, formatter);</span>
+        List&lt;LeaveRequest&gt; requestList;
+<span class="nc bnc" id="L59" title="All 4 branches missed.">        if (status.equalsIgnoreCase(&quot;all&quot;) || status.isEmpty()) {</span>
+<span class="nc" id="L60">            requestList = leaveRequestRepository.findByStartDateLessThanEqualAndEndDateGreaterThanEqual(parsedEndDate, parsedStartDate);</span>
+        } else {
+<span class="nc" id="L62">            requestList = leaveRequestRepository.findByStartDateLessThanEqualAndEndDateGreaterThanEqualAndStatus(parsedEndDate, parsedStartDate, status);</span>
+        }
+
+<span class="nc" id="L65">        List&lt;WorkflowRequest&gt; visibleRequests = approvalFlowService.getVisibleRequestsForUser(empId, 22);</span>
+
+<span class="nc" id="L67">        Set&lt;String&gt; visibleRequestNumbers = visibleRequests.stream().map(WorkflowRequest::getRequestNumber).collect(Collectors.toSet());</span>
+
+<span class="nc" id="L69">        Map&lt;String, WorkflowRequest&gt; requestMap = visibleRequests.stream().collect(Collectors.toMap(WorkflowRequest::getRequestNumber, req-&gt; req));</span>
+
+<span class="nc" id="L71">        requestList = requestList.stream().filter(lr -&gt; visibleRequestNumbers.contains(lr.getRequestNumber())).collect(Collectors.toList());</span>
+
+<span class="nc" id="L73">        Map&lt;Integer, Employee&gt; employeeMap = employeeRepository.findAll().stream().collect(Collectors.toMap(Employee::getEmployeeId, emp -&gt; emp));</span>
+
+<span class="nc" id="L75">        List&lt;LeaveRequestDTO&gt; dtoList = requestList.stream().map(lr -&gt; mapToDTO(lr, employeeMap, requestMap)).collect(Collectors.toList());</span>
+
+<span class="nc" id="L77">        List&lt;LeaveRequestDTO&gt; filteredList = applySearch(dtoList, searchField, searchKeyword);</span>
+<span class="nc" id="L78">        Comparator&lt;LeaveRequestDTO&gt; comparator = getComparator(sortBy, sortDir);</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">        if (comparator != null) {</span>
+<span class="nc" id="L80">            filteredList.sort(comparator);</span>
+        }
+<span class="nc" id="L82">        int totalItems = filteredList.size();</span>
+<span class="nc" id="L83">        int currentPage = pageable.getPageNumber();</span>
+<span class="nc" id="L84">        int pageSize = pageable.getPageSize();</span>
+<span class="nc" id="L85">        int totalPages = (int) Math.ceil((double) totalItems / pageSize);</span>
+
+<span class="nc" id="L87">        int startIndex = currentPage * pageSize;</span>
+<span class="nc" id="L88">        int endIndex = Math.min(startIndex + pageSize, totalItems);</span>
+
+<span class="nc bnc" id="L90" title="All 2 branches missed.">        List&lt;LeaveRequestDTO&gt; paginatedResult = startIndex &lt; totalItems ? filteredList.subList(startIndex, endIndex) : Collections.emptyList();</span>
+
+<span class="nc" id="L92">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L93">        response.put(&quot;result&quot;, paginatedResult);</span>
+<span class="nc" id="L94">        response.put(&quot;currentPage&quot;, currentPage + 1);</span>
+<span class="nc" id="L95">        response.put(&quot;pageSize&quot;, pageSize);</span>
+<span class="nc" id="L96">        response.put(&quot;totalItems&quot;, totalItems);</span>
+<span class="nc" id="L97">        response.put(&quot;totalPages&quot;, totalPages);</span>
+
+<span class="nc" id="L99">        return response;</span>
+    }
+
+    private LeaveRequestDTO mapToDTO(LeaveRequest leaveRequest, Map&lt;Integer, Employee&gt; employeeMap, Map&lt;String, WorkflowRequest&gt; requestMap) {
+<span class="nc" id="L103">        LeaveRequestDTO requestDTO = modelMapper.map(leaveRequest, LeaveRequestDTO.class);</span>
+<span class="nc" id="L104">        Employee employee = employeeMap.getOrDefault(requestDTO.getEmpId(), null);</span>
+<span class="nc" id="L105">        requestDTO.setEmployeeName(employee.getFullName());</span>
+<span class="nc" id="L106">        WorkflowRequest request = requestMap.getOrDefault(requestDTO.getRequestNumber(), null);</span>
+<span class="nc" id="L107">        requestDTO.setStatus(request.getUserStatus());</span>
+<span class="nc" id="L108">        return requestDTO;</span>
+    }
+
+    private List&lt;LeaveRequestDTO&gt; applySearch(List&lt;LeaveRequestDTO&gt; dtoList, String field, String keyword) {
+<span class="nc bnc" id="L112" title="All 4 branches missed.">        if (!StringUtils.hasText(field) || !StringUtils.hasText(keyword)) {</span>
+<span class="nc" id="L113">            return dtoList;</span>
+        }
+<span class="nc" id="L115">        DateTimeFormatter dtf = DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd&quot;);</span>
+<span class="nc" id="L116">        String search = keyword.toLowerCase();</span>
+
+<span class="nc" id="L118">        return dtoList.stream().filter(dto -&gt; {</span>
+<span class="nc bnc" id="L119" title="All 9 branches missed.">            switch (field.toLowerCase()) {</span>
+                case &quot;leavecode&quot;:
+<span class="nc bnc" id="L121" title="All 4 branches missed.">                    return dto.getLeaveCode() != null &amp;&amp; dto.getLeaveCode().toLowerCase().contains(search);</span>
+                case &quot;employeename&quot;:
+<span class="nc bnc" id="L123" title="All 4 branches missed.">                    return dto.getEmployeeName() != null &amp;&amp; dto.getEmployeeName().toLowerCase().contains(search);</span>
+                case &quot;requestnumber&quot;:
+<span class="nc bnc" id="L125" title="All 4 branches missed.">                    return dto.getRequestNumber() != null &amp;&amp; dto.getRequestNumber().toLowerCase().contains(search);</span>
+                case &quot;status&quot;:
+<span class="nc bnc" id="L127" title="All 4 branches missed.">                    return dto.getStatus() != null &amp;&amp; dto.getStatus().toLowerCase().contains(search);</span>
+                case &quot;totaldays&quot;:
+<span class="nc bnc" id="L129" title="All 4 branches missed.">                    return dto.getTotalDays() != null &amp;&amp; String.valueOf(dto.getTotalDays()).contains(search);</span>
+                case &quot;startdate&quot;:
+<span class="nc bnc" id="L131" title="All 4 branches missed.">                    return dto.getStartDate() != null &amp;&amp; dto.getStartDate().format(dtf).toLowerCase().contains(search);</span>
+                case &quot;enddate&quot;:
+<span class="nc bnc" id="L133" title="All 4 branches missed.">                    return dto.getEndDate() != null &amp;&amp; dto.getEndDate().format(dtf).toLowerCase().contains(search);</span>
+                case &quot;purpose&quot;:
+<span class="nc bnc" id="L135" title="All 4 branches missed.">                    return dto.getPurpose() != null &amp;&amp; dto.getPurpose().toLowerCase().contains(search);</span>
+                default:
+<span class="nc" id="L137">                    return true;</span>
+            }
+<span class="nc" id="L139">        }).collect(Collectors.toList());</span>
+    }
+
+    private Comparator&lt;LeaveRequestDTO&gt; getComparator(String field, String direction) {
+        Comparator&lt;LeaveRequestDTO&gt; comparator;
+
+<span class="nc bnc" id="L145" title="All 10 branches missed.">        switch (field != null ? field.toLowerCase() : &quot;&quot;) {</span>
+            case &quot;leavecode&quot;:
+<span class="nc" id="L147">                comparator = Comparator.comparing(LeaveRequestDTO::getLeaveCode, Comparator.nullsLast(String::compareToIgnoreCase));</span>
+<span class="nc" id="L148">                break;</span>
+            case &quot;employeename&quot;:
+<span class="nc" id="L150">                comparator = Comparator.comparing(LeaveRequestDTO::getEmployeeName, Comparator.nullsLast(String::compareToIgnoreCase));</span>
+<span class="nc" id="L151">                break;</span>
+            case &quot;startdate&quot;:
+<span class="nc" id="L153">                comparator = Comparator.comparing(LeaveRequestDTO::getStartDate, Comparator.nullsLast(LocalDate::compareTo));</span>
+<span class="nc" id="L154">                break;</span>
+            case &quot;enddate&quot;:
+<span class="nc" id="L156">                comparator = Comparator.comparing(LeaveRequestDTO::getEndDate, Comparator.nullsLast(LocalDate::compareTo));</span>
+<span class="nc" id="L157">                break;</span>
+            case &quot;status&quot;:
+<span class="nc" id="L159">                comparator = Comparator.comparing(LeaveRequestDTO::getStatus, Comparator.nullsLast(String::compareToIgnoreCase));</span>
+<span class="nc" id="L160">                break;</span>
+            case &quot;totaldays&quot;:
+<span class="nc" id="L162">                comparator = Comparator.comparing(LeaveRequestDTO::getTotalDays, Comparator.nullsLast(Double::compareTo));</span>
+<span class="nc" id="L163">                break;</span>
+            case &quot;purpose&quot;:
+<span class="nc" id="L165">                comparator = Comparator.comparing(LeaveRequestDTO::getPurpose, Comparator.nullsLast(String::compareTo));</span>
+<span class="nc" id="L166">                break;</span>
+            default:
+<span class="nc" id="L168">                comparator = Comparator.comparing(LeaveRequestDTO::getLeaveRfNum, Comparator.nullsLast(Long::compareTo));</span>
+        }
+
+<span class="nc bnc" id="L171" title="All 2 branches missed.">        if (&quot;desc&quot;.equalsIgnoreCase(direction)) {</span>
+<span class="nc" id="L172">            comparator = comparator.reversed();</span>
+        }
+
+<span class="nc" id="L175">        return comparator;</span>
+    }
+
+    @Transactional
+    public LeaveRequest updateLeaveRequest(LeaveRequestDTO leaveRequestDTO) {
+<span class="nc" id="L180">        LeaveRequest leaveRequest = leaveRequestRepository.findByRequestNumber(leaveRequestDTO.getRequestNumber())</span>
+<span class="nc" id="L181">                .orElseThrow(() -&gt; new IllegalArgumentException(&quot;No leave request found for request number: &quot; + leaveRequestDTO.getRequestNumber()));</span>
+
+<span class="nc" id="L183">        String statusUpdate = leaveRequestDTO.getApproveFlag();</span>
+<span class="nc" id="L184">        boolean isApproved = approvalFlowService.updateStatus(leaveRequest.getRequestNumber(), statusUpdate);</span>
+<span class="nc" id="L185">        String username = String.valueOf(SessionHolder.getUserLoginDetail().getUsername());</span>
+<span class="nc" id="L186">        Instant now = Instant.now();</span>
+
+<span class="nc bnc" id="L188" title="All 5 branches missed.">        switch (statusUpdate.toUpperCase()) {</span>
+            case Constant.LEAVE_REQUEST_STATUS_APPROVED:
+<span class="nc bnc" id="L190" title="All 2 branches missed.">                if (isApproved) {</span>
+<span class="nc" id="L191">                    leaveRequest.setStatus(Constant.LEAVE_REQUEST_STATUS_APPROVED);</span>
+                }
+                break;
+
+            case Constant.LEAVE_REQUEST_STATUS_REJECTED:
+<span class="nc" id="L196">                leaveRequest.setStatus(Constant.LEAVE_REQUEST_STATUS_REJECTED);</span>
+<span class="nc" id="L197">                updateLeaveBalance(leaveRequest);</span>
+<span class="nc" id="L198">                timeSheetApprovalService.checkTimesheetExists(leaveRequestDTO);</span>
+<span class="nc" id="L199">                break;</span>
+
+            case Constant.LEAVE_REQUEST_STATUS_REVERSAL_APPROVED:
+<span class="nc bnc" id="L202" title="All 2 branches missed.">                if (isApproved) {</span>
+<span class="nc" id="L203">                    leaveRequest.setStatus(Constant.LEAVE_REQUEST_STATUS_REVERSAL_APPROVED);</span>
+<span class="nc" id="L204">                    updateLeaveBalance(leaveRequest);</span>
+<span class="nc" id="L205">                    timeSheetApprovalService.checkTimesheetExists(leaveRequestDTO);</span>
+                }
+                break;
+
+            case Constant.LEAVE_REQUEST_STATUS_REVERSAL_REJECTED:
+<span class="nc" id="L210">                leaveRequest.setStatus(Constant.LEAVE_REQUEST_STATUS_APPROVED);</span>
+<span class="nc" id="L211">                break;</span>
+
+            default:
+<span class="nc" id="L214">                throw new IllegalArgumentException(&quot;Invalid approval flag: &quot; + statusUpdate);</span>
+        }
+<span class="nc" id="L216">        leaveRequest.setLastUpdatedBy(username);</span>
+<span class="nc" id="L217">        leaveRequest.setLastUpdatedDate(now);</span>
+<span class="nc" id="L218">        return leaveRequestRepository.save(leaveRequest);</span>
+    }
+
+    private void updateLeaveBalance(LeaveRequest leaveRequest) {
+<span class="nc" id="L222">        LeaveAllocation leaveAllocation = leaveAllocationRepository</span>
+<span class="nc" id="L223">                .findByEmpIdAndIsActiveAndLeaveAllocationDetails_LeaveCode(leaveRequest.getEmpId(), &quot;A&quot;, leaveRequest.getLeaveCode())</span>
+<span class="nc" id="L224">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;No active leave allocation found for employee and leave type.&quot;));</span>
+<span class="nc" id="L225">        LeaveAllocationDetails details = leaveAllocation.getLeaveAllocationDetails().stream()</span>
+<span class="nc bnc" id="L226" title="All 4 branches missed.">                .filter(d -&gt; leaveRequest.getLeaveCode().equals(d.getLeaveCode()) &amp;&amp; &quot;A&quot;.equals(d.getIsActive()))</span>
+<span class="nc" id="L227">                .findFirst()</span>
+<span class="nc" id="L228">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Leave type not allocated or inactive.&quot;));</span>
+<span class="nc" id="L229">        details.setLeaveBalance(details.getLeaveBalance() + leaveRequest.getTotalDays());</span>
+<span class="nc" id="L230">        details.setLastUpdatedBy(String.valueOf(SessionHolder.getUserLoginDetail().getUsername()));</span>
+<span class="nc" id="L231">        details.setLastUpdatedDate(Instant.now());</span>
+<span class="nc" id="L232">        insertIntoLeaveLedger(leaveRequest);</span>
+<span class="nc" id="L233">        allocationRepository.save(leaveAllocation);</span>
+<span class="nc" id="L234">    }</span>
+
+    private void insertIntoLeaveLedger(LeaveRequest leaveRequest) {
+<span class="nc" id="L237">        LeaveLedgerEntity ledgerEntity = new LeaveLedgerEntity();</span>
+<span class="nc" id="L238">        ledgerEntity.setEmpId(leaveRequest.getEmpId());</span>
+<span class="nc" id="L239">        ledgerEntity.setLeaveCode(leaveRequest.getLeaveCode());</span>
+<span class="nc" id="L240">        ledgerEntity.setRemark(&quot;Leave Credited due to Leave Rejection or Reversal&quot;);</span>
+<span class="nc" id="L241">        ledgerEntity.setTransactionType(&quot;CREDIT&quot;);</span>
+<span class="nc" id="L242">        ledgerEntity.setTransactionBalance(leaveRequest.getTotalDays());</span>
+<span class="nc" id="L243">        ledgerEntity.setCreatedBy(String.valueOf(SessionHolder.getUserLoginDetail().getEmpId()));</span>
+<span class="nc" id="L244">        ledgerEntity.setCreatedDate(Instant.now());</span>
+<span class="nc" id="L245">        ledgerEntity.setLastUpdatedBy(String.valueOf(SessionHolder.getUserLoginDetail().getEmpId()));</span>
+<span class="nc" id="L246">        ledgerEntity.setLastUpdatedDate(Instant.now());</span>
+<span class="nc" id="L247">        ledgerRepository.save(ledgerEntity);</span>
+<span class="nc" id="L248">    }</span>
+
+    @Transactional
+    public LeaveRequest leaveReversal(Long leaveRfNum) {
+<span class="nc" id="L252">        LeaveRequest leaveRequest = leaveRequestRepository.findById(leaveRfNum).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Leave request not found.&quot;));</span>
+<span class="nc bnc" id="L253" title="All 2 branches missed.">        if (leaveRequest.getStatus().equalsIgnoreCase(Constant.LEAVE_REQUEST_STATUS_PENDING)) {</span>
+<span class="nc" id="L254">            boolean b = approvalFlowService.updateStatus(leaveRequest.getRequestNumber(), Constant.WORKFLOW_REQUEST_STATUS_CANCELLED);</span>
+<span class="nc" id="L255">            updateLeaveBalance(leaveRequest);</span>
+<span class="nc" id="L256">            leaveRequest.setStatus(Constant.LEAVE_REQUEST_STATUS_REVERSAL_APPROVED);</span>
+<span class="nc bnc" id="L257" title="All 2 branches missed.">        } else if (leaveRequest.getStatus().equalsIgnoreCase(Constant.LEAVE_REQUEST_STATUS_APPROVED)) {</span>
+<span class="nc" id="L258">            approvalFlowService.updateStatus(leaveRequest.getRequestNumber(), Constant.WORKFLOW_REQUEST_STATUS_REVERSAL_PENDING);</span>
+<span class="nc" id="L259">            leaveRequest.setStatus(Constant.LEAVE_REQUEST_STATUS_REVERSAL_PENDING);</span>
+        } else {
+<span class="nc" id="L261">            throw new IllegalArgumentException(&quot;Leave Reversal cannot be applied on rejected status&quot;);</span>
+        }
+<span class="nc" id="L263">        leaveRequest.setLastUpdatedDate(Instant.now());</span>
+<span class="nc" id="L264">        leaveRequest.setLastUpdatedBy(String.valueOf(SessionHolder.getUserLoginDetail().getEmpId()));</span>
+<span class="nc" id="L265">        return leaveRequestRepository.save(leaveRequest);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

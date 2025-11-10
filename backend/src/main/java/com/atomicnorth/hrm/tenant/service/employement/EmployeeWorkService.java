@@ -1,0 +1,108 @@
+package com.atomicnorth.hrm.tenant.service.employement;
+
+import com.atomicnorth.hrm.tenant.domain.employement.EmployeeWorkHistory;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.employement.EmployeeWorkHistRepo;
+import com.atomicnorth.hrm.tenant.service.dto.employement.EmployeeWorkHistDTO;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+
+@Service
+@Transactional
+public class EmployeeWorkService {
+
+    @Autowired
+    EmployeeWorkHistRepo employeeWorkHistRepo;
+
+    public List<EmployeeWorkHistDTO> saveOrUpdate(List<EmployeeWorkHistDTO> employeeWorkHistDTOs) {
+        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();
+        List<EmployeeWorkHistDTO> updatedDTOs = new ArrayList<>();
+
+        for (EmployeeWorkHistDTO dto : employeeWorkHistDTOs) {
+            EmployeeWorkHistory employeeWorkHistory = dto.getEmploymentHistoryId() != null ? employeeWorkHistRepo.findById(dto.getEmploymentHistoryId()).orElse(new EmployeeWorkHistory()) : new EmployeeWorkHistory();
+
+            mapToEntity(dto, employeeWorkHistory);
+
+            if (employeeWorkHistory.getEmploymentHistoryId() == null) {
+                employeeWorkHistory.setCreatedBy(String.valueOf(tokenHolder));
+                employeeWorkHistory.setCreatedDate(Instant.now());
+                employeeWorkHistory.setIsActive(true);
+            }
+            employeeWorkHistory.setLastUpdatedBy(String.valueOf(tokenHolder));
+            employeeWorkHistory.setLastUpdatedDate(Instant.now());
+            employeeWorkHistory.setIsActive(true);
+            EmployeeWorkHistory savedEntity = employeeWorkHistRepo.save(employeeWorkHistory);
+
+            dto.setEmploymentHistoryId(savedEntity.getEmploymentHistoryId());
+            updatedDTOs.add(dto);
+        }
+
+        return updatedDTOs;
+    }
+
+    private void mapToEntity(EmployeeWorkHistDTO dto, EmployeeWorkHistory entity) {
+        entity.setUserName(dto.getUsername());
+        entity.setOrgName(dto.getOrgName());
+        entity.setLocation(dto.getLocation());
+        entity.setDepartmentId(dto.getDepartmentId());
+        entity.setDesignationId(dto.getDesignationId());
+        entity.setIsGap(dto.getIsGap());
+        entity.setEmploymentTypeCode(dto.getEmploymentTypeCode());
+        entity.setGapReason(dto.getGapReason());
+        entity.setExperience(dto.getExperience());
+        entity.setFromDate(dto.getFromDate());
+        entity.setToDate(dto.getToDate());
+    }
+
+    public List<EmployeeWorkHistDTO> getFamilyByUsername(Integer userId) {
+        List<EmployeeWorkHistory> workHistories = employeeWorkHistRepo.findByUserName(userId);
+
+        return workHistories.stream().map(this::convertToDTO).collect(Collectors.toList());
+    }
+
+    public EmployeeWorkHistDTO getEducationById(Integer employmentHistoryId) {
+        Optional<EmployeeWorkHistory> employeeWorkHistory = employeeWorkHistRepo.findById(employmentHistoryId);
+
+        return employeeWorkHistory.map(this::convertToDTO).orElse(null);
+    }
+
+    public void deactivateEmployeeWorkHistory(Integer employmentHistoryId) {
+        Optional<EmployeeWorkHistory> employeeWorkHistory = employeeWorkHistRepo.findById(employmentHistoryId);
+        if (employeeWorkHistory.isPresent()) {
+            EmployeeWorkHistory history = employeeWorkHistory.get();
+            history.setIsActive(false);
+            employeeWorkHistRepo.save(history);
+        }
+    }
+
+    private EmployeeWorkHistDTO convertToDTO(EmployeeWorkHistory entity) {
+        EmployeeWorkHistDTO dto = new EmployeeWorkHistDTO();
+
+        dto.setEmploymentHistoryId(entity.getEmploymentHistoryId());
+        dto.setUsername(entity.getUserName());
+        dto.setOrgName(entity.getOrgName());
+        dto.setLocation(entity.getLocation());
+        dto.setDepartmentId(entity.getDepartmentId());
+        dto.setDesignationId(entity.getDesignationId());
+        dto.setIsGap(entity.getIsGap());
+        dto.setEmploymentTypeCode(entity.getEmploymentTypeCode());
+        dto.setGapReason(entity.getGapReason());
+        dto.setExperience(entity.getExperience());
+        dto.setIsActive(entity.getIsActive());
+        dto.setFromDate(entity.getFromDate());
+        dto.setToDate(entity.getToDate());
+
+        return dto;
+    }
+
+
+}

@@ -1,0 +1,519 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmployeeService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service</a> &gt; <span class="el_source">EmployeeService.java</span></div><h1>EmployeeService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service;
+
+import com.atomicnorth.hrm.tenant.domain.Employee;
+import com.atomicnorth.hrm.tenant.domain.EmployeeHierarchyView;
+import com.atomicnorth.hrm.tenant.domain.approvalflow.Level;
+import com.atomicnorth.hrm.tenant.domain.attendance.ShiftEmployeeEntity;
+import com.atomicnorth.hrm.tenant.domain.designation.Designation;
+import com.atomicnorth.hrm.tenant.domain.holiday.HolidaysCalendarDay;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.EmployeeHierarchyViewRepo;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.repository.LookupCodeRepository;
+import com.atomicnorth.hrm.tenant.repository.approvalflow.LevelRepository;
+import com.atomicnorth.hrm.tenant.repository.attendance.ShiftEmployeeRepo;
+import com.atomicnorth.hrm.tenant.repository.attendance.SupraShiftRepo;
+import com.atomicnorth.hrm.tenant.repository.designation.DesignationRepository;
+import com.atomicnorth.hrm.tenant.repository.employement.employee_job_applicant.JobApplicantRepository;
+import com.atomicnorth.hrm.tenant.repository.holiday.HolidaysCalendarDayRepository;
+import com.atomicnorth.hrm.tenant.service.dto.EmployeeDTO;
+import com.atomicnorth.hrm.tenant.service.dto.EmployeeHierarchyViewDTO;
+import com.atomicnorth.hrm.tenant.service.dto.EmployeeProfileDTO;
+import com.atomicnorth.hrm.tenant.service.dto.employement.AddEmployee;
+import com.atomicnorth.hrm.tenant.service.dto.employement.EmployeeBasicDetails;
+import com.atomicnorth.hrm.tenant.service.dto.employement.EmployeeContactInfoDTO;
+import com.atomicnorth.hrm.tenant.service.dto.employement.EmployeePersonalInfoDTO;
+import com.atomicnorth.hrm.tenant.service.dto.employement.EmployeeWorkInfoDTO;
+import com.atomicnorth.hrm.tenant.service.dto.employement.Response.EmployeeResponseDTO;
+import com.atomicnorth.hrm.util.Enum.SequenceType;
+import org.apache.commons.lang3.StringUtils;
+import org.modelmapper.ModelMapper;
+import org.modelmapper.convention.MatchingStrategies;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.persistence.EntityNotFoundException;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Root;
+import java.time.LocalDate;
+import java.time.Period;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+@Service
+public class EmployeeService {
+
+    private final ModelMapper modelMapper;
+<span class="fc" id="L64">    private final Logger log = LoggerFactory.getLogger(EmployeeService.class);</span>
+    private final EmployeeRepository employeeRepository;
+    private final LookupCodeRepository lookupCodeRepository;
+    private final JobApplicantRepository employeeJobApplicantRepository;
+    private final SequenceGeneratorService sequenceGeneratorService;
+    private final HolidaysCalendarDayRepository holidaysCalendarDayRepository;
+    private final LevelRepository levelRepository;
+    private final DesignationRepository designationRepository;
+    private final SupraShiftRepo supraShiftRepo;
+    private final ShiftEmployeeRepo shiftEmployeeRepo;
+    private final EmployeeHierarchyViewRepo employeeHierarchyViewRepo;
+    private final InterviewService interviewService;
+
+<span class="fc" id="L77">    public EmployeeService(EmployeeRepository employeeRepository, LookupCodeRepository lookupCodeRepository, ModelMapper modelMapper, JobApplicantRepository employeeJobApplicantRepository, SequenceGeneratorService sequenceGeneratorService, HolidaysCalendarDayRepository holidaysCalendarDayRepository, LevelRepository levelRepository, DesignationRepository designationRepository, SupraShiftRepo supraShiftRepo, ShiftEmployeeRepo shiftEmployeeRepo, EmployeeHierarchyViewRepo employeeHierarchyViewRepo, InterviewService interviewService) {</span>
+<span class="fc" id="L78">        this.employeeRepository = employeeRepository;</span>
+<span class="fc" id="L79">        this.modelMapper = modelMapper;</span>
+<span class="fc" id="L80">        this.lookupCodeRepository = lookupCodeRepository;</span>
+<span class="fc" id="L81">        this.employeeJobApplicantRepository = employeeJobApplicantRepository;</span>
+<span class="fc" id="L82">        this.sequenceGeneratorService = sequenceGeneratorService;</span>
+<span class="fc" id="L83">        this.holidaysCalendarDayRepository = holidaysCalendarDayRepository;</span>
+<span class="fc" id="L84">        this.levelRepository = levelRepository;</span>
+<span class="fc" id="L85">        this.designationRepository = designationRepository;</span>
+<span class="fc" id="L86">        this.supraShiftRepo = supraShiftRepo;</span>
+<span class="fc" id="L87">        this.shiftEmployeeRepo = shiftEmployeeRepo;</span>
+<span class="fc" id="L88">        this.employeeHierarchyViewRepo = employeeHierarchyViewRepo;</span>
+<span class="fc" id="L89">        this.interviewService = interviewService;</span>
+<span class="fc" id="L90">        this.modelMapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);</span>
+
+<span class="fc" id="L92">        this.modelMapper.typeMap(Employee.class, EmployeeResponseDTO.class)</span>
+<span class="fc" id="L93">                .addMappings(mapper -&gt; mapper.map(src -&gt; src.getDesignation().getDesignationName(), EmployeeResponseDTO::setDesignationName))</span>
+<span class="fc" id="L94">                .addMappings(mapper -&gt; mapper.map(src -&gt; src.getDepartment().getDname(), EmployeeResponseDTO::setDepartmentName));</span>
+<span class="fc" id="L95">    }</span>
+
+    @Transactional
+    public EmployeeResponseDTO addEmployee(EmployeeResponseDTO dto, boolean isBasic) {
+<span class="nc bnc" id="L99" title="All 2 branches missed.">        if (isBasic) {</span>
+<span class="nc bnc" id="L100" title="All 4 branches missed.">            if (!dto.getPersonalEmail().isBlank() &amp;&amp; employeeRepository.existsByPersonalEmail(dto.getPersonalEmail())) {</span>
+<span class="nc" id="L101">                throw new IllegalArgumentException(&quot;Personal Email already exists: &quot; + dto.getPersonalEmail() + &quot;for &quot; + dto.getDisplayName());</span>
+            }
+<span class="nc bnc" id="L103" title="All 4 branches missed.">            if (!dto.getWorkEmail().isBlank() &amp;&amp; employeeRepository.existsByWorkEmail(dto.getWorkEmail())) {</span>
+<span class="nc" id="L104">                throw new IllegalArgumentException(&quot;Work Email already exists: &quot; + dto.getWorkEmail() + &quot;for &quot; + dto.getDisplayName());</span>
+            }
+<span class="nc bnc" id="L106" title="All 4 branches missed.">            if (dto.getPanNumber() != null &amp;&amp; employeeRepository.existsByPanNumber(dto.getPanNumber())) {</span>
+<span class="nc" id="L107">                throw new DuplicateKeyException(&quot;PAN Number already exists: &quot; + dto.getPanNumber());</span>
+            }
+<span class="nc bnc" id="L109" title="All 4 branches missed.">            if (dto.getAadhaarNumber() != null &amp;&amp; employeeRepository.existsByAadhaarNumber(dto.getAadhaarNumber())) {</span>
+<span class="nc" id="L110">                throw new DuplicateKeyException(&quot;Aadhaar Number already exists: &quot; + dto.getAadhaarNumber());</span>
+            }
+<span class="nc bnc" id="L112" title="All 4 branches missed.">            if (dto.getPassportNumber() != null &amp;&amp; employeeRepository.existsByPassportNumber(dto.getPassportNumber())) {</span>
+<span class="nc" id="L113">                throw new DuplicateKeyException(&quot;Passport Number already exists: &quot; + dto.getPassportNumber());</span>
+            }
+<span class="nc bnc" id="L115" title="All 4 branches missed.">            if (dto.getDlNumber() != null &amp;&amp; employeeRepository.existsByDlNumber(dto.getDlNumber())) {</span>
+<span class="nc" id="L116">                throw new DuplicateKeyException(&quot;DL Number already exists: &quot; + dto.getDlNumber());</span>
+            }
+<span class="nc bnc" id="L118" title="All 2 branches missed.">            if (dto.getDob() != null) {</span>
+<span class="nc" id="L119">                int age = Period.between(dto.getDob(), LocalDate.now()).getYears();</span>
+<span class="nc bnc" id="L120" title="All 2 branches missed.">                if (age &lt; 18) {</span>
+<span class="nc" id="L121">                    throw new IllegalArgumentException(&quot;Employee must be at least 18 years old. Provided DOB: &quot; + dto.getDob());</span>
+                }
+            }
+        }
+<span class="nc" id="L125">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L126">        Employee employee = modelMapper.map(dto, Employee.class);</span>
+<span class="nc" id="L127">        employee.setIsActive(&quot;Y&quot;);</span>
+<span class="nc" id="L128">        employee.setCreatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L129">        employee.setCreationDate(LocalDate.now());</span>
+<span class="nc" id="L130">        employee.setEmployeeNumber(sequenceGeneratorService.generateSequence(SequenceType.EMPLOYEE.toString(), null));</span>
+<span class="nc" id="L131">        interviewService.updateInterviewStatus(dto.getJobApplicantId());</span>
+<span class="nc" id="L132">        Employee savedEmployee = employeeRepository.save(employee);</span>
+<span class="nc" id="L133">        log.info(&quot;Employee created with ID: {}&quot;, savedEmployee.getEmployeeId());</span>
+<span class="nc" id="L134">        return modelMapper.map(savedEmployee, EmployeeResponseDTO.class);</span>
+    }
+    @Transactional
+    public EmployeeResponseDTO updatePersonalInfo(Integer employeeId, EmployeePersonalInfoDTO dto) {
+<span class="nc" id="L138">        Employee existingEmployee = employeeRepository.findById(employeeId)</span>
+<span class="nc" id="L139">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Employee not found&quot;));</span>
+
+<span class="nc bnc" id="L141" title="All 2 branches missed.">        if (dto.getPanNumber() != null) {</span>
+<span class="nc" id="L142">            Optional&lt;Employee&gt; existingEmployeeByPan = employeeRepository.findByPanNumber(dto.getPanNumber());</span>
+<span class="nc bnc" id="L143" title="All 4 branches missed.">            if (existingEmployeeByPan.isPresent() &amp;&amp; !existingEmployeeByPan.get().getEmployeeId().equals(employeeId)) {</span>
+<span class="nc" id="L144">                throw new DuplicateKeyException(&quot;PAN number already exists: &quot; + dto.getPanNumber());</span>
+            }
+        }
+<span class="nc bnc" id="L147" title="All 2 branches missed.">        if (dto.getAadhaarNumber() != null) {</span>
+<span class="nc" id="L148">            Optional&lt;Employee&gt; existingEmployeeByAadhaarNumber = employeeRepository.findByAadhaarNumber(dto.getAadhaarNumber());</span>
+<span class="nc bnc" id="L149" title="All 4 branches missed.">            if (existingEmployeeByAadhaarNumber.isPresent() &amp;&amp; !existingEmployeeByAadhaarNumber.get().getEmployeeId().equals(employeeId)) {</span>
+<span class="nc" id="L150">                throw new DuplicateKeyException(&quot;Aadhaar number already exists: &quot; + dto.getAadhaarNumber());</span>
+            }
+        }
+<span class="nc bnc" id="L153" title="All 4 branches missed.">        if (dto.getPassportNumber() != null &amp;&amp; !dto.getPassportNumber().isBlank()) {</span>
+<span class="nc" id="L154">            Optional&lt;Employee&gt; existingEmployeeByPassportNumber = employeeRepository.findByPassportNumber(dto.getPassportNumber());</span>
+<span class="nc bnc" id="L155" title="All 4 branches missed.">            if (existingEmployeeByPassportNumber.isPresent() &amp;&amp; !existingEmployeeByPassportNumber.get().getEmployeeId().equals(employeeId)) {</span>
+<span class="nc" id="L156">                throw new DuplicateKeyException(&quot;Passport number already exists: &quot; + dto.getPassportNumber());</span>
+            }
+        }
+<span class="nc bnc" id="L159" title="All 4 branches missed.">        if (dto.getDlNumber() != null &amp;&amp; !dto.getDlNumber().isBlank()) {</span>
+<span class="nc" id="L160">            Optional&lt;Employee&gt; existingEmployeeByDlNumber = employeeRepository.findByDlNumber(dto.getDlNumber());</span>
+<span class="nc bnc" id="L161" title="All 4 branches missed.">            if (existingEmployeeByDlNumber.isPresent() &amp;&amp; !existingEmployeeByDlNumber.get().getEmployeeId().equals(employeeId)) {</span>
+<span class="nc" id="L162">                throw new DuplicateKeyException(&quot;DL number already exists: &quot; + dto.getDlNumber());</span>
+            }
+        }
+<span class="nc bnc" id="L165" title="All 2 branches missed.">        if (dto.getDob() != null) {</span>
+<span class="nc" id="L166">            int age = Period.between(dto.getDob(), LocalDate.now()).getYears();</span>
+<span class="nc bnc" id="L167" title="All 2 branches missed.">            if (age &lt; 18) {</span>
+<span class="nc" id="L168">                throw new IllegalArgumentException(&quot;Employee must be at least 18 years old. Provided DOB: &quot; + dto.getDob());</span>
+            }
+        }
+<span class="nc" id="L171">        modelMapper.map(dto, existingEmployee);</span>
+<span class="nc" id="L172">        employeeRepository.save(existingEmployee);</span>
+<span class="nc" id="L173">        return modelMapper.map(existingEmployee, EmployeeResponseDTO.class);</span>
+    }
+
+    @Transactional
+    public EmployeeResponseDTO updateWorkInfo(Integer employeeId, EmployeeWorkInfoDTO dto) {
+<span class="nc" id="L178">        Employee employee = employeeRepository.findById(employeeId)</span>
+<span class="nc" id="L179">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Employee not found&quot;));</span>
+<span class="nc" id="L180">        modelMapper.map(dto, employee);</span>
+<span class="nc" id="L181">        employeeRepository.save(employee);</span>
+<span class="nc" id="L182">        return modelMapper.map(employee, EmployeeResponseDTO.class);</span>
+    }
+
+    @Transactional
+    public EmployeeResponseDTO updateContactInfo(Integer employeeId, EmployeeContactInfoDTO dto) {
+<span class="nc" id="L187">        Employee employee = employeeRepository.findById(employeeId)</span>
+<span class="nc" id="L188">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Employee not found&quot;));</span>
+
+<span class="nc bnc" id="L190" title="All 2 branches missed.">        if (dto.getPersonalEmail() != null) {</span>
+<span class="nc" id="L191">            Optional&lt;Employee&gt; existingEmployeeByPersonalEmail = employeeRepository.findByPersonalEmail(dto.getPersonalEmail());</span>
+<span class="nc bnc" id="L192" title="All 4 branches missed.">            if (existingEmployeeByPersonalEmail.isPresent() &amp;&amp; !existingEmployeeByPersonalEmail.get().getEmployeeId().equals(employeeId)) {</span>
+<span class="nc" id="L193">                throw new DuplicateKeyException(&quot;Personal Email already exists: &quot; + dto.getPersonalEmail());</span>
+            }
+        }
+<span class="nc bnc" id="L196" title="All 2 branches missed.">        if (dto.getWorkEmail() != null) {</span>
+<span class="nc" id="L197">            Optional&lt;Employee&gt; existingEmployeeByWorkEmail = employeeRepository.findByWorkEmail(dto.getWorkEmail());</span>
+<span class="nc bnc" id="L198" title="All 4 branches missed.">            if (existingEmployeeByWorkEmail.isPresent() &amp;&amp; !existingEmployeeByWorkEmail.get().getEmployeeId().equals(employeeId)) {</span>
+<span class="nc" id="L199">                throw new DuplicateKeyException(&quot;Work Email already exists: &quot; + dto.getWorkEmail());</span>
+            }
+        }
+
+<span class="nc" id="L203">        modelMapper.map(dto, employee);</span>
+<span class="nc" id="L204">        employeeRepository.save(employee);</span>
+<span class="nc" id="L205">        return modelMapper.map(employee, EmployeeResponseDTO.class);</span>
+    }
+
+    @Transactional
+    public Optional&lt;EmployeeResponseDTO&gt; getEmployeeById(Integer employeeId) {
+<span class="fc" id="L210">        Employee employee = employeeRepository.findById(employeeId)</span>
+<span class="fc" id="L211">                .orElseThrow(() -&gt; new RuntimeException(&quot;Employee with ID &quot; + employeeId + &quot; not found.&quot;));</span>
+<span class="fc" id="L212">        log.info(&quot;Employee with ID {} retrieved&quot;, employee.getEmployeeId());</span>
+<span class="fc" id="L213">        return Optional.of(convertToDTO(employee));</span>
+    }
+
+    private EmployeeResponseDTO convertToDTO(Employee employee) {
+<span class="fc" id="L217">        EmployeeResponseDTO dto = modelMapper.map(employee, EmployeeResponseDTO.class);</span>
+<span class="fc" id="L218">        dto.setPayrollCostCenterName(getLookupMeaning(&quot;PAYROLL_COST_CENTER&quot;, employee.getPayrollCostCenterCode(), &quot;Unknown Payroll Cost Center&quot;));</span>
+<span class="fc" id="L219">        dto.setSalaryModeName(getLookupMeaning(&quot;SALARY_PAID_PER_LIST&quot;, employee.getSalaryModeCode(), &quot;Unknown Salary Mode&quot;));</span>
+<span class="fc" id="L220">        dto.setCurrencyName(getLookupMeaning(&quot;CURRENCY_LIST&quot;, employee.getCurrencyCode(), &quot;Unknown Currency Name&quot;));</span>
+<span class="pc bpc" id="L221" title="1 of 2 branches missed.">        if (employee.getJobApplicantId() != null) {</span>
+<span class="fc" id="L222">            dto.setJobApplicantName(employeeJobApplicantRepository.findJobApplicantNameById(employee.getJobApplicantId())</span>
+<span class="fc" id="L223">                    .orElseGet(() -&gt; {</span>
+<span class="fc" id="L224">                        return &quot;Unknown Applicant&quot;;</span>
+                    }));
+        }
+<span class="fc" id="L227">        return dto;</span>
+    }
+
+    public String getLookupMeaning(String lookupType, String lookupCode, String defaultValue) {
+<span class="pc bpc" id="L231" title="1 of 2 branches missed.">        return StringUtils.isNotBlank(lookupCode)</span>
+<span class="fc" id="L232">                ? lookupCodeRepository.findMeaningByLookupTypeAndLookupCode(lookupType, lookupCode).orElse(defaultValue)</span>
+<span class="nc" id="L233">                : defaultValue;</span>
+    }
+
+    public List&lt;EmployeeResponseDTO&gt; getEmployessName(List&lt;String&gt; EmpIds) {
+<span class="nc" id="L237">        List&lt;EmployeeResponseDTO&gt; employeeResponseDTOList = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L238">        List&lt;Employee&gt; employeeList = employeeRepository.findAllByEmployeeNumber(EmpIds);</span>
+<span class="nc bnc" id="L239" title="All 2 branches missed.">        for (Employee employee : employeeList) {</span>
+<span class="nc" id="L240">            EmployeeResponseDTO employeeResponseDTO = new EmployeeResponseDTO();</span>
+<span class="nc" id="L241">            employeeResponseDTO.setEmployeeNumber(employee.getEmployeeNumber());</span>
+<span class="nc" id="L242">            employeeResponseDTO.setFirstName(employee.getFirstName());</span>
+<span class="nc" id="L243">            employeeResponseDTO.setLastName(employee.getLastName());</span>
+<span class="nc" id="L244">            employeeResponseDTO.setMiddleName(employee.getMiddleName());</span>
+<span class="nc" id="L245">            employeeResponseDTOList.add(employeeResponseDTO);</span>
+<span class="nc" id="L246">        }</span>
+<span class="nc" id="L247">        return employeeResponseDTOList;</span>
+    }
+
+    @Transactional()
+    public Map&lt;String, Object&gt; getPaginatedEmployee(Pageable pageable, String searchColumn, String searchValue) {
+        Page&lt;Employee&gt; employees;
+
+<span class="nc bnc" id="L254" title="All 2 branches missed.">        if (&quot;designationName&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L255">            employees = employeeRepository.findByDesignation_DesignationNameContainingIgnoreCase(searchValue, pageable);</span>
+<span class="nc bnc" id="L256" title="All 2 branches missed.">        } else if (&quot;divisionName&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L257">            employees = employeeRepository.findByDivisionMaster_NameContainingIgnoreCase(searchValue, pageable);</span>
+<span class="nc bnc" id="L258" title="All 2 branches missed.">        } else if (&quot;departmentName&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L259">            employees = employeeRepository.findByDepartment_DnameContainingIgnoreCase(searchValue, pageable);</span>
+<span class="nc bnc" id="L260" title="All 2 branches missed.">        } else if (&quot;fullName&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L261">            employees = employeeRepository.findByFirstNameContainingIgnoreCaseOrMiddleNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(</span>
+                    searchValue, searchValue, searchValue, pageable);
+<span class="nc bnc" id="L263" title="All 4 branches missed.">        } else if (searchColumn != null &amp;&amp; searchValue != null) {</span>
+<span class="nc" id="L264">            Specification&lt;Employee&gt; spec = searchByColumn(searchColumn, searchValue);</span>
+<span class="nc" id="L265">            employees = employeeRepository.findAll(spec, pageable);</span>
+<span class="nc" id="L266">        } else {</span>
+<span class="nc" id="L267">            employees = employeeRepository.findAll(pageable);</span>
+        }
+
+<span class="nc" id="L270">        List&lt;EmployeeResponseDTO&gt; employeeDTOs = employees.getContent()</span>
+<span class="nc" id="L271">                .stream()</span>
+<span class="nc" id="L272">                .map(this::mapEmployee)</span>
+<span class="nc" id="L273">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L275">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L276">        response.put(&quot;result&quot;, employeeDTOs);</span>
+<span class="nc" id="L277">        response.put(&quot;currentPage&quot;, pageable.getPageNumber() + 1);</span>
+<span class="nc" id="L278">        response.put(&quot;pageSize&quot;, pageable.getPageSize());</span>
+<span class="nc" id="L279">        response.put(&quot;totalItems&quot;, employees.getTotalElements());</span>
+<span class="nc" id="L280">        response.put(&quot;totalPages&quot;, employees.getTotalPages());</span>
+
+<span class="nc" id="L282">        return response;</span>
+    }
+
+    private EmployeeResponseDTO mapEmployee(Employee employee) {
+<span class="nc bnc" id="L286" title="All 2 branches missed.">        if (employee == null) {</span>
+<span class="nc" id="L287">            return null;</span>
+        }
+
+<span class="nc" id="L290">        EmployeeResponseDTO dto = new EmployeeResponseDTO();</span>
+
+        try {
+<span class="nc" id="L293">            dto.setEmployeeId(employee.getEmployeeId());</span>
+<span class="nc" id="L294">            dto.setEmployeeNumber(employee.getEmployeeNumber());</span>
+<span class="nc" id="L295">            dto.setSalutation(employee.getSalutation());</span>
+<span class="nc" id="L296">            dto.setFirstName(employee.getFirstName());</span>
+<span class="nc" id="L297">            dto.setMiddleName(employee.getMiddleName());</span>
+<span class="nc" id="L298">            dto.setLastName(employee.getLastName());</span>
+<span class="nc" id="L299">            dto.setDisplayName(employee.getDisplayName());</span>
+<span class="nc" id="L300">            dto.setDob(employee.getDob());</span>
+<span class="nc" id="L301">            dto.setGenderCode(employee.getGenderCode());</span>
+<span class="nc" id="L302">            dto.setDivisionId(employee.getDivisionId());</span>
+<span class="nc" id="L303">            dto.setDepartmentId(employee.getDepartmentId());</span>
+<span class="nc" id="L304">            dto.setDesignationId(employee.getDesignationId());</span>
+
+<span class="nc bnc" id="L306" title="All 2 branches missed.">            if (employee.getDivisionMaster() != null) {</span>
+<span class="nc" id="L307">                dto.setDivisionName(employee.getDivisionMaster().getDisplayName());</span>
+            } else {
+<span class="nc" id="L309">                dto.setDivisionName(null);</span>
+            }
+
+<span class="nc bnc" id="L312" title="All 2 branches missed.">            if (employee.getDepartment() != null) {</span>
+<span class="nc" id="L313">                dto.setDepartmentName(employee.getDepartment().getDname());</span>
+            } else {
+<span class="nc" id="L315">                dto.setDepartmentName(null);</span>
+            }
+
+<span class="nc bnc" id="L318" title="All 2 branches missed.">            if (employee.getDesignation() != null) {</span>
+<span class="nc" id="L319">                dto.setDesignationName(employee.getDesignation().getDesignationName());</span>
+            } else {
+<span class="nc" id="L321">                dto.setDesignationName(null);</span>
+            }
+
+<span class="nc bnc" id="L324" title="All 2 branches missed.">            if (employee.getReportingManager() != null) {</span>
+<span class="nc" id="L325">                dto.setReportingManagerId(employee.getReportingManager().getEmployeeId());</span>
+            } else {
+<span class="nc" id="L327">                dto.setReportingManagerId(employee.getReportingManagerId());</span>
+            }
+
+<span class="nc" id="L330">            dto.setPanNumber(employee.getPanNumber());</span>
+<span class="nc" id="L331">            dto.setAadhaarNumber(employee.getAadhaarNumber());</span>
+<span class="nc" id="L332">            dto.setPassportNumber(employee.getPassportNumber());</span>
+<span class="nc" id="L333">            dto.setDlNumber(employee.getDlNumber());</span>
+<span class="nc" id="L334">            dto.setBusinessGroupId(employee.getBusinessGroupId());</span>
+<span class="nc" id="L335">            dto.setPolicyGroup(employee.getPolicyGroup());</span>
+<span class="nc" id="L336">            dto.setMotherTongue(employee.getMotherTongue());</span>
+<span class="nc" id="L337">            dto.setMaritalStatus(employee.getMaritalStatus());</span>
+<span class="nc" id="L338">            dto.setMarriageDate(employee.getMarriageDate());</span>
+<span class="nc" id="L339">            dto.setSpouseName(employee.getSpouseName());</span>
+<span class="nc" id="L340">            dto.setFatherName(employee.getFatherName());</span>
+<span class="nc" id="L341">            dto.setMotherName(employee.getMotherName());</span>
+
+<span class="nc" id="L343">            dto.setPersonalEmail(employee.getPersonalEmail());</span>
+<span class="nc" id="L344">            dto.setWorkEmail(employee.getWorkEmail());</span>
+<span class="nc" id="L345">            dto.setPrimaryContactNumber(employee.getPrimaryContactNumber());</span>
+<span class="nc" id="L346">            dto.setPrimaryContactCountryCode(employee.getPrimaryContactCountryCode());</span>
+
+<span class="nc" id="L348">            dto.setOnBoardingDate(employee.getOnBoardingDate());</span>
+<span class="nc" id="L349">            dto.setOffBoardingDate(employee.getOffBoardingDate());</span>
+<span class="nc" id="L350">            dto.setRetirementDate(employee.getRetirementDate());</span>
+<span class="nc" id="L351">            dto.setConfirmationDate(employee.getConfirmationDate());</span>
+<span class="nc" id="L352">            dto.setOfferDate(employee.getOfferDate());</span>
+<span class="nc" id="L353">            dto.setIsActive(employee.getIsActive());</span>
+
+<span class="nc" id="L355">            dto.setFullName(employee.getFullName());</span>
+
+<span class="nc" id="L357">        } catch (Exception ex) {</span>
+<span class="nc" id="L358">            System.err.println(&quot;Error while mapping employeeId=&quot;</span>
+<span class="nc" id="L359">                    + employee.getEmployeeId() + &quot;: &quot; + ex.getMessage());</span>
+<span class="nc" id="L360">        }</span>
+
+<span class="nc" id="L362">        return dto;</span>
+    }
+
+
+    public static Specification&lt;Employee&gt; searchByColumn(String column, String value) {
+<span class="nc" id="L367">        return (Root&lt;Employee&gt; root, CriteriaQuery&lt;?&gt; query, CriteriaBuilder criteriaBuilder) -&gt; {</span>
+<span class="nc" id="L368">            return criteriaBuilder.like(</span>
+<span class="nc" id="L369">                    criteriaBuilder.lower(root.get(column)),</span>
+<span class="nc" id="L370">                    &quot;%&quot; + value.toLowerCase() + &quot;%&quot;</span>
+            );
+        };
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;EmployeeBasicDetails&gt; getAllEmployeesWithDetails() {
+<span class="nc" id="L377">        return employeeRepository.findAllByOrderByFirstNameAsc().stream()</span>
+<span class="nc" id="L378">                .filter(emp -&gt; &quot;Y&quot;.equalsIgnoreCase(emp.getIsActive())).collect(Collectors.toList());</span>
+    }
+
+    public List&lt;EmployeeDTO&gt; findManagerFullName() {
+<span class="nc" id="L382">        List&lt;Employee&gt; employeeDetails = employeeRepository.findByIsActive(&quot;Active&quot;);</span>
+<span class="nc" id="L383">        Set&lt;Integer&gt; rmIds = employeeDetails.stream().map(Employee::getReportingManagerId).collect(Collectors.toSet());</span>
+<span class="nc" id="L384">        List&lt;Employee&gt; managers = employeeRepository.findByEmployeeIdIn(rmIds);</span>
+<span class="nc" id="L385">        return managers.stream()</span>
+<span class="nc" id="L386">                .map(e -&gt; new EmployeeDTO(</span>
+<span class="nc" id="L387">                        e.getEmployeeId(),</span>
+<span class="nc" id="L388">                        e.getFullName(),</span>
+<span class="nc" id="L389">                        e.getWorkEmail(),</span>
+<span class="nc" id="L390">                        e.getEmployeeNumber()</span>
+                ))
+<span class="nc" id="L392">                .collect(Collectors.toList());</span>
+    }
+
+    public Map&lt;LocalDate, HolidaysCalendarDay&gt; getHolidayList(Integer empId) {
+<span class="nc" id="L396">        Set&lt;Integer&gt; calendarIds = employeeRepository.findById(empId).stream().map(Employee::getHolidayListId).collect(Collectors.toSet());</span>
+<span class="nc bnc" id="L397" title="All 2 branches missed.">        if (!calendarIds.isEmpty()) {</span>
+<span class="nc" id="L398">            return holidaysCalendarDayRepository.findByHolidayCalendarIdIn(calendarIds).stream()</span>
+<span class="nc bnc" id="L399" title="All 2 branches missed.">                    .filter(x -&gt; !&quot;WO&quot;.equals(x.getHolidayType())).collect(Collectors.toMap(</span>
+                            HolidaysCalendarDay::getHolidayDate,
+<span class="nc" id="L401">                            x -&gt; x,</span>
+<span class="nc" id="L402">                            (existing, replacement) -&gt; existing</span>
+                    ));
+        }
+<span class="nc" id="L405">        return null;</span>
+    }
+
+    public Optional&lt;EmployeeProfileDTO&gt; getEmployeeProfileById(Integer empId) {
+<span class="nc" id="L409">        return employeeRepository.findById(empId).map(employee -&gt; {</span>
+<span class="nc" id="L410">            EmployeeProfileDTO dto = modelMapper.map(employee, EmployeeProfileDTO.class);</span>
+
+<span class="nc" id="L412">            String fullName = Stream.of(employee.getFirstName(), employee.getMiddleName(), employee.getLastName())</span>
+<span class="nc bnc" id="L413" title="All 4 branches missed.">                    .filter(name -&gt; name != null &amp;&amp; !name.isBlank())</span>
+<span class="nc" id="L414">                    .collect(Collectors.joining(&quot; &quot;));</span>
+
+<span class="nc" id="L416">            dto.setFullName(fullName);</span>
+
+<span class="nc" id="L418">            Date today = Date.from(LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant());</span>
+
+<span class="nc" id="L420">            List&lt;ShiftEmployeeEntity&gt; currentShifts = shiftEmployeeRepo</span>
+<span class="nc" id="L421">                    .findByEmployeeIdAndIsActive(empId, &quot;Y&quot;);</span>
+
+<span class="nc bnc" id="L423" title="All 2 branches missed.">            if (!currentShifts.isEmpty()) {</span>
+<span class="nc" id="L424">                List&lt;String&gt; shiftDisplays = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L425" title="All 2 branches missed.">                for (ShiftEmployeeEntity shiftEmp : currentShifts) {</span>
+<span class="nc" id="L426">                    Long shiftId = Long.valueOf(shiftEmp.getShiftId());</span>
+<span class="nc" id="L427">                    supraShiftRepo.findById(Math.toIntExact(shiftId)).ifPresent(shift -&gt; {</span>
+<span class="nc" id="L428">                        String shiftDisplay = shift.getShiftCode() + &quot; (&quot; +</span>
+<span class="nc" id="L429">                                shift.getGeneralStartTime() + &quot; - &quot; +</span>
+<span class="nc" id="L430">                                shift.getGeneralEndTime() + &quot;)&quot;;</span>
+<span class="nc" id="L431">                        shiftDisplays.add(shiftDisplay);</span>
+<span class="nc" id="L432">                    });</span>
+<span class="nc" id="L433">                }</span>
+<span class="nc" id="L434">                dto.setShift(String.join(&quot;, &quot;, shiftDisplays));</span>
+<span class="nc bnc" id="L435" title="All 2 branches missed.">            } else if (employee.getDefaultShiftId() != null) {</span>
+<span class="nc" id="L436">                supraShiftRepo.findById(employee.getDefaultShiftId()).ifPresent(shift -&gt; {</span>
+<span class="nc" id="L437">                    String shiftDisplay = shift.getShiftCode() + &quot; (&quot; +</span>
+<span class="nc" id="L438">                            shift.getGeneralStartTime() + &quot; - &quot; +</span>
+<span class="nc" id="L439">                            shift.getGeneralEndTime() + &quot;)&quot;;</span>
+<span class="nc" id="L440">                    dto.setShift(shiftDisplay);</span>
+<span class="nc" id="L441">                });</span>
+            }
+<span class="nc" id="L443">            return dto;</span>
+        });
+    }
+
+    public List&lt;Employee&gt; getActiveEmployeesByDepartment(List&lt;Long&gt; departmentIds, String active) {
+<span class="nc" id="L448">        return employeeRepository.findByDepartmentIdInAndIsActive(departmentIds, active);</span>
+    }
+
+    public boolean checkEmployeeExists(Integer jobApplicantId) {
+<span class="nc" id="L452">        return employeeRepository.existsByJobApplicantId(jobApplicantId);</span>
+    }
+
+    public List&lt;EmployeeBasicDetails&gt; getAllManager(Integer levelId) {
+        List&lt;Level&gt; allLevels;
+<span class="nc bnc" id="L457" title="All 2 branches missed.">        if (levelId != null) {</span>
+<span class="nc" id="L458">            allLevels = levelRepository.findByIsActiveAndLevelId(&quot;Y&quot;, levelId);</span>
+        } else {
+<span class="nc" id="L460">            allLevels = levelRepository.findByIsActiveAndLevelCodeNot(&quot;Y&quot;, &quot;EMPLOYEE&quot;);</span>
+        }
+<span class="nc" id="L462">        List&lt;Integer&gt; levelIds = allLevels.stream().map(Level::getLevelId).collect(Collectors.toList());</span>
+<span class="nc" id="L463">        List&lt;Designation&gt; designations = designationRepository.findByLevelMasterIdInAndStatus(levelIds, &quot;A&quot;);</span>
+<span class="nc bnc" id="L464" title="All 2 branches missed.">        if (!designations.isEmpty()) {</span>
+<span class="nc" id="L465">            List&lt;Integer&gt; designationIds = designations.stream().map(Designation::getId).collect(Collectors.toList());</span>
+<span class="nc" id="L466">            return employeeRepository.findByDesignationIdInAndIsActiveOrderByFirstNameAscLastNameAsc(designationIds, &quot;Y&quot;);</span>
+        }
+<span class="nc" id="L468">        return Collections.emptyList();</span>
+    }
+
+    public List&lt;EmployeeHierarchyViewDTO&gt; applyFilters(List&lt;Integer&gt; divisionId, List&lt;Integer&gt; departmentId, List&lt;Integer&gt; reportingManagerId) {
+        List&lt;EmployeeHierarchyView&gt; result;
+<span class="nc bnc" id="L473" title="All 12 branches missed.">        if (divisionId != null &amp;&amp; departmentId != null &amp;&amp; reportingManagerId != null &amp;&amp; !divisionId.isEmpty() &amp;&amp; !departmentId.isEmpty() &amp;&amp; !reportingManagerId.isEmpty()) {</span>
+<span class="nc" id="L474">            result = employeeHierarchyViewRepo.findByDivisionIdInAndDepartmentIdInAndReportingManagerIdIn(divisionId, departmentId, reportingManagerId);</span>
+<span class="nc bnc" id="L475" title="All 8 branches missed.">        } else if (divisionId != null &amp;&amp; departmentId != null &amp;&amp; !divisionId.isEmpty() &amp;&amp; !departmentId.isEmpty()) {</span>
+<span class="nc" id="L476">            result = employeeHierarchyViewRepo.findByDivisionIdInAndDepartmentIdIn(divisionId, departmentId);</span>
+<span class="nc bnc" id="L477" title="All 8 branches missed.">        } else if (divisionId != null &amp;&amp; reportingManagerId != null &amp;&amp; !divisionId.isEmpty() &amp;&amp; !reportingManagerId.isEmpty()) {</span>
+<span class="nc" id="L478">            result = employeeHierarchyViewRepo.findByDivisionIdInAndReportingManagerIdIn(divisionId, reportingManagerId);</span>
+<span class="nc bnc" id="L479" title="All 4 branches missed.">        } else if (divisionId != null &amp;&amp; !divisionId.isEmpty()) {</span>
+<span class="nc" id="L480">            result = employeeHierarchyViewRepo.findByDivisionIdIn(divisionId);</span>
+<span class="nc bnc" id="L481" title="All 8 branches missed.">        } else if (departmentId != null &amp;&amp; reportingManagerId != null &amp;&amp; !departmentId.isEmpty() &amp;&amp; !reportingManagerId.isEmpty()) {</span>
+<span class="nc" id="L482">            result = employeeHierarchyViewRepo.findByDepartmentIdInAndReportingManagerIdIn(departmentId, reportingManagerId);</span>
+<span class="nc bnc" id="L483" title="All 4 branches missed.">        } else if (departmentId != null &amp;&amp; !departmentId.isEmpty()) {</span>
+<span class="nc" id="L484">            result = employeeHierarchyViewRepo.findByDepartmentIdIn(departmentId);</span>
+<span class="nc bnc" id="L485" title="All 4 branches missed.">        } else if (reportingManagerId != null &amp;&amp; !reportingManagerId.isEmpty()) {</span>
+<span class="nc" id="L486">            result = employeeHierarchyViewRepo.findByReportingManagerIdIn(reportingManagerId);</span>
+        } else {
+<span class="nc" id="L488">            result = employeeHierarchyViewRepo.findAll();</span>
+        }
+<span class="nc" id="L490">        return result.stream().map(x -&gt; modelMapper.map(x, EmployeeHierarchyViewDTO.class)).collect(Collectors.toList());</span>
+    }
+
+    @Transactional
+    public List&lt;EmployeeResponseDTO&gt; addEmployees(List&lt;AddEmployee&gt; addEmployees) {
+<span class="nc" id="L495">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L496">        List&lt;Employee&gt; employeesToSave = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L498" title="All 2 branches missed.">        for (AddEmployee dto : addEmployees) {</span>
+<span class="nc bnc" id="L499" title="All 2 branches missed.">            if (employeeRepository.existsByPersonalEmail(dto.getPersonalEmail())) {</span>
+<span class="nc" id="L500">                throw new IllegalArgumentException(&quot;Personal Email already exists: &quot; + dto.getPersonalEmail() + &quot;for &quot; + dto.getDisplayName());</span>
+            }
+
+<span class="nc bnc" id="L503" title="All 2 branches missed.">            if (employeeRepository.existsByWorkEmail(dto.getWorkEmail())) {</span>
+<span class="nc" id="L504">                throw new IllegalArgumentException(&quot;Work Email already exists: &quot; + dto.getWorkEmail() + &quot;for &quot; + dto.getDisplayName());</span>
+            }
+
+<span class="nc" id="L507">            Employee employee = modelMapper.map(dto, Employee.class);</span>
+<span class="nc" id="L508">            employee.setIsActive(&quot;Y&quot;);</span>
+<span class="nc" id="L509">            employee.setCreatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L510">            employee.setCreationDate(LocalDate.now());</span>
+<span class="nc" id="L511">            employee.setEmployeeNumber(sequenceGeneratorService.generateSequence(SequenceType.EMPLOYEE.toString(), null));</span>
+<span class="nc" id="L512">            employeesToSave.add(employee);</span>
+<span class="nc" id="L513">        }</span>
+<span class="nc" id="L514">        List&lt;Employee&gt; savedEmployees = employeeRepository.saveAll(employeesToSave);</span>
+
+<span class="nc" id="L516">        return savedEmployees.stream().map(emp -&gt; modelMapper.map(emp, EmployeeResponseDTO.class)).collect(Collectors.toList());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

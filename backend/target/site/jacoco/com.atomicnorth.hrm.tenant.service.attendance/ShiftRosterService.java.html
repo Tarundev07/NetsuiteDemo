@@ -1,0 +1,610 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ShiftRosterService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.attendance</a> &gt; <span class="el_source">ShiftRosterService.java</span></div><h1>ShiftRosterService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.attendance;
+
+import com.atomicnorth.hrm.tenant.domain.attendance.EmpRosterRemark;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.repository.attendance.EmpRosterRemarkRepository;
+import com.atomicnorth.hrm.tenant.repository.attendance.ShiftEmployeeRepo;
+import com.atomicnorth.hrm.tenant.repository.attendance.SupraShiftRepo;
+import com.atomicnorth.hrm.tenant.service.dto.attendance.RosterRemarkDTO;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFCellStyle;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.json.JSONArray;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L51">public class ShiftRosterService {</span>
+
+<span class="nc" id="L53">    private final Logger log = LoggerFactory.getLogger(ShiftRosterService.class);</span>
+<span class="nc" id="L54">    SimpleDateFormat sdf2 = new SimpleDateFormat(&quot;yyyy-MM-dd&quot;);</span>
+
+    @Autowired
+    private EmpRosterRemarkRepository empRosterRemarkRepository;
+    @Autowired
+    private SupraShiftRepo supraShiftRepo;
+    @Autowired
+    private ShiftEmployeeRepo shiftEmployeeRepo;
+    @Autowired
+    private ShiftAssignmentsServices shiftAssignmentsServices;
+    @Autowired
+    private EmployeeRepository employeeRepository;
+
+    public Object updateShiftRosterOfEmp(String username, String firstDay, String lastDay, String[] shiftCodeArray, String[] shiftPLArray, String[] shiftRemarkArray) throws Exception {
+        try {
+<span class="nc" id="L69">            UserLoginDetail user = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L70">            List&lt;Map&lt;String, Object&gt;&gt; assignedShifts = supraShiftRepo.findShiftsByUsernameAndDateRange(username, firstDay, lastDay);</span>
+<span class="nc" id="L71">            List&lt;Date&gt; allDates = shiftAssignmentsServices.getDaysBetweenDates(sdf2.parse(firstDay), sdf2.parse(lastDay));</span>
+
+<span class="nc" id="L73">            Set&lt;String&gt; shiftToBeUpdated = new HashSet&lt;&gt;();</span>
+
+<span class="nc bnc" id="L75" title="All 2 branches missed.">            for (Date date : allDates) {</span>
+<span class="nc" id="L76">                assignedShifts.stream()</span>
+<span class="nc" id="L77">                        .filter(shift -&gt; {</span>
+                            try {
+<span class="nc" id="L79">                                return isDateWithinShift(date, shift);</span>
+<span class="nc" id="L80">                            } catch (ParseException e) {</span>
+<span class="nc" id="L81">                                throw new RuntimeException(e);</span>
+                            }
+                        })
+<span class="nc" id="L84">                        .forEach(shift -&gt; shiftToBeUpdated.add(String.valueOf(shift.get(&quot;SHIFT_EMP_ID&quot;))));</span>
+<span class="nc" id="L85">            }</span>
+
+<span class="nc" id="L87">            log.info(&quot;Shifts to be updated: {}&quot;, shiftToBeUpdated);</span>
+
+<span class="nc bnc" id="L89" title="All 2 branches missed.">            if (!shiftToBeUpdated.isEmpty()) {</span>
+<span class="nc" id="L90">                shiftEmployeeRepo.deleteByShiftEmpId(shiftToBeUpdated);</span>
+            }
+
+<span class="nc" id="L93">            Map&lt;String, String&gt; shiftIdCodeMap = supraShiftRepo.findShiftIdandShiftCode().stream()</span>
+<span class="nc" id="L94">                    .collect(Collectors.toMap(m -&gt; String.valueOf(m.get(&quot;SHIFT_CODE&quot;)), m -&gt; String.valueOf(m.get(&quot;SHIFT_ID&quot;))));</span>
+
+<span class="nc" id="L96">            List&lt;List&lt;String&gt;&gt; finalShiftAssignData = processShiftAssignments(allDates, shiftCodeArray);</span>
+
+<span class="nc bnc" id="L98" title="All 2 branches missed.">            if (finalShiftAssignData.isEmpty()) {</span>
+<span class="nc" id="L99">                return &quot;Please select shift to assign.&quot;;</span>
+            }
+
+<span class="nc bnc" id="L102" title="All 2 branches missed.">            for (List&lt;String&gt; finalShift : finalShiftAssignData) {</span>
+<span class="nc bnc" id="L103" title="All 2 branches missed.">                if (shiftIdCodeMap.containsKey(finalShift.get(0))) supraShiftRepo.insertShiftEmp(</span>
+<span class="nc" id="L104">                        shiftIdCodeMap.get(finalShift.get(0)), username, finalShift.get(1), finalShift.get(2), &quot;Y&quot;, user.getUsername().toString(), sdf2.format(new Date()), user.getUsername().toString(), sdf2.format(new Date())</span>
+                );
+<span class="nc" id="L106">            }</span>
+
+<span class="nc" id="L108">            processShiftRemarks(username, shiftCodeArray, shiftPLArray, shiftRemarkArray, allDates, shiftIdCodeMap, user);</span>
+
+<span class="nc" id="L110">            return &quot;Shift roster updated successfully.&quot;;</span>
+<span class="nc" id="L111">        } catch (Exception e) {</span>
+<span class="nc" id="L112">            log.error(&quot;Error updating shift roster: {}&quot;, e.getMessage(), e);</span>
+<span class="nc" id="L113">            throw e;</span>
+        }
+    }
+
+    private boolean isDateWithinShift(Date date, Map&lt;String, Object&gt; shift) throws ParseException {
+<span class="nc" id="L118">        String shiftStartDate = String.valueOf(shift.get(&quot;START_DATE&quot;));</span>
+<span class="nc" id="L119">        String shiftEndDate = String.valueOf(shift.get(&quot;END_DATE&quot;));</span>
+
+<span class="nc" id="L121">        Date start = sdf2.parse(shiftStartDate);</span>
+<span class="nc" id="L122">        Date end = sdf2.parse(shiftEndDate);</span>
+
+<span class="nc bnc" id="L124" title="All 4 branches missed.">        return sdf2.format(date).equals(shiftStartDate) || sdf2.format(date).equals(shiftEndDate) ||</span>
+<span class="nc bnc" id="L125" title="All 6 branches missed.">                (date.after(start) &amp;&amp; date.before(end) &amp;&amp; !isDifferentMonth(start, end));</span>
+    }
+
+    private boolean isDifferentMonth(Date start, Date end) {
+<span class="nc" id="L129">        Calendar calStart = Calendar.getInstance();</span>
+<span class="nc" id="L130">        calStart.setTime(start);</span>
+<span class="nc" id="L131">        Calendar calEnd = Calendar.getInstance();</span>
+<span class="nc" id="L132">        calEnd.setTime(end);</span>
+<span class="nc bnc" id="L133" title="All 2 branches missed.">        return calStart.get(Calendar.MONTH) != calEnd.get(Calendar.MONTH);</span>
+    }
+
+    private List&lt;List&lt;String&gt;&gt; processShiftAssignments(List&lt;Date&gt; allDates, String[] shiftCodeArray) throws ParseException {
+<span class="nc" id="L137">        List&lt;List&lt;String&gt;&gt; finalShiftAssignData = new LinkedList&lt;&gt;();</span>
+<span class="nc" id="L138">        List&lt;String&gt; shiftCodeList = Arrays.asList(shiftCodeArray);</span>
+
+<span class="nc" id="L140">        String startDate = &quot;&quot;, endDate = &quot;&quot;;</span>
+
+<span class="nc bnc" id="L142" title="All 2 branches missed.">        for (int i = 0; i &lt; shiftCodeList.size(); i++) {</span>
+<span class="nc" id="L143">            List&lt;String&gt; shiftParams = new LinkedList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L145" title="All 2 branches missed.">            if (i == 0) {</span>
+<span class="nc" id="L146">                startDate = sdf2.format(allDates.get(i));</span>
+<span class="nc" id="L147">                endDate = sdf2.format(allDates.get(i));</span>
+<span class="nc bnc" id="L148" title="All 2 branches missed.">            } else if (shiftCodeList.get(i).equalsIgnoreCase(shiftCodeList.get(i - 1))) {</span>
+<span class="nc" id="L149">                endDate = sdf2.format(allDates.get(i));</span>
+<span class="nc bnc" id="L150" title="All 2 branches missed.">                if (i == shiftCodeList.size() - 1) {</span>
+<span class="nc" id="L151">                    shiftParams.add(shiftCodeList.get(i));</span>
+<span class="nc" id="L152">                    shiftParams.add(startDate);</span>
+<span class="nc" id="L153">                    shiftParams.add(endDate);</span>
+<span class="nc" id="L154">                    finalShiftAssignData.add(shiftParams);</span>
+                }
+            } else {
+<span class="nc" id="L157">                shiftParams.add(shiftCodeList.get(i - 1));</span>
+<span class="nc" id="L158">                shiftParams.add(startDate);</span>
+<span class="nc" id="L159">                shiftParams.add(endDate);</span>
+<span class="nc" id="L160">                finalShiftAssignData.add(shiftParams);</span>
+
+<span class="nc" id="L162">                startDate = sdf2.format(allDates.get(i));</span>
+<span class="nc" id="L163">                endDate = sdf2.format(allDates.get(i));</span>
+            }
+        }
+<span class="nc" id="L166">        return finalShiftAssignData;</span>
+    }
+
+    private void processShiftRemarks(String username, String[] shiftCodeArray, String[] shiftPLArray,
+                                     String[] shiftRemarkArray, List&lt;Date&gt; allDates,
+                                     Map&lt;String, String&gt; shiftIdCodeMap, UserLoginDetail user) throws ParseException {
+<span class="nc bnc" id="L172" title="All 2 branches missed.">        for (int i = 0; i &lt; shiftPLArray.length; i++) {</span>
+<span class="nc bnc" id="L173" title="All 4 branches missed.">            if (shiftPLArray[i] != null &amp;&amp; !shiftPLArray[i].isEmpty()) {</span>
+<span class="nc bnc" id="L174" title="All 2 branches missed.">                if (shiftPLArray[i].equals(&quot;true&quot;)) {</span>
+<span class="nc" id="L175">                    empRosterRemarkRepository.insertEmpRosterRemark(</span>
+<span class="nc bnc" id="L176" title="All 2 branches missed.">                            username, shiftIdCodeMap.get(shiftCodeArray[i]), sdf2.format(allDates.get(i)), shiftRemarkArray[i], shiftPLArray[i].equals(&quot;true&quot;) ? &quot;Y&quot; : &quot;&quot;, user.getUsername().toString(), user.getUsername().toString(), sdf2.format(new Date())</span>
+
+                    );
+                } else {
+<span class="nc" id="L180">                    supraShiftRepo.updateFlag(username, sdf2.format(allDates.get(i)));</span>
+                }
+<span class="nc bnc" id="L182" title="All 4 branches missed.">            } else if (shiftRemarkArray[i] != null &amp;&amp; !shiftRemarkArray[i].isEmpty()) {</span>
+<span class="nc" id="L183">                empRosterRemarkRepository.insertEmpRosterRemark(</span>
+<span class="nc bnc" id="L184" title="All 2 branches missed.">                        username, shiftIdCodeMap.get(shiftCodeArray[i]), sdf2.format(allDates.get(i)), shiftRemarkArray[i], shiftPLArray[i].equals(&quot;true&quot;) ? &quot;Y&quot; : &quot;&quot;, user.getUsername().toString(), user.getUsername().toString(), sdf2.format(new Date())</span>
+                );
+            }
+        }
+<span class="nc" id="L188">    }</span>
+
+    public String generateBulkAssignShift(String firstDay, String lastDay, List&lt;String&gt; userDivisionGroup,
+                                          List&lt;String&gt; projectList) {
+<span class="nc" id="L192">        UserLoginDetail user1 = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L193">        String fileName = &quot;&quot;;</span>
+<span class="nc" id="L194">        List&lt;Object[]&gt; userList = new ArrayList&lt;&gt;();</span>
+        try {
+<span class="nc bnc" id="L196" title="All 4 branches missed.">            if (firstDay == null || lastDay == null) {</span>
+<span class="nc" id="L197">                return &quot;Invalid input&quot;;</span>
+            }
+<span class="nc" id="L199">            Calendar c = Calendar.getInstance();</span>
+<span class="nc" id="L200">            c.setTime(sdf2.parse(firstDay));</span>
+<span class="nc" id="L201">            c.set(Calendar.DAY_OF_MONTH, c.getActualMaximum(Calendar.DAY_OF_MONTH));</span>
+<span class="nc" id="L202">            lastDay = sdf2.format(c.getTime());</span>
+
+<span class="nc bnc" id="L204" title="All 4 branches missed.">            if (projectList != null &amp;&amp; !projectList.isEmpty()) {</span>
+<span class="nc bnc" id="L205" title="All 4 branches missed.">                if (userDivisionGroup != null &amp;&amp; !userDivisionGroup.isEmpty()) {</span>
+<span class="nc" id="L206">                    userList = employeeRepository.getRosterDataListForATN62(userDivisionGroup, firstDay, lastDay, projectList);</span>
+                } else {
+<span class="nc" id="L208">                    userList = employeeRepository.getRosterDataListForATN57(firstDay, lastDay, projectList);</span>
+                }
+            } else {
+<span class="nc bnc" id="L211" title="All 4 branches missed.">                if (userDivisionGroup != null &amp;&amp; !userDivisionGroup.isEmpty()) {</span>
+<span class="nc" id="L212">                    userList = employeeRepository.getRosterDataListForATN48(userDivisionGroup, firstDay, lastDay);</span>
+                } else {
+<span class="nc" id="L214">                    userList = employeeRepository.getRosterDataListForATN49(firstDay, lastDay);</span>
+                }
+            }
+<span class="nc" id="L217">            List&lt;Date&gt; allDates = shiftAssignmentsServices.getDaysBetweenDates(sdf2.parse(firstDay), sdf2.parse(lastDay));</span>
+<span class="nc" id="L218">            List&lt;String&gt; headerRow = new ArrayList&lt;String&gt;();</span>
+<span class="nc" id="L219">            headerRow.add(&quot;SNo&quot;);</span>
+<span class="nc" id="L220">            headerRow.add(&quot;Emp Id&quot;);</span>
+<span class="nc" id="L221">            headerRow.add(&quot;Employee Code&quot;);</span>
+<span class="nc" id="L222">            headerRow.add(&quot;Emp Name&quot;);</span>
+<span class="nc" id="L223">            headerRow.add(&quot;Email&quot;);</span>
+<span class="nc bnc" id="L224" title="All 2 branches missed.">            for (Date d : allDates) {</span>
+<span class="nc" id="L225">                headerRow.add(sdf2.format(d));</span>
+<span class="nc" id="L226">            }</span>
+<span class="nc" id="L227">            List&lt;List&lt;String&gt;&gt; dataList = new ArrayList&lt;List&lt;String&gt;&gt;();</span>
+<span class="nc" id="L228">            List&lt;String&gt; dataRowDate = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L229">            List&lt;List&lt;String&gt;&gt; dataListDate = new ArrayList&lt;List&lt;String&gt;&gt;();</span>
+<span class="nc" id="L230">            String userName = null;</span>
+<span class="nc bnc" id="L231" title="All 2 branches missed.">            if (userList != null) {</span>
+<span class="nc" id="L232">                int i = 0;</span>
+<span class="nc bnc" id="L233" title="All 2 branches missed.">                for (Object[] userData : userList) {</span>
+<span class="nc" id="L234">                    userName = String.valueOf(userData[0]);</span>
+<span class="nc" id="L235">                    Map&lt;String, Object&gt; mapUser = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L236">                    mapUser.put(&quot;USER_CODE&quot;, userData[0]);</span>
+<span class="nc" id="L237">                    mapUser.put(&quot;EMPLOYEE_CODE&quot;, userData[1]);</span>
+<span class="nc" id="L238">                    mapUser.put(&quot;fullname&quot;, userData[2]);</span>
+<span class="nc" id="L239">                    mapUser.put(&quot;EMAIL&quot;, userData[3]);</span>
+
+                    // Add more fields if needed
+<span class="nc" id="L242">                    List&lt;String&gt; dataRow = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L243">                    dataRow.add(String.valueOf(++i));</span>
+<span class="nc" id="L244">                    dataRow.add(String.valueOf(mapUser.get(&quot;USER_CODE&quot;)));</span>
+<span class="nc" id="L245">                    dataRow.add(String.valueOf(mapUser.get(&quot;EMPLOYEE_CODE&quot;)));</span>
+<span class="nc" id="L246">                    dataRow.add(String.valueOf(mapUser.get(&quot;fullname&quot;)));</span>
+<span class="nc" id="L247">                    dataRow.add(String.valueOf(mapUser.get(&quot;EMAIL&quot;)));</span>
+<span class="nc" id="L248">                    dataList.add(dataRow);</span>
+<span class="nc" id="L249">                }</span>
+<span class="nc" id="L250">                List&lt;Map&lt;String, Object&gt;&gt; prevAssignedShiftList = supraShiftRepo.fetchShieftDetails(userName, firstDay, lastDay);</span>
+<span class="nc" id="L251">                Map&lt;String, String&gt; dateShiftMap = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L252" title="All 2 branches missed.">                for (Date d : allDates) {</span>
+<span class="nc" id="L253">                    int shiftAvailableFlag = 0;</span>
+
+<span class="nc bnc" id="L255" title="All 2 branches missed.">                    for (Map&lt;String, Object&gt; shiftAssigned : prevAssignedShiftList) {</span>
+<span class="nc" id="L256">                        String shiftCode = String.valueOf(shiftAssigned.get(&quot;shiftCode&quot;));</span>
+<span class="nc" id="L257">                        String shiftSSDate = String.valueOf(shiftAssigned.get(&quot;shiftStartDate&quot;));</span>
+<span class="nc" id="L258">                        String shiftEEDate = String.valueOf(shiftAssigned.get(&quot;shiftEndDate&quot;));</span>
+<span class="nc" id="L259">                        Date shiftSDate = sdf2.parse(shiftSSDate);</span>
+<span class="nc" id="L260">                        Date shiftEDate = sdf2.parse(shiftEEDate);</span>
+<span class="nc bnc" id="L261" title="All 8 branches missed.">                        if (sdf2.format(d).equals(String.valueOf(shiftAssigned.get(&quot;shiftStartDate&quot;))) || sdf2.format(d).equals(String.valueOf(shiftAssigned.get(&quot;shiftEndDate&quot;))) || (d.after(shiftSDate) &amp;&amp; d.before(shiftEDate))) {</span>
+<span class="nc" id="L262">                            dateShiftMap.put(sdf2.format(d), shiftCode);</span>
+<span class="nc" id="L263">                            shiftAvailableFlag = 1;</span>
+<span class="nc" id="L264">                            dataRowDate.add(shiftCode);</span>
+<span class="nc" id="L265">                            dataListDate.add(dataRowDate);</span>
+                        }
+<span class="nc" id="L267">                    }</span>
+<span class="nc" id="L268">                }</span>
+
+<span class="nc" id="L270">                XSSFWorkbook workbook = new XSSFWorkbook();</span>
+<span class="nc" id="L271">                XSSFSheet firstSheet = workbook.createSheet(&quot;FillShift&quot;);</span>
+<span class="nc" id="L272">                XSSFCellStyle cellStyle = workbook.createCellStyle();</span>
+<span class="nc" id="L273">                XSSFCellStyle cellStyle2 = workbook.createCellStyle();</span>
+<span class="nc" id="L274">                cellStyle2.setFillForegroundColor(IndexedColors.RED.getIndex());</span>
+<span class="nc" id="L275">                cellStyle2.setFillPattern(FillPatternType.SOLID_FOREGROUND);</span>
+<span class="nc" id="L276">                int rownum = 0;</span>
+<span class="nc" id="L277">                Row row = firstSheet.createRow(rownum);</span>
+<span class="nc bnc" id="L278" title="All 2 branches missed.">                for (int k = 0; k &lt; headerRow.size(); k++) {</span>
+<span class="nc" id="L279">                    Cell cell = row.createCell(k);</span>
+<span class="nc" id="L280">                    cell.setCellValue(headerRow.get(k));</span>
+                }
+<span class="nc" id="L282">                rownum = 1;</span>
+<span class="nc bnc" id="L283" title="All 2 branches missed.">                for (int k = 0; k &lt; dataList.size(); k++) {</span>
+<span class="nc" id="L284">                    row = firstSheet.createRow(rownum);</span>
+<span class="nc bnc" id="L285" title="All 2 branches missed.">                    for (int l = 0; l &lt; dataList.get(k).size(); l++) {</span>
+<span class="nc" id="L286">                        Cell cell = row.createCell(l);</span>
+<span class="nc" id="L287">                        cell.setCellValue(dataList.get(k).get(l));</span>
+                    }
+<span class="nc" id="L289">                    int dateCellCount = 5;</span>
+<span class="nc bnc" id="L290" title="All 2 branches missed.">                    for (Date d : allDates) {</span>
+<span class="nc" id="L291">                        Cell cell = row.createCell(dateCellCount);</span>
+<span class="nc" id="L292">                        cell.setCellStyle(cellStyle);</span>
+<span class="nc" id="L293">                        dateCellCount += 1;</span>
+<span class="nc" id="L294">                    }</span>
+<span class="nc bnc" id="L295" title="All 2 branches missed.">                    if (k &lt; dataListDate.size()) {</span>
+<span class="nc" id="L296">                        List&lt;String&gt; dateData = dataListDate.get(k);</span>
+<span class="nc bnc" id="L297" title="All 2 branches missed.">                        for (int m = 0; m &lt; allDates.size(); m++) {</span>
+<span class="nc" id="L298">                            Cell cell = row.createCell(5 + m);</span>
+<span class="nc bnc" id="L299" title="All 2 branches missed.">                            if (m &lt; dateData.size()) {</span>
+<span class="nc" id="L300">                                cell.setCellValue(dateData.get(m));</span>
+                            } else {
+<span class="nc" id="L302">                                cell.setCellValue(&quot;&quot;);</span>
+                            }
+                        }
+                    }
+<span class="nc" id="L306">                    rownum++;</span>
+                }
+<span class="nc" id="L308">                XSSFSheet secondSheet = workbook.createSheet(&quot;ShiftCodeList&quot;);</span>
+
+<span class="nc" id="L310">                String usernameActiveShiftList = String.valueOf(user1.getUsername());</span>
+<span class="nc" id="L311">                System.out.println(user1.getUsername());</span>
+                @SuppressWarnings(&quot;unchecked&quot;)
+<span class="nc" id="L313">                List&lt;Object[]&gt; activeShiftList = shiftAssignmentsServices.getActiveShiftLists(userList);</span>
+<span class="nc" id="L314">                int rownum2 = 0;</span>
+                Row row2;
+<span class="nc" id="L316">                row2 = secondSheet.createRow(rownum2);</span>
+<span class="nc" id="L317">                Cell cell2 = row2.createCell(0);</span>
+<span class="nc" id="L318">                cell2.setCellValue(&quot;Calendar&quot;);</span>
+<span class="nc" id="L319">                cell2 = row2.createCell(1);</span>
+<span class="nc" id="L320">                cell2.setCellValue(&quot;Shift&quot;);</span>
+<span class="nc" id="L321">                cell2 = row2.createCell(2);</span>
+<span class="nc" id="L322">                cell2.setCellValue(&quot;Shift Code&quot;);</span>
+<span class="nc" id="L323">                cell2 = row2.createCell(3);</span>
+<span class="nc" id="L324">                cell2.setCellValue(&quot;Week Off&quot;);</span>
+<span class="nc bnc" id="L325" title="All 2 branches missed.">                for (Object[] shift : activeShiftList) {</span>
+<span class="nc" id="L326">                    row2 = secondSheet.createRow(++rownum2);</span>
+<span class="nc" id="L327">                    cell2 = row2.createCell(0);</span>
+<span class="nc" id="L328">                    cell2.setCellValue(shift[0].toString());</span>
+<span class="nc" id="L329">                    cell2 = row2.createCell(1);</span>
+<span class="nc" id="L330">                    cell2.setCellValue(shift[1].toString());</span>
+<span class="nc" id="L331">                    cell2 = row2.createCell(2);</span>
+<span class="nc" id="L332">                    cell2.setCellStyle(cellStyle);</span>
+<span class="nc" id="L333">                    cell2.setCellValue(shift[2].toString());</span>
+<span class="nc" id="L334">                    cell2 = row2.createCell(3);</span>
+<span class="nc bnc" id="L335" title="All 2 branches missed.">                    if (shift[3] == null) {</span>
+<span class="nc" id="L336">                        cell2.setCellStyle(cellStyle2);</span>
+<span class="nc" id="L337">                        cell2.setCellValue(&quot;No WO&quot;);</span>
+                    } else
+<span class="nc" id="L339">                        cell2.setCellValue(shift[3].toString());</span>
+<span class="nc" id="L340">                }</span>
+<span class="nc" id="L341">                int columnNumber = headerRow.size();</span>
+<span class="nc bnc" id="L342" title="All 2 branches missed.">                for (int m = 0; m &lt; columnNumber; m++) {</span>
+<span class="nc" id="L343">                    firstSheet.autoSizeColumn(m);</span>
+                }
+<span class="nc" id="L345">                int columnNumber2 = activeShiftList.size();</span>
+<span class="nc bnc" id="L346" title="All 2 branches missed.">                for (int m = 0; m &lt; columnNumber2; m++) {</span>
+<span class="nc" id="L347">                    secondSheet.autoSizeColumn(m);</span>
+                }
+<span class="nc" id="L349">                String downloadFolderPath = System.getProperty(&quot;user.home&quot;) + File.separator + &quot;Downloads&quot;;</span>
+<span class="nc" id="L350">                String fileNames = downloadFolderPath + File.separator + &quot;BulkShiftAssign.xlsx&quot;;</span>
+<span class="nc" id="L351">                System.out.println(&quot;--------&quot; + downloadFolderPath);</span>
+<span class="nc" id="L352">                try (FileOutputStream outputStream = new FileOutputStream(fileNames)) {</span>
+<span class="nc" id="L353">                    workbook.write(outputStream);</span>
+                }
+<span class="nc" id="L355">                return &quot;BulkShiftAssign.xlsx&quot;;</span>
+            } else {
+<span class="nc" id="L357">                return &quot; No user found.&quot;;</span>
+            }
+<span class="nc" id="L359">        } catch (Exception e) {</span>
+<span class="nc" id="L360">            e.printStackTrace();</span>
+<span class="nc" id="L361">            return e.getMessage();</span>
+        }
+    }
+
+
+    public String generateBulkAssignShiftWithoutDetails(String firstDay, String lastDay, List&lt;String&gt; userDivisionGroup,
+                                                        List&lt;String&gt; projectList) {
+<span class="nc" id="L368">        UserLoginDetail user1 = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L369">        String fileName = &quot;&quot;;</span>
+<span class="nc" id="L370">        List&lt;Object[]&gt; userList = new ArrayList&lt;&gt;();</span>
+        try {
+<span class="nc" id="L372">            JSONArray array = new JSONArray();</span>
+<span class="nc bnc" id="L373" title="All 4 branches missed.">            if (firstDay == null || lastDay == null) {</span>
+<span class="nc" id="L374">                return &quot;Invalid input&quot;;</span>
+            }
+<span class="nc" id="L376">            Calendar c = Calendar.getInstance();</span>
+<span class="nc" id="L377">            c.setTime(sdf2.parse(firstDay));</span>
+<span class="nc" id="L378">            c.set(Calendar.DAY_OF_MONTH, c.getActualMaximum(Calendar.DAY_OF_MONTH));</span>
+<span class="nc" id="L379">            lastDay = sdf2.format(c.getTime());</span>
+
+<span class="nc bnc" id="L381" title="All 4 branches missed.">            if (projectList != null &amp;&amp; !projectList.isEmpty()) {</span>
+<span class="nc bnc" id="L382" title="All 4 branches missed.">                if (userDivisionGroup != null &amp;&amp; !userDivisionGroup.isEmpty()) {</span>
+<span class="nc" id="L383">                    userList = employeeRepository.getRosterDataListForATN62(userDivisionGroup, firstDay, lastDay, projectList);</span>
+                } else {
+<span class="nc" id="L385">                    userList = employeeRepository.getRosterDataListForATN57(firstDay, lastDay, projectList);</span>
+                }
+            } else {
+<span class="nc bnc" id="L388" title="All 4 branches missed.">                if (userDivisionGroup != null &amp;&amp; !userDivisionGroup.isEmpty()) {</span>
+<span class="nc" id="L389">                    userList = employeeRepository.getRosterDataListForATN48(userDivisionGroup, firstDay, lastDay);</span>
+                } else {
+<span class="nc" id="L391">                    userList = employeeRepository.getRosterDataListForATN49(firstDay, lastDay);</span>
+                }
+            }
+<span class="nc" id="L394">            List&lt;Date&gt; allDates = shiftAssignmentsServices.getDaysBetweenDates(sdf2.parse(firstDay), sdf2.parse(lastDay));</span>
+<span class="nc" id="L395">            List&lt;String&gt; headerRow = new ArrayList&lt;String&gt;();</span>
+<span class="nc" id="L396">            headerRow.add(&quot;SNo&quot;);</span>
+<span class="nc" id="L397">            headerRow.add(&quot;Emp Id&quot;);</span>
+<span class="nc" id="L398">            headerRow.add(&quot;Employee Code&quot;);</span>
+<span class="nc" id="L399">            headerRow.add(&quot;Emp Name&quot;);</span>
+<span class="nc" id="L400">            headerRow.add(&quot;Email&quot;);</span>
+<span class="nc bnc" id="L401" title="All 2 branches missed.">            for (Date d : allDates) {</span>
+<span class="nc" id="L402">                headerRow.add(sdf2.format(d));</span>
+<span class="nc" id="L403">            }</span>
+<span class="nc" id="L404">            List&lt;List&lt;String&gt;&gt; dataList = new ArrayList&lt;List&lt;String&gt;&gt;();</span>
+<span class="nc bnc" id="L405" title="All 2 branches missed.">            if (userList != null) {</span>
+<span class="nc" id="L406">                int i = 0;</span>
+<span class="nc bnc" id="L407" title="All 2 branches missed.">                for (Object[] userData : userList) {</span>
+<span class="nc" id="L408">                    Map&lt;String, Object&gt; mapUser = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L409">                    mapUser.put(&quot;EMPLOYEE_ID&quot;, userData[0]);</span>
+<span class="nc" id="L410">                    mapUser.put(&quot;EMPLOYEE_CODE&quot;, userData[1]);</span>
+<span class="nc" id="L411">                    mapUser.put(&quot;fullname&quot;, userData[2]);</span>
+<span class="nc" id="L412">                    mapUser.put(&quot;EMAIL&quot;, userData[3]);</span>
+
+<span class="nc" id="L414">                    List&lt;String&gt; dataRow = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L415">                    dataRow.add(String.valueOf(++i));</span>
+<span class="nc" id="L416">                    dataRow.add(String.valueOf(mapUser.get(&quot;EMPLOYEE_ID&quot;)));</span>
+<span class="nc" id="L417">                    dataRow.add(String.valueOf(mapUser.get(&quot;EMPLOYEE_CODE&quot;)));</span>
+<span class="nc" id="L418">                    dataRow.add(String.valueOf(mapUser.get(&quot;fullname&quot;)));</span>
+<span class="nc" id="L419">                    dataRow.add(String.valueOf(mapUser.get(&quot;EMAIL&quot;)));</span>
+<span class="nc" id="L420">                    dataList.add(dataRow);</span>
+<span class="nc" id="L421">                }</span>
+<span class="nc" id="L422">                XSSFWorkbook workbook = new XSSFWorkbook();</span>
+<span class="nc" id="L423">                XSSFSheet firstSheet = workbook.createSheet(&quot;FillShift&quot;);</span>
+<span class="nc" id="L424">                XSSFCellStyle cellStyle = workbook.createCellStyle();</span>
+<span class="nc" id="L425">                cellStyle.setFillForegroundColor(IndexedColors.YELLOW.getIndex());</span>
+<span class="nc" id="L426">                cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);</span>
+<span class="nc" id="L427">                XSSFCellStyle cellStyle2 = workbook.createCellStyle();</span>
+<span class="nc" id="L428">                cellStyle2.setFillForegroundColor(IndexedColors.RED.getIndex());</span>
+<span class="nc" id="L429">                cellStyle2.setFillPattern(FillPatternType.SOLID_FOREGROUND);</span>
+<span class="nc" id="L430">                int rownum = 0;</span>
+<span class="nc" id="L431">                Row row = firstSheet.createRow(rownum);</span>
+<span class="nc bnc" id="L432" title="All 2 branches missed.">                for (int k = 0; k &lt; headerRow.size(); k++) {</span>
+<span class="nc" id="L433">                    Cell cell = row.createCell(k);</span>
+<span class="nc" id="L434">                    cell.setCellValue(headerRow.get(k));</span>
+                }
+<span class="nc" id="L436">                rownum = 1;</span>
+<span class="nc bnc" id="L437" title="All 2 branches missed.">                for (int k = 0; k &lt; dataList.size(); k++) {</span>
+<span class="nc" id="L438">                    row = firstSheet.createRow(rownum);</span>
+<span class="nc bnc" id="L439" title="All 2 branches missed.">                    for (int l = 0; l &lt; dataList.get(k).size(); l++) {</span>
+<span class="nc" id="L440">                        Cell cell = row.createCell(l);</span>
+<span class="nc" id="L441">                        cell.setCellValue(dataList.get(k).get(l));</span>
+                    }
+<span class="nc" id="L443">                    int dateCellCount = 5;</span>
+<span class="nc bnc" id="L444" title="All 2 branches missed.">                    for (Date d : allDates) {</span>
+<span class="nc" id="L445">                        Cell cell = row.createCell(dateCellCount);</span>
+<span class="nc" id="L446">                        cell.setCellStyle(cellStyle);</span>
+<span class="nc" id="L447">                        dateCellCount += 1;</span>
+<span class="nc" id="L448">                    }</span>
+<span class="nc" id="L449">                    rownum += 1;</span>
+                }
+<span class="nc" id="L451">                XSSFSheet secondSheet = workbook.createSheet(&quot;ShiftCodeList&quot;);</span>
+
+<span class="nc" id="L453">                String usernameActiveShiftList = String.valueOf(user1.getUsername());</span>
+<span class="nc" id="L454">                System.out.println(user1.getUsername());</span>
+<span class="nc" id="L455">                List&lt;Object[]&gt; activeShiftList = shiftAssignmentsServices.getActiveShiftList(usernameActiveShiftList);</span>
+<span class="nc" id="L456">                int rownum2 = 0;</span>
+                Row row2;
+<span class="nc" id="L458">                row2 = secondSheet.createRow(rownum2);</span>
+<span class="nc" id="L459">                Cell cell2 = row2.createCell(0);</span>
+<span class="nc" id="L460">                cell2.setCellValue(&quot;Calendar&quot;);</span>
+<span class="nc" id="L461">                cell2 = row2.createCell(1);</span>
+<span class="nc" id="L462">                cell2.setCellValue(&quot;Shift&quot;);</span>
+<span class="nc" id="L463">                cell2 = row2.createCell(2);</span>
+<span class="nc" id="L464">                cell2.setCellValue(&quot;Shift Code&quot;);</span>
+<span class="nc" id="L465">                cell2 = row2.createCell(3);</span>
+<span class="nc" id="L466">                cell2.setCellValue(&quot;Week Off&quot;);</span>
+<span class="nc bnc" id="L467" title="All 2 branches missed.">                for (Object[] shift : activeShiftList) {</span>
+<span class="nc" id="L468">                    row2 = secondSheet.createRow(++rownum2);</span>
+<span class="nc" id="L469">                    cell2 = row2.createCell(0);</span>
+<span class="nc" id="L470">                    cell2.setCellValue(shift[0].toString());</span>
+<span class="nc" id="L471">                    cell2 = row2.createCell(1);</span>
+<span class="nc" id="L472">                    cell2.setCellValue(shift[1].toString());</span>
+<span class="nc" id="L473">                    cell2 = row2.createCell(2);</span>
+<span class="nc" id="L474">                    cell2.setCellStyle(cellStyle);</span>
+<span class="nc" id="L475">                    cell2.setCellValue(shift[2].toString());</span>
+<span class="nc" id="L476">                    cell2 = row2.createCell(3);</span>
+<span class="nc bnc" id="L477" title="All 2 branches missed.">                    if (shift[3] == null) {</span>
+<span class="nc" id="L478">                        cell2.setCellStyle(cellStyle2);</span>
+<span class="nc" id="L479">                        cell2.setCellValue(&quot;No WO&quot;);</span>
+                    } else
+<span class="nc" id="L481">                        cell2.setCellValue(shift[3].toString());</span>
+<span class="nc" id="L482">                }</span>
+<span class="nc" id="L483">                int columnNumber = headerRow.size();</span>
+<span class="nc bnc" id="L484" title="All 2 branches missed.">                for (int m = 0; m &lt; columnNumber; m++) {</span>
+<span class="nc" id="L485">                    firstSheet.autoSizeColumn(m);</span>
+                }
+<span class="nc" id="L487">                int columnNumber2 = activeShiftList.size();</span>
+<span class="nc bnc" id="L488" title="All 2 branches missed.">                for (int m = 0; m &lt; columnNumber2; m++) {</span>
+<span class="nc" id="L489">                    secondSheet.autoSizeColumn(m);</span>
+                }
+<span class="nc" id="L491">                String downloadFolderPath = System.getProperty(&quot;user.home&quot;) + File.separator + &quot;Downloads&quot;;</span>
+<span class="nc" id="L492">                String fileNames = downloadFolderPath + File.separator + &quot;BulkShiftAssignNoShiftCode.xlsx&quot;;</span>
+<span class="nc" id="L493">                System.out.println(&quot;--------&quot; + downloadFolderPath);</span>
+<span class="nc" id="L494">                try (FileOutputStream outputStream = new FileOutputStream(fileNames)) {</span>
+<span class="nc" id="L495">                    workbook.write(outputStream);</span>
+                }
+<span class="nc" id="L497">                return &quot;BulkShiftAssignNoShiftCode.xlsx&quot;;</span>
+            } else {
+<span class="nc" id="L499">                return &quot;No user found.&quot;;</span>
+            }
+<span class="nc" id="L501">        } catch (Exception e) {</span>
+<span class="nc" id="L502">            e.printStackTrace();</span>
+<span class="nc" id="L503">            return e.getMessage();</span>
+        }
+    }
+
+    public String extractShiftDataAndUpload(String startDate, String endDate, MultipartFile file,
+                                            boolean finalSubmit) {
+<span class="nc" id="L509">        StringBuilder validationString = new StringBuilder();</span>
+<span class="nc" id="L510">        String tempFilePath = System.getProperty(&quot;user.dir&quot;) + File.separator + file.getOriginalFilename();</span>
+        try {
+<span class="nc" id="L512">            File tempFile = new File(tempFilePath);</span>
+<span class="nc" id="L513">            long dateCount = 1 + (TimeUnit.DAYS.convert(</span>
+<span class="nc" id="L514">                    (sdf2.parse(endDate)).getTime() - (sdf2.parse(startDate)).getTime(), TimeUnit.MILLISECONDS));</span>
+
+<span class="nc" id="L516">            List&lt;Map&lt;String, Object&gt;&gt; allShiftIdAndShiftCodes = supraShiftRepo.getShiftIdAndShiftCode();</span>
+<span class="nc" id="L517">            Map&lt;String, String&gt; shiftIdCodeMap = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L518" title="All 2 branches missed.">            for (Map&lt;String, Object&gt; m1 : allShiftIdAndShiftCodes) {</span>
+<span class="nc" id="L519">                shiftIdCodeMap.put(String.valueOf(m1.get(&quot;SHIFT_CODE&quot;)), String.valueOf(m1.get(&quot;SHIFT_ID&quot;)));</span>
+<span class="nc" id="L520">            }</span>
+<span class="nc" id="L521">            FileInputStream excelFile = new FileInputStream(tempFile);</span>
+<span class="nc" id="L522">            Workbook workbook = new XSSFWorkbook(excelFile);</span>
+<span class="nc" id="L523">            Sheet datatypeSheet = workbook.getSheetAt(0);</span>
+
+<span class="nc" id="L525">            List&lt;List&lt;String&gt;&gt; tempRowList = new LinkedList&lt;&gt;();</span>
+<span class="nc" id="L526">            Iterator&lt;Row&gt; iterator = datatypeSheet.iterator();</span>
+<span class="nc bnc" id="L527" title="All 2 branches missed.">            while (iterator.hasNext()) {</span>
+<span class="nc" id="L528">                Row currentRow = iterator.next();</span>
+<span class="nc bnc" id="L529" title="All 2 branches missed.">                if (currentRow.getRowNum() &gt; 0) {</span>
+<span class="nc" id="L530">                    List&lt;String&gt; tempList = new LinkedList&lt;&gt;();</span>
+<span class="nc" id="L531">                    Iterator&lt;Cell&gt; cellIterator = currentRow.iterator();</span>
+<span class="nc bnc" id="L532" title="All 2 branches missed.">                    while (cellIterator.hasNext()) {</span>
+<span class="nc" id="L533">                        Cell currentCell = cellIterator.next();</span>
+<span class="nc bnc" id="L534" title="All 2 branches missed.">                        if (currentCell.getCellType() == CellType.BLANK) {</span>
+<span class="nc" id="L535">                            validationString.append(&quot;R&quot;).append(currentCell.getRowIndex()).append(&quot;C&quot;).append(currentCell.getColumnIndex()).append(&quot; Blank Cell &lt;br&gt;&quot;);</span>
+                        }
+<span class="nc bnc" id="L537" title="All 2 branches missed.">                        if (currentCell.getColumnIndex() &gt; 4) {</span>
+<span class="nc bnc" id="L538" title="All 2 branches missed.">                            if (!(shiftIdCodeMap.containsKey(currentCell.getStringCellValue())))</span>
+<span class="nc" id="L539">                                validationString.append(&quot;R&quot;).append(currentCell.getRowIndex()).append(&quot;C&quot;).append(currentCell.getColumnIndex()).append(&quot; Invalid shift code &lt;br&gt;&quot;);</span>
+                        }
+<span class="nc" id="L541">                        tempList.add(currentCell.getStringCellValue());</span>
+<span class="nc" id="L542">                    }</span>
+<span class="nc" id="L543">                    tempRowList.add(tempList);</span>
+                }
+<span class="nc" id="L545">            }</span>
+<span class="nc" id="L546">            workbook.close();</span>
+<span class="nc" id="L547">            excelFile.close();</span>
+<span class="nc bnc" id="L548" title="All 2 branches missed.">            if (dateCount != (tempRowList.get(0).size() - 5))</span>
+<span class="nc" id="L549">                validationString.append(&quot;Invalid date range. Verify xls.&quot;);</span>
+<span class="nc bnc" id="L550" title="All 2 branches missed.">            if (validationString.length() &gt; 0)</span>
+<span class="nc" id="L551">                return validationString.toString();</span>
+<span class="nc bnc" id="L552" title="All 2 branches missed.">            if (finalSubmit) {</span>
+<span class="nc" id="L553">                int saveCount = 0;</span>
+<span class="nc bnc" id="L554" title="All 2 branches missed.">                for (int c = 0; c &lt; tempRowList.size(); c++) {</span>
+<span class="nc" id="L555">                    List&lt;String&gt; rowData = tempRowList.get(c);</span>
+<span class="nc" id="L556">                    String[] shiftCodeArray = new String[rowData.size() - 5];</span>
+<span class="nc" id="L557">                    String[] shiftPLArray = new String[rowData.size() - 5];</span>
+<span class="nc" id="L558">                    String[] shiftRemarkArray = new String[rowData.size() - 5];</span>
+<span class="nc" id="L559">                    String username = supraShiftRepo.findUsernameByUsercode(rowData.get(2));</span>
+<span class="nc" id="L560">                    int count = 0;</span>
+<span class="nc bnc" id="L561" title="All 2 branches missed.">                    for (int a = 5; a &lt; rowData.size(); a++) {</span>
+<span class="nc" id="L562">                        shiftCodeArray[count] = rowData.get(a);</span>
+<span class="nc" id="L563">                        shiftPLArray[count] = &quot;false&quot;;</span>
+<span class="nc" id="L564">                        shiftRemarkArray[count] = &quot;&quot;;</span>
+<span class="nc" id="L565">                        count++;</span>
+                    }
+<span class="nc" id="L567">                    String statusString = updateShiftRosterOfEmp(username, startDate, endDate, shiftCodeArray, shiftPLArray, shiftRemarkArray).toString();</span>
+<span class="nc bnc" id="L568" title="All 2 branches missed.">                    if (statusString.contains(&quot;successfully&quot;))</span>
+<span class="nc" id="L569">                        saveCount++;</span>
+                }
+<span class="nc" id="L571">                return &quot;SUCCESS! Shift assigned successfully. User count: &quot; + saveCount;</span>
+            } else {
+<span class="nc" id="L573">                return &quot;SUCCESS! No error.&quot;;</span>
+            }
+<span class="nc" id="L575">        } catch (FileNotFoundException e) {</span>
+<span class="nc" id="L576">            e.printStackTrace();</span>
+<span class="nc" id="L577">            return &quot;File not found: &quot; + e.getMessage();</span>
+<span class="nc" id="L578">        } catch (IOException e) {</span>
+<span class="nc" id="L579">            e.printStackTrace();</span>
+<span class="nc" id="L580">            return &quot;Error reading file: &quot; + e.getMessage();</span>
+<span class="nc" id="L581">        } catch (Exception e) {</span>
+<span class="nc" id="L582">            e.printStackTrace();</span>
+<span class="nc" id="L583">            return &quot;An error occurred: &quot; + e.getMessage();</span>
+        }
+    }
+
+    public void createRoster(RosterRemarkDTO rosterRemarkDTO) {
+<span class="nc" id="L588">        EmpRosterRemark empRosterRemark = convertToEntity(rosterRemarkDTO);</span>
+<span class="nc" id="L589">        empRosterRemarkRepository.save(empRosterRemark);</span>
+<span class="nc" id="L590">    }</span>
+
+    private EmpRosterRemark convertToEntity(RosterRemarkDTO rosterRemarkDTO) {
+<span class="nc" id="L593">        EmpRosterRemark empRosterRemark = new EmpRosterRemark();</span>
+<span class="nc" id="L594">        empRosterRemark.setRosterRemarkId(rosterRemarkDTO.getRosterRemarkId());</span>
+<span class="nc" id="L595">        empRosterRemark.setDate(rosterRemarkDTO.getDate());</span>
+<span class="nc" id="L596">        empRosterRemark.setUsername(rosterRemarkDTO.getUsername());</span>
+<span class="nc" id="L597">        empRosterRemark.setLastUpdateSessionId(rosterRemarkDTO.getLastUpdateSessionId());</span>
+<span class="nc" id="L598">        empRosterRemark.setShiftId(rosterRemarkDTO.getShiftId());</span>
+<span class="nc" id="L599">        empRosterRemark.setAssigneeRemark(rosterRemarkDTO.getAssigneeRemark());</span>
+<span class="nc" id="L600">        empRosterRemark.setTempLeaveFlag(rosterRemarkDTO.getTempLeaveFlag());</span>
+<span class="nc" id="L601">        empRosterRemark.setEntityId(rosterRemarkDTO.getEntityId());</span>
+<span class="nc" id="L602">        empRosterRemark.setClientId(rosterRemarkDTO.getClientId());</span>
+<span class="nc" id="L603">        empRosterRemark.setLastUpdatedBy(rosterRemarkDTO.getLastUpdatedBy());</span>
+<span class="nc" id="L604">        empRosterRemark.setLastUpdateDate(rosterRemarkDTO.getLastUpdateDate());</span>
+<span class="nc" id="L605">        empRosterRemark.setCreatedBy(rosterRemarkDTO.getCreatedBy());</span>
+<span class="nc" id="L606">        empRosterRemark.setCreationDate(rosterRemarkDTO.getCreationDate());</span>
+<span class="nc" id="L607">        return empRosterRemark;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

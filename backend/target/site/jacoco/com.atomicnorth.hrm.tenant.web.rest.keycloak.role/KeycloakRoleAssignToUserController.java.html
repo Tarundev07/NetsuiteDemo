@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>KeycloakRoleAssignToUserController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.keycloak.role</a> &gt; <span class="el_source">KeycloakRoleAssignToUserController.java</span></div><h1>KeycloakRoleAssignToUserController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.keycloak.role;
+
+import com.atomicnorth.hrm.tenant.service.dto.keycloak.role.KeycloakRoleAssignToUserRequestDTO;
+import com.atomicnorth.hrm.tenant.service.dto.keycloak.role.KeycloakUserRoleDTO;
+import com.atomicnorth.hrm.tenant.service.keycloak.role.KeycloakRoleAssignToUserService;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+
+import java.util.List;
+
+<span class="nc" id="L15">@Slf4j</span>
+@RestController
+@RequestMapping(&quot;/api/roles-assigned&quot;)
+public class KeycloakRoleAssignToUserController {
+
+    private final KeycloakRoleAssignToUserService keycloakRoleAssignToUserService;
+
+<span class="nc" id="L22">    public KeycloakRoleAssignToUserController(KeycloakRoleAssignToUserService keycloakRoleAssignToUserService) {</span>
+<span class="nc" id="L23">        this.keycloakRoleAssignToUserService = keycloakRoleAssignToUserService;</span>
+<span class="nc" id="L24">    }</span>
+
+    private String extractKeycloakErrorMessage(WebClientResponseException ex) {
+        try {
+<span class="nc" id="L28">            return ex.getResponseBodyAsString();</span>
+<span class="nc" id="L29">        } catch (Exception e) {</span>
+<span class="nc" id="L30">            return &quot;Unknown error occurred.&quot;;</span>
+        }
+    }
+
+    @GetMapping(&quot;/assign/{realm}/{userId}/{clientId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;KeycloakUserRoleDTO&gt;&gt;&gt; getUserRoles(
+            @PathVariable String realm,
+            @PathVariable String userId,
+            @PathVariable String clientId,
+            @RequestHeader(&quot;keycloakToken&quot;) String keycloakToken) {
+        try {
+<span class="nc" id="L41">            List&lt;KeycloakUserRoleDTO&gt; roles = keycloakRoleAssignToUserService.getUserRoles(realm, userId, clientId, keycloakToken);</span>
+
+<span class="nc" id="L43">            ApiResponse&lt;List&lt;KeycloakUserRoleDTO&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    roles,
+                    true,
+                    &quot;USER-ROLE-RETRIEVE-SUCCESS&quot;,
+                    &quot;Roles retrieved successfully.&quot;
+            );
+<span class="nc" id="L49">            return ResponseEntity.ok(response);</span>
+
+<span class="nc" id="L51">        } catch (WebClientResponseException ex) {</span>
+<span class="nc" id="L52">            log.error(&quot;Keycloak API Error: {}&quot;, ex.getMessage());</span>
+<span class="nc" id="L53">            ApiResponse&lt;List&lt;KeycloakUserRoleDTO&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;USER-ROLE-RETRIEVE-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L58">                    List.of(&quot;Failed to retrieve user roles: &quot; + ex.getMessage())</span>
+            );
+<span class="nc" id="L60">            return ResponseEntity.status(ex.getStatusCode()).body(errorResponse);</span>
+
+<span class="nc" id="L62">        } catch (Exception ex) {</span>
+<span class="nc" id="L63">            log.error(&quot;Unexpected error: {}&quot;, ex.getMessage(), ex);</span>
+<span class="nc" id="L64">            ApiResponse&lt;List&lt;KeycloakUserRoleDTO&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;USER-ROLE-RETRIEVE-ERROR&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L69">                    List.of(ex.getMessage(), &quot;Please contact support.&quot;)</span>
+            );
+<span class="nc" id="L71">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @PostMapping(&quot;/remove&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;String&gt;&gt; removeRoleFromUser(
+            @RequestParam String realm,
+            @RequestParam String userId,
+            @RequestParam String clientId,
+            @RequestHeader(&quot;token&quot;) String token,
+            @RequestBody List&lt;KeycloakRoleAssignToUserRequestDTO&gt; roles) {
+
+        try {
+<span class="nc bnc" id="L84" title="All 4 branches missed.">            if (roles == null || roles.isEmpty()) {</span>
+<span class="nc" id="L85">                throw new IllegalArgumentException(&quot;Role list cannot be empty&quot;);</span>
+            }
+
+            // Check if the role is assigned before removing
+<span class="nc" id="L89">            boolean isAssigned = keycloakRoleAssignToUserService.isRoleAlreadyAssigned(realm, userId, clientId, roles, token);</span>
+<span class="nc bnc" id="L90" title="All 2 branches missed.">            if (!isAssigned) {</span>
+<span class="nc" id="L91">                ApiResponse&lt;String&gt; response = new ApiResponse&lt;&gt;(</span>
+                        null, false, &quot;ROLE-NOT-ASSIGNED&quot;, &quot;Error&quot;,
+<span class="nc" id="L93">                        List.of(&quot;The user does not have the assigned role.&quot;)</span>
+                );
+<span class="nc" id="L95">                return ResponseEntity.status(HttpStatus.CONFLICT).body(response);</span>
+            }
+
+            // Remove the assigned role
+<span class="nc" id="L99">            keycloakRoleAssignToUserService.removeRoleFromUser(realm, userId, clientId, roles, token);</span>
+
+<span class="nc" id="L101">            ApiResponse&lt;String&gt; response = new ApiResponse&lt;&gt;(</span>
+                    &quot;Role removed successfully&quot;,
+                    true,
+                    &quot;ROLE-REMOVE-SUCCESS&quot;,
+                    &quot;User role mapping updated.&quot;
+            );
+<span class="nc" id="L107">            return ResponseEntity.ok(response);</span>
+
+<span class="nc" id="L109">        } catch (WebClientResponseException ex) {</span>
+<span class="nc" id="L110">            String errorMessage = extractKeycloakErrorMessage(ex);</span>
+<span class="nc" id="L111">            log.error(&quot;Keycloak role removal failed: Response Code: {}, Response Body: {}&quot;,</span>
+<span class="nc" id="L112">                    ex.getStatusCode(), errorMessage);</span>
+
+<span class="nc" id="L114">            ApiResponse&lt;String&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null, false, &quot;ROLE-REMOVE-FAILURE&quot;, &quot;Error&quot;,
+<span class="nc" id="L116">                    List.of(&quot;Failed to remove role: &quot; + errorMessage)</span>
+            );
+<span class="nc" id="L118">            return ResponseEntity.status(ex.getStatusCode()).body(errorResponse);</span>
+
+<span class="nc" id="L120">        } catch (Exception ex) {</span>
+<span class="nc" id="L121">            log.error(&quot;Unexpected error: {}&quot;, ex.getMessage(), ex);</span>
+<span class="nc" id="L122">            ApiResponse&lt;String&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null, false, &quot;ROLE-REMOVE-ERROR&quot;, &quot;Error&quot;,
+<span class="nc" id="L124">                    List.of(ex.getMessage(), &quot;Please contact support.&quot;)</span>
+            );
+<span class="nc" id="L126">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @PostMapping(&quot;/assignRoleToUserTest&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;String&gt;&gt; assignRoleToUserTest(
+            @RequestParam String realm,
+            @RequestParam String userId,
+            @RequestParam String clientId,
+            @RequestHeader(&quot;token&quot;) String token,
+            @RequestBody List&lt;KeycloakRoleAssignToUserRequestDTO&gt; roles) {
+
+        try {
+<span class="nc bnc" id="L139" title="All 4 branches missed.">            if (roles == null || roles.isEmpty()) {</span>
+<span class="nc" id="L140">                throw new IllegalArgumentException(&quot;Role list cannot be empty&quot;);</span>
+            }
+
+            // Call Service Layer (Only Keycloak operation)
+<span class="nc" id="L144">            keycloakRoleAssignToUserService.assignRoleToKeycloak(realm, userId, clientId, roles, token);</span>
+
+<span class="nc" id="L146">            return ResponseEntity.status(HttpStatus.CREATED)</span>
+<span class="nc" id="L147">                    .body(new ApiResponse&lt;&gt;(&quot;Role assigned successfully&quot;, true, &quot;ROLE-ASSIGN-SUCCESS&quot;, &quot;User role mapping completed in Keycloak.&quot;));</span>
+
+<span class="nc" id="L149">        } catch (Exception ex) {</span>
+<span class="nc" id="L150">            log.error(&quot;Unexpected error: {}&quot;, ex.getMessage(), ex);</span>
+<span class="nc" id="L151">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L152">                    .body(new ApiResponse&lt;&gt;(null, false, &quot;ROLE-ASSIGN-ERROR&quot;, &quot;Error&quot;, List.of(ex.getMessage(), &quot;Please contact support.&quot;)));</span>
+        }
+    }
+
+
+    @GetMapping(&quot;/health&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;String&gt;&gt; checkKeycloakHealth(
+            @RequestParam String realm,
+            @RequestHeader(&quot;Authorization&quot;) String token) {  //  Get Token from Header
+
+        //  Remove &quot;Bearer &quot; if present
+<span class="nc bnc" id="L163" title="All 2 branches missed.">        if (token.startsWith(&quot;Bearer &quot;)) {</span>
+<span class="nc" id="L164">            token = token.substring(7);</span>
+        }
+
+<span class="nc" id="L167">        boolean isAvailable = keycloakRoleAssignToUserService.isKeycloakAvailable(realm, token);</span>
+
+<span class="nc bnc" id="L169" title="All 2 branches missed.">        if (isAvailable) {</span>
+<span class="nc" id="L170">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(&quot;Keycloak is UP&quot;, true, &quot;KEYCLOAK-AVAILABLE&quot;, &quot;API is accessible&quot;));</span>
+        } else {
+<span class="nc" id="L172">            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)</span>
+<span class="nc" id="L173">                    .body(new ApiResponse&lt;&gt;(&quot;Keycloak is DOWN&quot;, false, &quot;KEYCLOAK-DOWN&quot;, &quot;API is not accessible&quot;));</span>
+        }
+    }
+
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

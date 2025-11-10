@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SesM00UserManageColumnsDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.dto.manageColumn</a> &gt; <span class="el_source">SesM00UserManageColumnsDTO.java</span></div><h1>SesM00UserManageColumnsDTO.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.dto.manageColumn;
+
+import lombok.Data;
+
+import javax.validation.Valid;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import java.util.Date;
+import java.util.List;
+
+<span class="nc bnc" id="L11" title="All 110 branches missed.">@Data</span>
+public class SesM00UserManageColumnsDTO {
+
+<span class="nc" id="L14">    private Integer userManageColumnId;</span>
+
+    @NotNull(message = &quot;User ID is required&quot;)
+<span class="nc" id="L17">    private Integer userId;</span>
+
+    @NotNull(message = &quot;Module ID is required&quot;)
+<span class="nc" id="L20">    private Integer moduleId;</span>
+
+    @NotNull(message = &quot;Module Feature ID is required&quot;)
+<span class="nc" id="L23">    private Integer moduleFeatureId;</span>
+
+    @NotBlank(message = &quot;Page Key is required&quot;)
+<span class="nc" id="L26">    private String pageKey;</span>
+
+    @NotNull(message = &quot;Public flag is required&quot;)
+<span class="nc" id="L29">    private Boolean isPublic;</span>
+
+    @NotNull(message = &quot;Creation Date is required&quot;)
+<span class="nc" id="L32">    private Date creationDate;</span>
+
+    @NotNull(message = &quot;Last Update Date is required&quot;)
+<span class="nc" id="L35">    private Date lastUpdateDate;</span>
+
+    @NotNull(message = &quot;Created By is required&quot;)
+<span class="nc" id="L38">    private Integer createdBy;</span>
+
+    @NotNull(message = &quot;Last Updated By is required&quot;)
+<span class="nc" id="L41">    private Integer lastUpdatedBy;</span>
+
+    @NotBlank(message = &quot;Operation Source is required&quot;)
+<span class="nc" id="L44">    private String operationSource;</span>
+
+    @NotBlank(message = &quot;Page Section is required&quot;)
+<span class="nc" id="L47">    private String pageSection;</span>
+
+    @NotNull(message = &quot;Column Details are required&quot;)
+<span class="nc" id="L50">    private List&lt;@Valid SesM01UserManageColumnDetailsDTO&gt; columnDetails;</span>
+
+    // Additional attributes...
+
+    // Getters and Setters
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

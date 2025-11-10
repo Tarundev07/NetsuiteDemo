@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmpExitApprovalDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.dto.employeeExit</a> &gt; <span class="el_source">EmpExitApprovalDTO.java</span></div><h1>EmpExitApprovalDTO.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.dto.employeeExit;
+
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import lombok.Data;
+import net.minidev.json.annotate.JsonIgnore;
+
+import java.time.Instant;
+import java.time.LocalDate;
+
+<span class="nc bnc" id="L10" title="All 238 branches missed.">@Data</span>
+public class EmpExitApprovalDTO {
+<span class="nc" id="L12">    private Integer id;</span>
+<span class="nc" id="L13">    private Integer approverId;</span>
+<span class="nc" id="L14">    private Integer exitRequestId;</span>
+<span class="nc" id="L15">    private String  exitRequestNumber;</span>
+<span class="nc" id="L16">    private LocalDate exitInitiateDate;</span>
+
+<span class="nc" id="L18">    private Integer employeeId;</span>
+<span class="nc" id="L19">    private String employeeName;</span>
+<span class="nc" id="L20">    private String email;</span>
+<span class="nc" id="L21">    private String designation;</span>
+<span class="nc" id="L22">    private String department;</span>
+<span class="nc" id="L23">    private String reportingManager;</span>
+<span class="nc" id="L24">    private String hrManager;</span>
+<span class="nc" id="L25">    private LocalDate dateOfJoining;</span>
+<span class="nc" id="L26">    private Integer noticePeriod;</span>
+<span class="nc" id="L27">    private Boolean ApprovalRequired;</span>
+
+<span class="nc" id="L29">    private LocalDate effectiveFrom;</span>
+<span class="nc" id="L30">    private String exitType;</span>
+<span class="nc" id="L31">    private String exitReason;</span>
+<span class="nc" id="L32">    private LocalDate lastWorkingDate;</span>
+<span class="nc" id="L33">    private Boolean requestMeeting;</span>
+<span class="nc" id="L34">    private Boolean eligibleToRehire;</span>
+<span class="nc" id="L35">    private Boolean requestBuyout;</span>
+<span class="nc" id="L36">    private String empRemarks;</span>
+<span class="nc" id="L37">    private String status;</span>
+<span class="nc" id="L38">    private String attachment;</span>
+
+<span class="nc" id="L40">    private String approvalStatus;</span>
+<span class="nc" id="L41">    private LocalDate approvalDate;</span>
+<span class="nc" id="L42">    private String remarks;</span>
+<span class="nc" id="L43">    private Instant CreatedOn;</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

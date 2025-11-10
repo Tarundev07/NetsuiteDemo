@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LocationController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.location</a> &gt; <span class="el_source">LocationController.java</span></div><h1>LocationController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.location;
+
+import com.atomicnorth.hrm.tenant.service.dto.location.CityMasterDTO;
+import com.atomicnorth.hrm.tenant.service.dto.location.CountryMasterDTO;
+import com.atomicnorth.hrm.tenant.service.dto.location.StateMasterDTO;
+import com.atomicnorth.hrm.tenant.service.location.LocationService;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Collections;
+import java.util.List;
+@RestController
+@RequestMapping(&quot;/api/location&quot;)
+<span class="nc" id="L20">public class LocationController {</span>
+    @Autowired
+    private LocationService locationService;
+    @GetMapping(&quot;/getAllCountries&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;CountryMasterDTO&gt;&gt;&gt; getAllCountries() {
+        try {
+<span class="nc" id="L26">            List&lt;CountryMasterDTO&gt; countryDTOs = locationService.getAllCountries();</span>
+<span class="nc" id="L27">            ApiResponse&lt;List&lt;CountryMasterDTO&gt;&gt; response = new ApiResponse&lt;&gt;(countryDTOs, true, &quot;COUNTRY-LIST-FETCH-SUCCESS&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L28">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L29">        } catch (Exception e) {</span>
+<span class="nc" id="L30">            ApiResponse&lt;List&lt;CountryMasterDTO&gt;&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;COUNTRY-LIST-FETCH-FAILURE&quot;, &quot;Failure&quot;, Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L31">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getStatesByCountryId&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;StateMasterDTO&gt;&gt;&gt; getStatesByCountryId(@RequestParam Integer countryId) {
+        try {
+<span class="nc" id="L38">            List&lt;StateMasterDTO&gt; stateDTOs = locationService.getStatesByCountryId(countryId);</span>
+<span class="nc" id="L39">            ApiResponse&lt;List&lt;StateMasterDTO&gt;&gt; response = new ApiResponse&lt;&gt;(stateDTOs, true, &quot;STATE-LIST-FETCH-SUCCESS&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L40">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L41">        } catch (Exception e) {</span>
+<span class="nc" id="L42">            ApiResponse&lt;List&lt;StateMasterDTO&gt;&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;STATE-LIST-FETCH-FAILURE&quot;, &quot;Failure&quot;, Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L43">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getCitiesByStateId&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;CityMasterDTO&gt;&gt;&gt; getCitiesByStateId(@RequestParam Integer stateId) {
+        try {
+<span class="nc" id="L50">            List&lt;CityMasterDTO&gt; cityDTOs = locationService.getCitiesByStateId(stateId);</span>
+<span class="nc" id="L51">            ApiResponse&lt;List&lt;CityMasterDTO&gt;&gt; response = new ApiResponse&lt;&gt;(cityDTOs, true, &quot;CITY-LIST-FETCH-SUCCESS&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L52">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L53">        } catch (Exception e) {</span>
+<span class="nc" id="L54">            ApiResponse&lt;List&lt;CityMasterDTO&gt;&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;CITY-LIST-FETCH-FAILURE&quot;, &quot;Failure&quot;, Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L55">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getCitiesByCountryId&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;CityMasterDTO&gt;&gt;&gt; getCitiesByCountryId(@RequestParam Integer countryId) {
+        try {
+<span class="nc" id="L62">            List&lt;CityMasterDTO&gt; cityDTOs = locationService.getCitiesByCountryId(countryId);</span>
+<span class="nc" id="L63">            ApiResponse&lt;List&lt;CityMasterDTO&gt;&gt; response = new ApiResponse&lt;&gt;(cityDTOs, true, &quot;CITY-LIST-FETCH-SUCCESS&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L64">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L65">        } catch (Exception e) {</span>
+<span class="nc" id="L66">            ApiResponse&lt;List&lt;CityMasterDTO&gt;&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;CITY-LIST-FETCH-FAILURE&quot;, &quot;Failure&quot;, Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L67">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

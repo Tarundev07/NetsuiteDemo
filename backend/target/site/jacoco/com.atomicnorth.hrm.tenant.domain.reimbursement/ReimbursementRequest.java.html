@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReimbursementRequest.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.domain.reimbursement</a> &gt; <span class="el_source">ReimbursementRequest.java</span></div><h1>ReimbursementRequest.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.domain.reimbursement;
+
+import com.atomicnorth.hrm.tenant.domain.AbstractAuditingEntity;
+import lombok.Data;
+
+import javax.persistence.*;
+import java.util.Date;
+
+@Entity
+<span class="nc bnc" id="L10" title="All 110 branches missed.">@Data</span>
+@Table(name = &quot;ses_m00_rms_request&quot;)
+public class ReimbursementRequest extends AbstractAuditingEntity&lt;Long&gt; {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = &quot;SR_NO&quot;)
+<span class="nc" id="L17">    private Integer srno;</span>
+
+    @Column(name = &quot;REQUEST_NUMBER&quot;)
+<span class="nc" id="L20">    private String requestNumber;</span>
+
+    @Column(name = &quot;EMPLOYEE_ID&quot;)
+<span class="nc" id="L23">    private Integer employeeId;</span>
+
+    @Column(name = &quot;REQUESTED_AMOUNT&quot;)
+<span class="nc" id="L26">    private Double requestedamount;</span>
+
+    @Column(name = &quot;APPROVED_AMOUNT&quot;)
+<span class="nc" id="L29">    private Double approvedamount;</span>
+
+    @Column(name = &quot;STATUS&quot;)
+<span class="nc" id="L32">    private String status;</span>
+
+    @Column(name = &quot;REVIEWER_REMARK&quot;)
+<span class="nc" id="L35">    private String reviewerremark;</span>
+
+    @Column(name = &quot;VP_REMARK&quot;)
+<span class="nc" id="L38">    private String vpremark;</span>
+
+    @Column(name = &quot;APPROVER_REMARK&quot;)
+<span class="nc" id="L41">    private String approverremark;</span>
+
+    @Column(name = &quot;BUCKET_ID&quot;)
+<span class="nc" id="L44">    private Double bucketid;</span>
+
+    @Column(name = &quot;BANK_REF_NUMBER&quot;)
+<span class="nc" id="L47">    private String bankrefnumber;</span>
+
+    @Column(name = &quot;PROCESSED_DATE&quot;)
+<span class="nc" id="L50">    private Date processeddate;</span>
+
+    @Column(name = &quot;REASSIGN_FLAG&quot;)
+<span class="nc" id="L53">    private String reassignflag;</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

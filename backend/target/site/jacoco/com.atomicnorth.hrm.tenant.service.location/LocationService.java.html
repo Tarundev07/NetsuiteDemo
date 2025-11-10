@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LocationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.location</a> &gt; <span class="el_source">LocationService.java</span></div><h1>LocationService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.location;
+
+import com.atomicnorth.hrm.tenant.domain.location.CityMaster;
+import com.atomicnorth.hrm.tenant.domain.location.CountryMaster;
+import com.atomicnorth.hrm.tenant.domain.location.StateMaster;
+import com.atomicnorth.hrm.tenant.repository.location.CityMasterRepository;
+import com.atomicnorth.hrm.tenant.repository.location.CountryMasterRepository;
+import com.atomicnorth.hrm.tenant.repository.location.StateMasterRepository;
+import com.atomicnorth.hrm.tenant.service.dto.location.CityMasterDTO;
+import com.atomicnorth.hrm.tenant.service.dto.location.CountryMasterDTO;
+import com.atomicnorth.hrm.tenant.service.dto.location.StateMasterDTO;
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+@Service
+<span class="nc" id="L20">public class LocationService {</span>
+    @Autowired
+    private CityMasterRepository cityMasterRepository;
+    @Autowired
+    private StateMasterRepository stateMasterRepository;
+    @Autowired
+    private CountryMasterRepository countryMasterRepository;
+    @Autowired
+    private ModelMapper modelMapper;
+    public List&lt;CountryMasterDTO&gt; getAllCountries() {
+<span class="nc" id="L30">        List&lt;CountryMaster&gt; countries = countryMasterRepository.findAll();</span>
+<span class="nc" id="L31">        return countries.stream()</span>
+<span class="nc" id="L32">                .map(country -&gt; modelMapper.map(country, CountryMasterDTO.class))</span>
+<span class="nc" id="L33">                .collect(Collectors.toList());</span>
+    }
+    public List&lt;StateMasterDTO&gt; getStatesByCountryId(Integer countryId) {
+<span class="nc" id="L36">        List&lt;StateMaster&gt; states = stateMasterRepository.findByCountryId(countryId);</span>
+<span class="nc" id="L37">        return states.stream()</span>
+<span class="nc" id="L38">                .map(state -&gt; modelMapper.map(state, StateMasterDTO.class))</span>
+<span class="nc" id="L39">                .sorted(Comparator.comparing(StateMasterDTO::getStateName))</span>
+<span class="nc" id="L40">                .collect(Collectors.toList());</span>
+    }
+    public List&lt;CityMasterDTO&gt; getCitiesByStateId(Integer stateId) {
+<span class="nc" id="L43">        List&lt;CityMaster&gt; cityEntities = cityMasterRepository.findByStateId(stateId);</span>
+<span class="nc" id="L44">        return cityEntities.stream()</span>
+<span class="nc" id="L45">                .map(city -&gt; modelMapper.map(city, CityMasterDTO.class))</span>
+<span class="nc" id="L46">                .sorted(Comparator.comparing(CityMasterDTO::getCityName))</span>
+<span class="nc" id="L47">                .collect(Collectors.toList());</span>
+    }
+    public List&lt;CityMasterDTO&gt; getCitiesByCountryId(Integer countryId) {
+<span class="nc" id="L50">        List&lt;StateMaster&gt; states = stateMasterRepository.findByCountryId(countryId);</span>
+
+<span class="nc" id="L52">        List&lt;Integer&gt; stateIds = states.stream()</span>
+<span class="nc" id="L53">                .map(StateMaster::getStateId)</span>
+<span class="nc" id="L54">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L56">        List&lt;CityMaster&gt; cities = cityMasterRepository.findByStateIdIn(stateIds);</span>
+
+<span class="nc" id="L58">        return cities.stream()</span>
+<span class="nc" id="L59">                .map(city -&gt; modelMapper.map(city, CityMasterDTO.class))</span>
+<span class="nc" id="L60">                .collect(Collectors.toList());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

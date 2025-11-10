@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Ses_M00_Set_Up_Company.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.domain.company</a> &gt; <span class="el_source">Ses_M00_Set_Up_Company.java</span></div><h1>Ses_M00_Set_Up_Company.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.domain.company;
+
+import com.atomicnorth.hrm.tenant.domain.holiday.HolidaysCalendar;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.persistence.*;
+import java.util.Date;
+
+@Entity
+<span class="nc bnc" id="L13" title="All 254 branches missed.">@Data</span>
+<span class="nc" id="L14">@NoArgsConstructor</span>
+<span class="nc" id="L15">@AllArgsConstructor</span>
+<span class="nc" id="L16">@Builder</span>
+@Table(name = &quot;ses_m00_set_up_company&quot;,
+        uniqueConstraints = {
+                @UniqueConstraint(name = &quot;COMPANY_UNIQUE_NAME_ABBREVIATION&quot;, columnNames = {&quot;COMPANY_NAME&quot;, &quot;COMPANY_ABBREVIATION&quot;})
+        })
+public class Ses_M00_Set_Up_Company {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = &quot;COMPANY_ID&quot;, nullable = false)
+<span class="nc" id="L26">    private Integer companyId;</span>
+
+    @Column(name = &quot;COMPANY_NAME&quot;, nullable = false, length = 255)
+<span class="nc" id="L29">    private String companyName;</span>
+
+    @Column(name = &quot;COMPANY_ABBREVIATION&quot;, nullable = false, length = 50)
+<span class="nc" id="L32">    private String companyAbbreviation;</span>
+
+    @Column(name = &quot;DEFAULT_CURRENCY&quot;, nullable = false)
+<span class="nc" id="L35">    private Integer defaultCurrency;</span>
+
+    @Column(name = &quot;COUNTRY&quot;, nullable = false)
+<span class="nc" id="L38">    private Integer country;</span>
+
+    @Column(name = &quot;DEFAULT_LETTER_HEAD&quot;)
+<span class="nc" id="L41">    private Integer defaultLetterHead;</span>
+
+    @Column(name = &quot;TAX_ID&quot;)
+<span class="nc" id="L44">    private Integer taxId;</span>
+
+    @Column(name = &quot;IS_GROUP&quot;)
+<span class="nc" id="L47">    private Boolean isGroup;</span>
+
+    @Column(name = &quot;DOMAIN&quot;, length = 255)
+<span class="nc" id="L50">    private String domain;</span>
+
+    @Column(name = &quot;DATE_OF_ESTABLISHMENT&quot;)
+    @Temporal(TemporalType.DATE)
+<span class="nc" id="L54">    private Date dateOfEstablishment;</span>
+
+    @Column(name = &quot;PARENT_COMPANY&quot;)
+<span class="nc" id="L57">    private Integer parentCompany;</span>
+
+    @Column(name = &quot;DEFAULT_HOLIDAY_LIST&quot;)
+<span class="nc" id="L60">    private Integer defaultHolidayList;</span>
+
+    @Column(name = &quot;REGISTRATION_DETAILS&quot;, length = 255)
+<span class="nc" id="L63">    private String registrationDetails;</span>
+
+    @Column(name = &quot;GST_NO&quot;, length = 50)
+<span class="nc" id="L66">    private String gstNo;</span>
+
+    @Column(name = &quot;CHART_OF_ACCOUNT&quot;)
+<span class="nc" id="L69">    private Integer chartOfAccount;</span>
+
+    @Column(name = &quot;CHART_OF_ACCOUNT_TEMPLATE&quot;)
+<span class="nc" id="L72">    private Integer chartOfAccountTemplate;</span>
+
+    @Column(name = &quot;WRITE_OFF_ACCOUNT&quot;)
+<span class="nc" id="L75">    private Integer writeOffAccount;</span>
+
+    @Column(name = &quot;LOST_ACCOUNT&quot;)
+<span class="nc" id="L78">    private Integer lostAccount;</span>
+
+    @Column(name = &quot;DEFAULT_PAYMENT_DISCOUNT_ACCOUNT&quot;)
+<span class="nc" id="L81">    private Integer defaultPaymentDiscountAccount;</span>
+
+    @Column(name = &quot;CREATED_ON&quot;)
+    @Temporal(TemporalType.DATE)
+<span class="nc" id="L85">    private Date createdOn;</span>
+
+    @Column(name = &quot;CREATED_BY&quot;, length = 50)
+<span class="nc" id="L88">    private String createdBy;</span>
+
+    @Column(name = &quot;PAYMENT_TERM_TEMPLATE&quot;)
+<span class="nc" id="L91">    private Integer paymentTermTemplate;</span>
+
+    @Column(name = &quot;EXCHANGE_GAIN_LOSS&quot;)
+<span class="nc" id="L94">    private Integer exchangeGainLoss;</span>
+
+    @Column(name = &quot;UNRELEASED_GAIN_LOSS&quot;)
+<span class="nc" id="L97">    private Integer unreleasedGainLoss;</span>
+
+    @Column(name = &quot;ROUND_OFF_ACCOUNT&quot;)
+<span class="nc" id="L100">    private Integer roundOffAccount;</span>
+
+    @Column(name = &quot;ROUND_OFF_OPENING&quot;)
+<span class="nc" id="L103">    private Integer roundOffOpening;</span>
+
+    @Column(name = &quot;ROUND_OFF_COST_CENTER&quot;)
+<span class="nc" id="L106">    private Integer roundOffCostCenter;</span>
+
+    @Column(name = &quot;LAST_UPDATED_DATE&quot;)
+<span class="nc" id="L109">    private Date lastUpdatedDate;</span>
+
+    @Transient
+<span class="nc" id="L112">    private String HolidayName;</span>
+
+    @ManyToOne
+    @JoinColumn(name = &quot;DEFAULT_HOLIDAY_LIST&quot;, referencedColumnName = &quot;HOLIDAY_CALENDAR_ID&quot;, insertable = false, updatable = false)
+<span class="nc" id="L116">    private HolidaysCalendar holidaysCalendar;</span>
+
+    @ManyToOne
+    @JoinColumn(name = &quot;PARENT_COMPANY&quot;, referencedColumnName = &quot;COMPANY_ID&quot;, insertable = false, updatable = false)
+<span class="nc" id="L120">    private Ses_M00_Set_Up_Company parentCompanyEntity;</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

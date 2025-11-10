@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>HolidaysCalendarDay.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.domain.holiday</a> &gt; <span class="el_source">HolidaysCalendarDay.java</span></div><h1>HolidaysCalendarDay.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.domain.holiday;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.persistence.*;
+import java.time.LocalDate;
+
+@Entity
+@Table(name = &quot;ses_m06_hoilday_calendar_days&quot;, uniqueConstraints = {
+        @UniqueConstraint(name = &quot;Index_2&quot;, columnNames = {&quot;HOLIDAY_CALENDAR_ID&quot;, &quot;HOLIDAY_DATE&quot;})
+})
+<span class="nc bnc" id="L15" title="All 366 branches missed.">@Data</span>
+<span class="nc" id="L16">@NoArgsConstructor</span>
+<span class="nc" id="L17">@AllArgsConstructor</span>
+<span class="nc" id="L18">@Builder</span>
+public class HolidaysCalendarDay {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = &quot;HOLIDAY_CALENDAR_DAY_ID&quot;)
+<span class="nc" id="L24">    private Integer holidayCalendarDayId;</span>
+
+    @Column(name = &quot;HOLIDAY_CALENDAR_ID&quot;, nullable = false)
+<span class="nc" id="L27">    private Integer holidayCalendarId;</span>
+
+    @Column(name = &quot;NAME&quot;, nullable = false)
+<span class="nc" id="L30">    private String name;</span>
+
+    @Column(name = &quot;HOLIDAY_TYPE&quot;, nullable = false)
+<span class="nc" id="L33">    private String holidayType;</span>
+
+    @Column(name = &quot;HOLIDAY_DATE&quot;)
+<span class="nc" id="L36">    private LocalDate holidayDate;</span>
+
+<span class="nc" id="L38">    @Column(name = &quot;IS_ACTIVE&quot;, length = 1)</span>
+<span class="nc" id="L39">    private String isActive = &quot;Y&quot;;</span>
+
+    @Column(name = &quot;LEAVE_CODE&quot;)
+<span class="nc" id="L42">    private Integer leaveCode;</span>
+
+    @Column(name = &quot;LAST_UPDATE_SESSION_ID&quot;)
+<span class="nc" id="L45">    private Integer lastUpdateSessionId;</span>
+
+    // Custom attributes (C_ATTRIBUTE1 to C_ATTRIBUTE15)
+    @Column(name = &quot;C_ATTRIBUTE1&quot;)
+<span class="nc" id="L49">    private String cAttribute1;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE2&quot;)
+<span class="nc" id="L52">    private String cAttribute2;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE3&quot;)
+<span class="nc" id="L55">    private String cAttribute3;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE4&quot;)
+<span class="nc" id="L58">    private String cAttribute4;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE5&quot;)
+<span class="nc" id="L61">    private String cAttribute5;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE6&quot;)
+<span class="nc" id="L64">    private String cAttribute6;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE7&quot;)
+<span class="nc" id="L67">    private String cAttribute7;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE8&quot;)
+<span class="nc" id="L70">    private String cAttribute8;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE9&quot;)
+<span class="nc" id="L73">    private String cAttribute9;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE10&quot;)
+<span class="nc" id="L76">    private String cAttribute10;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE11&quot;)
+<span class="nc" id="L79">    private String cAttribute11;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE12&quot;)
+<span class="nc" id="L82">    private String cAttribute12;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE13&quot;)
+<span class="nc" id="L85">    private String cAttribute13;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE14&quot;)
+<span class="nc" id="L88">    private String cAttribute14;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE15&quot;)
+<span class="nc" id="L91">    private String cAttribute15;</span>
+
+    // Numeric attributes (N_ATTRIBUTE16 to N_ATTRIBUTE25)
+    @Column(name = &quot;N_ATTRIBUTE16&quot;)
+<span class="nc" id="L95">    private Integer nAttribute16;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE17&quot;)
+<span class="nc" id="L98">    private Integer nAttribute17;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE18&quot;)
+<span class="nc" id="L101">    private Integer nAttribute18;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE19&quot;)
+<span class="nc" id="L104">    private Integer nAttribute19;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE20&quot;)
+<span class="nc" id="L107">    private Integer nAttribute20;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE21&quot;)
+<span class="nc" id="L110">    private Integer nAttribute21;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE22&quot;)
+<span class="nc" id="L113">    private Integer nAttribute22;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE23&quot;)
+<span class="nc" id="L116">    private Integer nAttribute23;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE24&quot;)
+<span class="nc" id="L119">    private Integer nAttribute24;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE25&quot;)
+<span class="nc" id="L122">    private Integer nAttribute25;</span>
+
+    // Date attributes (D_ATTRIBUTE26 to D_ATTRIBUTE30)
+    @Column(name = &quot;D_ATTRIBUTE26&quot;)
+<span class="nc" id="L126">    private LocalDate dAttribute26;</span>
+
+    @Column(name = &quot;D_ATTRIBUTE27&quot;)
+<span class="nc" id="L129">    private LocalDate dAttribute27;</span>
+
+    @Column(name = &quot;D_ATTRIBUTE28&quot;)
+<span class="nc" id="L132">    private LocalDate dAttribute28;</span>
+
+    @Column(name = &quot;D_ATTRIBUTE29&quot;)
+<span class="nc" id="L135">    private LocalDate dAttribute29;</span>
+
+    @Column(name = &quot;D_ATTRIBUTE30&quot;)
+<span class="nc" id="L138">    private LocalDate dAttribute30;</span>
+
+    // JSON-like attributes (J_ATTRIBUTE31 to J_ATTRIBUTE32)
+    @Column(name = &quot;J_ATTRIBUTE31&quot;)
+<span class="nc" id="L142">    private String jAttribute31;</span>
+
+    @Column(name = &quot;J_ATTRIBUTE32&quot;)
+<span class="nc" id="L145">    private String jAttribute32;</span>
+
+    // Record metadata
+    @Column(name = &quot;CREATION_DATE&quot;)
+<span class="nc" id="L149">    private LocalDate creationDate;</span>
+
+    @Column(name = &quot;CREATED_BY&quot;)
+<span class="nc" id="L152">    private String createdBy;</span>
+
+    @Column(name = &quot;LAST_UPDATED_BY&quot;)
+<span class="nc" id="L155">    private String lastUpdatedBy;</span>
+
+    @Column(name = &quot;LAST_UPDATED_DATE&quot;)
+<span class="nc" id="L158">    private LocalDate lastUpdatedDate;</span>
+
+    @Column(name = &quot;RECORD_INFO&quot;, columnDefinition = &quot;TEXT&quot;)
+<span class="nc" id="L161">    private String recordInfo;</span>
+
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

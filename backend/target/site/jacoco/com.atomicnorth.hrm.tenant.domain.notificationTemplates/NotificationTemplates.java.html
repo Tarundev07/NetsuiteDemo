@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NotificationTemplates.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.domain.notificationTemplates</a> &gt; <span class="el_source">NotificationTemplates.java</span></div><h1>NotificationTemplates.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.domain.notificationTemplates;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.persistence.*;
+import javax.validation.constraints.Size;
+import java.time.LocalDateTime;
+
+@Entity
+<span class="nc" id="L12">@AllArgsConstructor</span>
+<span class="nc bnc" id="L13" title="All 158 branches missed.">@Data</span>
+<span class="nc" id="L14">@NoArgsConstructor</span>
+@Table(name = &quot;ses_m00_notification_templates&quot;)
+public class NotificationTemplates {
+
+    @Id
+    @Column(name = &quot;NOTIFICATION_TEMPLATE_ID&quot;)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<span class="nc" id="L21">    private Integer notificationTemplateId;</span>
+
+    @Column(name = &quot;NOTIFICATION_TYPE&quot;)
+<span class="nc" id="L24">    private String notificationType;</span>
+
+    @Column(name = &quot;COMMUNICATION_TYPE&quot;)
+<span class="nc" id="L27">    private String communicationType;</span>
+
+    @Column(name = &quot;TEMPLATE_TYPE&quot;)
+<span class="nc" id="L30">    private String templateType;</span>
+
+    @Column(name = &quot;TEMPLATE_NAME&quot;)
+<span class="nc" id="L33">    private String templateName;</span>
+
+    @Column(name = &quot;SUBJECT&quot;)
+<span class="nc" id="L36">    private String subject;</span>
+
+    @Column(name = &quot;TEMPLATE_DESCRIPTION&quot;)
+<span class="nc" id="L39">    private String templateDescription;</span>
+
+    @Column(name = &quot;BODY&quot;)
+<span class="nc" id="L42">    private String body;</span>
+
+    @Column(name = &quot;LANGUAGE_ID&quot;)
+<span class="nc" id="L45">    private Integer languageId;</span>
+
+    @Column(name = &quot;STATUS&quot;)
+    @Size(max = 1)
+<span class="nc" id="L49">    private String status;</span>
+
+    @Column(name = &quot;FEATURE_ID&quot;)
+<span class="nc" id="L52">    private Integer featureId;</span>
+
+    @Column(name = &quot;MODULE_NAME&quot;)
+<span class="nc" id="L55">    private String moduleName;</span>
+
+    @Column(name = &quot;ORGANIZATION_ID&quot;)
+<span class="nc" id="L58">    private Integer organizationId;</span>
+
+    @Column(name = &quot;CREATION_DATE&quot;)
+<span class="nc" id="L61">    private LocalDateTime creationDate;</span>
+
+    @Column(name = &quot;LAST_UPDATE_DATE&quot;)
+<span class="nc" id="L64">    private LocalDateTime lastUpdateDate;</span>
+
+    @Column(name = &quot;CREATED_BY&quot;)
+<span class="nc" id="L67">    private Integer createdBy;</span>
+
+    @Column(name = &quot;LAST_UPDATED_BY&quot;)
+<span class="nc" id="L70">    private Integer lastUpdatedBy;</span>
+
+    @Column(name = &quot;MODULE_ID&quot;)
+<span class="nc" id="L73">    private Integer moduleId;</span>
+
+    @Column(name = &quot;FUNCTION_ID&quot;)
+<span class="nc" id="L76">    private Integer functionId;</span>
+
+//    @PrePersist
+//    @PreUpdate
+//    private void formatFields() {
+//        this.notificationType = formatString(this.notificationType);
+//        this.communicationType = formatString(this.communicationType);
+//        this.templateType = formatString(this.templateType);
+//        this.templateName = formatString(this.templateName);
+//        this.subject = formatString(this.subject);
+//        this.templateDescription = formatString(this.templateDescription);
+//        //this.body = formatString(this.body);
+//        this.status = formatString(this.status);
+//        this.moduleName = formatString(this.moduleName);
+//    }
+//
+//    private String formatString(String value) {
+//        if (value == null) {
+//            return null;
+//        }
+//        return value.toUpperCase().replace(&quot; &quot;, &quot;_&quot;);
+//    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LeaveAllocationController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest</a> &gt; <span class="el_source">LeaveAllocationController.java</span></div><h1>LeaveAllocationController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest;
+
+import com.atomicnorth.hrm.tenant.domain.LeaveAllocation;
+import com.atomicnorth.hrm.tenant.domain.branch.LeaveTypes;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.repository.LeaveAllocationRepository;
+import com.atomicnorth.hrm.tenant.repository.LeaveTypeRepository;
+import com.atomicnorth.hrm.tenant.service.LeaveAllocationService;
+import com.atomicnorth.hrm.tenant.service.dto.LeaveAllocationDTO;
+import com.atomicnorth.hrm.tenant.service.dto.LeaveAllocationDetailsDTO;
+import com.atomicnorth.hrm.tenant.service.dto.LeaveAllocationRequestDTO;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.util.StringUtils;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.annotation.*;
+
+import javax.persistence.EntityNotFoundException;
+import javax.validation.Valid;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping(&quot;/api/leave-allocations&quot;)
+@EnableTransactionManagement
+<span class="nc" id="L36">public class LeaveAllocationController {</span>
+
+<span class="nc" id="L38">    private final Logger log = LoggerFactory.getLogger(LeaveAllocationController.class);</span>
+
+    @Autowired
+    private LeaveAllocationService leaveAllocationService;
+
+    @Autowired
+    private LeaveAllocationRepository leaveAllocationRepository;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Autowired
+    private LeaveTypeRepository leaveTypeRepository;
+
+    @Autowired
+    private EmployeeRepository employeeRepository;
+
+    private ResponseEntity&lt;ApiResponse&lt;?&gt;&gt; handleValidationErrors(BindingResult bindingResult) {
+<span class="nc" id="L56">        Map&lt;String, String&gt; errors = bindingResult.getFieldErrors().stream()</span>
+<span class="nc" id="L57">                .collect(Collectors.toMap(</span>
+                        FieldError::getField,
+<span class="nc" id="L59">                        fieldError -&gt; fieldError.getDefaultMessage()</span>
+                ));
+<span class="nc" id="L61">        return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_VALIDATION_ERROR&quot;, &quot;FAILURE&quot;,</span>
+<span class="nc" id="L62">                new ArrayList&lt;&gt;(errors.values())), HttpStatus.BAD_REQUEST);</span>
+    }
+
+    @GetMapping(&quot;/findAll&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getAllLeaveAllocations(
+            @RequestParam(value = &quot;page&quot;, defaultValue = &quot;1&quot;) int page,
+            @RequestParam(value = &quot;size&quot;, defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;id&quot;) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;) String sortDir,
+            @RequestParam(value = &quot;searchKeyword&quot;, required = false) String searchKeyword,
+            @RequestParam(value = &quot;searchField&quot;, required = false) String searchField
+    ) {
+<span class="nc" id="L74">        log.debug(&quot;REST request to get paginated Leave Allocations record&quot;);</span>
+        try {
+<span class="nc" id="L76">            Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc" id="L77">            Map&lt;String, Object&gt; leaveAllocationMap = leaveAllocationService.getPaginatedLeaveAllocations(pageable, searchField, searchKeyword,sortBy,sortDir);</span>
+
+<span class="nc" id="L79">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    leaveAllocationMap,
+                    true,
+                    &quot;LEAVE-ALLOCATIONS-FETCHED&quot;,
+                    &quot;SUCCESS&quot;
+            );
+<span class="nc" id="L85">            return ResponseEntity.ok(response);</span>
+
+<span class="nc" id="L87">        } catch (Exception e) {</span>
+<span class="nc" id="L88">            log.error(&quot;Error fetching leave allocations&quot;, e);</span>
+<span class="nc" id="L89">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;LEAVE-ALLOCATION-FETCH-ERROR&quot;,
+                    &quot;FAILURE&quot;,
+<span class="nc" id="L94">                    Collections.singletonList(e.getMessage())</span>
+            );
+<span class="nc" id="L96">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+
+    @GetMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;LeaveAllocationDTO&gt;&gt; getLeaveAllocationById(@PathVariable Long id) {
+        try {
+<span class="nc" id="L104">            return leaveAllocationService.getLeaveAllocationById(id)</span>
+<span class="nc" id="L105">                    .map(leaveAllocation -&gt; ResponseEntity.ok(new ApiResponse&lt;&gt;(leaveAllocation, true, &quot;ATMCMN_LEAVE_ALLOCATION_FETCHED&quot;, &quot;SUCCESS&quot;)))</span>
+<span class="nc" id="L106">                    .orElse(new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_LEAVE_ALLOCATION_NOT_FOUND&quot;, &quot;FAILURE&quot;,</span>
+<span class="nc" id="L107">                            Collections.singletonList(&quot;Leave Allocation not found with ID: &quot; + id)), HttpStatus.NOT_FOUND));</span>
+<span class="nc" id="L108">        } catch (Exception e) {</span>
+<span class="nc" id="L109">            log.error(&quot;Error occurred while fetching Leave Allocation by ID&quot;, e);</span>
+<span class="nc" id="L110">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_LEAVE_ALLOCATION_FETCH_ERROR&quot;, &quot;FAILURE&quot;,</span>
+<span class="nc" id="L111">                    Collections.singletonList(e.getMessage())), HttpStatus.INTERNAL_SERVER_ERROR);</span>
+        }
+    }
+
+    @PostMapping(&quot;/save&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;?&gt;&gt; saveLeaveAllocationWithDetails(
+            @Valid @RequestBody LeaveAllocationRequestDTO leaveAllocationDTO,
+            BindingResult bindingResult) {
+
+<span class="nc bnc" id="L120" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L121">            return handleValidationErrors(bindingResult);</span>
+        }
+
+        try {
+<span class="nc" id="L125">            Integer empId = leaveAllocationDTO.getEmpId();</span>
+
+<span class="nc bnc" id="L127" title="All 2 branches missed.">            if (leaveAllocationDTO.getLeaveDetails() != null) {</span>
+<span class="nc" id="L128">                LeaveAllocationDetailsDTO detail = leaveAllocationDTO.getLeaveDetails();</span>
+
+<span class="nc" id="L130">                Integer maxLeave = leaveTypeRepository.findByLeaveCode(detail.getLeaveCode())</span>
+<span class="nc" id="L131">                        .map(LeaveTypes::getMaximumLeave)</span>
+<span class="nc" id="L132">                        .orElse(null);</span>
+
+<span class="nc bnc" id="L134" title="All 4 branches missed.">                if (maxLeave != null &amp;&amp; detail.getLeaveAllocationNumber() != null &amp;&amp;</span>
+<span class="nc bnc" id="L135" title="All 2 branches missed.">                        detail.getLeaveAllocationNumber() &gt; maxLeave) {</span>
+<span class="nc" id="L136">                    String leaveTypeName = leaveTypeRepository.findByLeaveCode(detail.getLeaveCode())</span>
+<span class="nc" id="L137">                            .map(LeaveTypes::getLeaveName)</span>
+<span class="nc" id="L138">                            .orElse(&quot;Unknown Leave Type&quot;);</span>
+
+<span class="nc" id="L140">                    return new ResponseEntity&lt;&gt;(</span>
+                            new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_LEAVE_ALLOCATION_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L142">                                    Collections.singletonList(&quot;Leave Allocation for '&quot; + leaveTypeName +</span>
+                                            &quot;' can't be greater than the max limit: &quot; + maxLeave)),
+                            HttpStatus.OK
+                    );
+                }
+
+<span class="nc bnc" id="L148" title="All 2 branches missed.">                if (leaveAllocationDTO.getId() == null) {</span>
+<span class="nc" id="L149">                    Optional&lt;LeaveAllocation&gt; existing = leaveAllocationRepository</span>
+<span class="nc" id="L150">                            .findByEmpIdAndIsActiveAndLeaveAllocationDetails_LeaveCode(</span>
+<span class="nc" id="L151">                                    empId, &quot;A&quot;, detail.getLeaveCode());</span>
+
+<span class="nc bnc" id="L153" title="All 2 branches missed.">                    if (existing.isPresent()) {</span>
+<span class="nc" id="L154">                        String employeeName = employeeRepository.findEmployeeFullNameById(Long.valueOf(empId))</span>
+<span class="nc" id="L155">                                .orElse(String.valueOf(empId));</span>
+<span class="nc" id="L156">                        String leaveTypeName = leaveTypeRepository.findByLeaveCode(detail.getLeaveCode())</span>
+<span class="nc" id="L157">                                .map(LeaveTypes::getLeaveName)</span>
+<span class="nc" id="L158">                                .orElse(detail.getLeaveCode());</span>
+
+<span class="nc" id="L160">                        return new ResponseEntity&lt;&gt;(</span>
+                                new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_LEAVE_ALLOCATION_EXISTS&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L162">                                        Collections.singletonList(&quot;Leave Allocation already exists for employee '&quot; + employeeName +</span>
+                                                &quot;' and leave type '&quot; + leaveTypeName + &quot;'&quot;)),
+                                HttpStatus.OK
+                        );
+                    }
+                }
+            }
+
+<span class="nc" id="L170">            LeaveAllocationDTO savedAllocation = leaveAllocationService.createOrUpdateLeaveAllocation(leaveAllocationDTO);</span>
+<span class="nc bnc" id="L171" title="All 2 branches missed.">            String responseCode = (leaveAllocationDTO.getId() == null)</span>
+<span class="nc" id="L172">                    ? &quot;LEAVE_ALLOCATION_CREATED&quot;</span>
+<span class="nc" id="L173">                    : &quot;LEAVE_ALLOCATION_UPDATED&quot;;</span>
+
+<span class="nc" id="L175">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(savedAllocation, true, responseCode, &quot;SUCCESS&quot;),
+                    HttpStatus.CREATED
+            );
+
+<span class="nc" id="L180">        } catch (Exception e) {</span>
+<span class="nc" id="L181">            log.error(&quot;Error occurred while saving Leave Allocation&quot;, e);</span>
+<span class="nc" id="L182">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_LEAVE_ALLOCATION_SAVE_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L184">                            Collections.singletonList(e.getMessage())),</span>
+                    HttpStatus.OK
+            );
+        }
+    }
+
+    @GetMapping(&quot;/check-allocation/{empId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Boolean&gt;&gt; checkEmployeeLeaveAllocationExists(@PathVariable Integer empId) {
+<span class="nc" id="L192">        boolean exists = leaveAllocationRepository.existsByEmpId(empId);</span>
+<span class="nc bnc" id="L193" title="All 2 branches missed.">        if (exists) {</span>
+<span class="nc" id="L194">            String employeeName = employeeRepository.findEmployeeFullNameById(empId.longValue())</span>
+<span class="nc" id="L195">                    .orElse(String.valueOf(empId));</span>
+<span class="nc" id="L196">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(true, false, &quot;ATMCMN_LEAVE_ALLOCATION_EXISTS&quot;, &quot;FAILURE&quot;,</span>
+<span class="nc" id="L197">                    Collections.singletonList(&quot;Leave Allocation already exists for employee '&quot; + employeeName + &quot;'. Please select another employee.&quot;)));</span>
+        }
+<span class="nc" id="L199">        return ResponseEntity.ok(new ApiResponse&lt;&gt;(false, true, &quot;NO_EXISTING_ALLOCATION&quot;, &quot;SUCCESS&quot;));</span>
+    }
+
+    @GetMapping(&quot;/employee/{empId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;LeaveAllocationDTO&gt;&gt; getLeaveAllocationByEmpId(@PathVariable Integer empId) {
+        try {
+<span class="nc" id="L205">            return leaveAllocationService.getLeaveAllocationByEmpId(empId)</span>
+<span class="nc" id="L206">                    .map(dto -&gt; ResponseEntity.ok(new ApiResponse&lt;&gt;(dto, true, &quot;ATMCMN_LEAVE_ALLOCATION_FETCHED&quot;, &quot;SUCCESS&quot;)))</span>
+<span class="nc" id="L207">                    .orElse(new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_LEAVE_ALLOCATION_NOT_FOUND&quot;, &quot;FAILURE&quot;,</span>
+<span class="nc" id="L208">                            Collections.singletonList(&quot;Leave Allocation not found for EMP_ID: &quot; + empId)), HttpStatus.OK));</span>
+<span class="nc" id="L209">        } catch (Exception e) {</span>
+<span class="nc" id="L210">            log.error(&quot;Error occurred while fetching Leave Allocation by EMP_ID&quot;, e);</span>
+<span class="nc" id="L211">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_LEAVE_ALLOCATION_FETCH_ERROR&quot;, &quot;FAILURE&quot;,</span>
+<span class="nc" id="L212">                    Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+
+    @PostMapping(&quot;saveLeaveAllocation&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;LeaveAllocation&gt;&gt; saveLeaveAllocation(@Valid @RequestBody LeaveAllocationRequestDTO leaveAllocationRequestDTO) {
+        try {
+<span class="nc" id="L219">            LeaveAllocation leaveAllocation = leaveAllocationService.saveLeaveAllocation(leaveAllocationRequestDTO);</span>
+<span class="nc" id="L220">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(leaveAllocation, true, &quot;LEAVE_ALLOCATION_SAVED_SUCCESS&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L221">        } catch (Exception e) {</span>
+<span class="nc" id="L222">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;LEAVE_ALLOCATION_SAVED_FAILED&quot;, &quot;FAILURE&quot;, Collections.singletonList(e.getMessage())));</span>
+        }
+    }
+
+    @DeleteMapping(&quot;deleteById/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; deleteById(@PathVariable(&quot;id&quot;) Long id, @RequestParam(value = &quot;status&quot;) String status) {
+        try {
+<span class="nc bnc" id="L229" title="All 2 branches missed.">            if (!StringUtils.hasText(status)) {</span>
+<span class="nc" id="L230">                return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;LEAVE_ALLOCATION_DELETED_FAILED&quot;, &quot;FAILURE&quot;, Collections.singletonList(&quot;Status is mandatory.&quot;)));</span>
+            }
+<span class="nc" id="L232">            LeaveAllocation leaveAllocation = leaveAllocationService.deleteById(id, status);</span>
+<span class="nc" id="L233">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(leaveAllocation, true, &quot;LEAVE_ALLOCATION_DELETED_SUCCESS&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L234">        } catch (EntityNotFoundException | IllegalArgumentException e) {</span>
+<span class="nc" id="L235">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;LEAVE_ALLOCATION_DELETED_FAILED&quot;, &quot;FAILURE&quot;, Collections.singletonList(e.getMessage())));</span>
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

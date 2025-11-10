@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OfferTermMasterDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.dto.jobOpening</a> &gt; <span class="el_source">OfferTermMasterDTO.java</span></div><h1>OfferTermMasterDTO.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.dto.jobOpening;
+
+import lombok.Data;
+
+import javax.validation.constraints.FutureOrPresent;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Size;
+import java.util.Date;
+
+<span class="nc bnc" id="L10" title="All 86 branches missed.">@Data</span>
+public class OfferTermMasterDTO {
+<span class="nc" id="L12">    private Long id;</span>
+
+    @NotBlank(message = &quot;Title is mandatory&quot;)
+    @Size(max = 200, message = &quot;Title cannot exceed 200 characters&quot;)
+<span class="nc" id="L16">    private String title;</span>
+
+    @NotBlank(message = &quot;Type is mandatory&quot;)
+    @Size(max = 200, message = &quot;Type cannot exceed 200 characters&quot;)
+<span class="nc" id="L20">    private String type;</span>
+    @NotBlank(message = &quot;Value is mandatory&quot;)
+    @Size(max = 256, message = &quot;Value cannot exceed 256 characters&quot;)
+<span class="nc" id="L23">    private String value;</span>
+
+    //@PastOrPresent(message = &quot;Start Date cannot be in the future&quot;)
+<span class="nc" id="L26">    private Date startDate;</span>
+
+    @FutureOrPresent(message = &quot;End Date cannot be in the past&quot;)
+<span class="nc" id="L29">    private Date endDate;</span>
+<span class="nc" id="L30">    private Date creationDate;</span>
+
+<span class="nc" id="L32">    private String createdBy;</span>
+
+<span class="nc" id="L34">    private String lastUpdatedBy;</span>
+
+<span class="nc" id="L36">    private Date lastUpdatedDate;</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

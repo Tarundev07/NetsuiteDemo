@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JobApplicantService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.employement.employee_job_applicant</a> &gt; <span class="el_source">JobApplicantService.java</span></div><h1>JobApplicantService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.employement.employee_job_applicant;
+
+import com.atomicnorth.hrm.tenant.domain.employement.employee_job_applicant.JobApplicant;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.repository.InterviewFeedbackRepository;
+import com.atomicnorth.hrm.tenant.repository.LookupCodeRepository;
+import com.atomicnorth.hrm.tenant.repository.employement.employee_job_applicant.JobApplicantRepository;
+import com.atomicnorth.hrm.tenant.repository.jobOpening.JobOfferRepository;
+import com.atomicnorth.hrm.tenant.service.EmployeeService;
+import com.atomicnorth.hrm.tenant.service.dto.employement.employee_job_applicant.JobApplicantDTO;
+import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.persistence.EntityNotFoundException;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Root;
+import javax.servlet.http.HttpServletRequest;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L48">public class JobApplicantService {</span>
+
+
+<span class="nc" id="L51">    private final Logger log = LoggerFactory.getLogger(JobApplicantService.class);</span>
+    @Autowired
+    private JobApplicantRepository jobApplicantRepository;
+    @Autowired
+    private ModelMapper modelMapper;
+    @Autowired
+    private HttpServletRequest httpServletRequest;
+    @Value(&quot;${resumeFileUrl.global-base-url}&quot;)
+    private String globalBaseUrl;
+    @Value(&quot;${resume.local-upload-dir}&quot;)
+    private String localUploadDir;
+    @Autowired
+    private EmployeeRepository employeeRepository;
+    @Autowired
+    private LookupCodeRepository lookupCodeRepository;
+    @Autowired
+    private JobOfferRepository jobOfferRepository;
+    @Autowired
+    private InterviewFeedbackRepository interviewFeedbackRepository;
+    @Autowired
+    private EmployeeService employeeService;
+
+    public static final String RESULT_CODE_PASS = &quot;PASS&quot;;
+
+    private String handleResumeUpload(MultipartFile file, String username) throws IOException {
+<span class="nc" id="L76">        String datePath = new SimpleDateFormat(&quot;yyyy/MM/dd&quot;).format(new Date());</span>
+
+<span class="nc" id="L78">        String userDir = localUploadDir + &quot;/&quot; + username + &quot;/&quot; + datePath;</span>
+
+<span class="nc" id="L80">        File directory = new File(userDir);</span>
+<span class="nc bnc" id="L81" title="All 2 branches missed.">        if (!directory.exists()) {</span>
+<span class="nc" id="L82">            directory.mkdirs();</span>
+        }
+
+<span class="nc" id="L85">        String fileName = System.currentTimeMillis() + &quot;_&quot; + file.getOriginalFilename();</span>
+<span class="nc" id="L86">        Path filePath = Paths.get(userDir, fileName);</span>
+<span class="nc" id="L87">        Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);</span>
+<span class="nc" id="L88">        return userDir + &quot;/&quot; + fileName;</span>
+    }
+
+    @Transactional
+    public JobApplicantDTO saveOrUpdateJobApplicant(JobApplicantDTO request, MultipartFile resumeAttachment) throws IOException {
+<span class="nc" id="L93">        UserLoginDetail user = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L94">        String username = String.valueOf(user.getUsername());</span>
+
+        JobApplicant employeeJobApplicant;
+
+<span class="nc bnc" id="L98" title="All 2 branches missed.">        if (request.getId() == null) {</span>
+<span class="nc bnc" id="L99" title="All 2 branches missed.">            if (jobApplicantRepository.findByEmailAddress(request.getEmailAddress()).isPresent()) {</span>
+<span class="nc" id="L100">                throw new IllegalArgumentException(&quot;An applicant with this email already exists.&quot;);</span>
+            }
+
+<span class="nc bnc" id="L103" title="All 2 branches missed.">            if (jobApplicantRepository.findByPhoneNumber(request.getPhoneNumber()).isPresent()) {</span>
+<span class="nc" id="L104">                throw new IllegalArgumentException(&quot;An applicant with this phone number already exists.&quot;);</span>
+            }
+        }
+
+<span class="nc bnc" id="L108" title="All 2 branches missed.">        if (&quot;D&quot;.equals(request.getFlag())) {</span>
+<span class="nc" id="L109">            Optional&lt;JobApplicant&gt; existingApplicant = jobApplicantRepository.findById(request.getId());</span>
+<span class="nc bnc" id="L110" title="All 2 branches missed.">            if (existingApplicant.isPresent()) {</span>
+<span class="nc" id="L111">                employeeJobApplicant = existingApplicant.get();</span>
+<span class="nc" id="L112">                employeeJobApplicant.setStatus(&quot;INACTIVE&quot;); // Mark as inactive</span>
+<span class="nc" id="L113">                jobApplicantRepository.save(employeeJobApplicant);</span>
+            } else {
+<span class="nc" id="L115">                throw new EntityNotFoundException(&quot;Job Applicant not found for soft delete&quot;);</span>
+            }
+<span class="nc" id="L117">        } else {</span>
+<span class="nc bnc" id="L118" title="All 2 branches missed.">            if (&quot;E&quot;.equals(request.getFlag())) {</span>
+<span class="nc" id="L119">                employeeJobApplicant = jobApplicantRepository.findById(request.getId())</span>
+<span class="nc" id="L120">                        .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Job Applicant not found&quot;));</span>
+
+<span class="nc bnc" id="L122" title="All 2 branches missed.">                if (employeeService.checkEmployeeExists(employeeJobApplicant.getId())) {</span>
+<span class="nc" id="L123">                    throw  new IllegalArgumentException(&quot;Employee already exists for this job applicant.&quot;);</span>
+                }
+<span class="nc" id="L125">                modelMapper.getConfiguration().setSkipNullEnabled(true);</span>
+<span class="nc" id="L126">                modelMapper.map(request, employeeJobApplicant);</span>
+<span class="nc" id="L127">                employeeJobApplicant.setLastUpdatedBy(username);</span>
+<span class="nc" id="L128">                employeeJobApplicant.setLastUpdatedDate(new Date());</span>
+<span class="nc" id="L129">                employeeJobApplicant.setSourceDetail(request.getSourceDetail());</span>
+<span class="nc bnc" id="L130" title="All 4 branches missed.">                if (resumeAttachment != null &amp;&amp; !resumeAttachment.isEmpty()) {</span>
+<span class="nc" id="L131">                    String resumeFilePath = handleResumeUpload(resumeAttachment, username);</span>
+<span class="nc" id="L132">                    employeeJobApplicant.setResumeAttachment(resumeFilePath);</span>
+<span class="nc" id="L133">                } else {</span>
+<span class="nc bnc" id="L134" title="All 2 branches missed.">                    if (employeeJobApplicant.getResumeAttachment() == null) {</span>
+<span class="nc" id="L135">                        log.info(&quot;No attachment provided and no existing attachment in the database for applicant ID: {}&quot;, request.getId());</span>
+<span class="nc" id="L136">                        employeeJobApplicant.setResumeAttachment(employeeJobApplicant.getResumeAttachment());</span>
+                    } else {
+<span class="nc" id="L138">                        log.info(&quot;No new attachment provided. Retaining existing attachment for applicant ID: {}&quot;, request.getId());</span>
+                    }
+                }
+<span class="nc bnc" id="L141" title="All 2 branches missed.">            } else if (&quot;A&quot;.equals(request.getFlag())) {</span>
+<span class="nc" id="L142">                employeeJobApplicant = new JobApplicant();</span>
+<span class="nc" id="L143">                modelMapper.map(request, employeeJobApplicant);</span>
+<span class="nc" id="L144">                employeeJobApplicant.setCreatedBy(username);</span>
+<span class="nc" id="L145">                employeeJobApplicant.setCreationDate(new Date());</span>
+<span class="nc" id="L146">                employeeJobApplicant.setStatus(request.getStatus());</span>
+<span class="nc" id="L147">                employeeJobApplicant.setApplicantRating(0);</span>
+<span class="nc bnc" id="L148" title="All 4 branches missed.">                if (resumeAttachment != null &amp;&amp; !resumeAttachment.isEmpty()) {</span>
+<span class="nc" id="L149">                    String resumeFilePath = handleResumeUpload(resumeAttachment, username);</span>
+<span class="nc" id="L150">                    employeeJobApplicant.setResumeAttachment(resumeFilePath);</span>
+<span class="nc" id="L151">                } else {</span>
+<span class="nc" id="L152">                    employeeJobApplicant.setResumeAttachment(null);</span>
+                }
+            } else {
+<span class="nc" id="L155">                throw new IllegalArgumentException(&quot;Invalid flag value. Only 'A' (Add), 'E' (Edit), or 'D' (Delete) are allowed.&quot;);</span>
+            }
+
+<span class="nc" id="L158">            employeeJobApplicant = jobApplicantRepository.save(employeeJobApplicant);</span>
+        }
+
+<span class="nc" id="L161">        JobApplicantDTO responseDTO = modelMapper.map(employeeJobApplicant, JobApplicantDTO.class);</span>
+<span class="nc" id="L162">        responseDTO.setFlag(request.getFlag());</span>
+
+<span class="nc" id="L164">        String baseUrl = httpServletRequest.getScheme() + &quot;://&quot; + httpServletRequest.getServerName() +</span>
+<span class="nc bnc" id="L165" title="All 4 branches missed.">                (httpServletRequest.getServerPort() == 80 || httpServletRequest.getServerPort() == 443 ? &quot;&quot; : &quot;:&quot; + httpServletRequest.getServerPort()) +</span>
+<span class="nc" id="L166">                httpServletRequest.getContextPath();</span>
+
+<span class="nc bnc" id="L168" title="All 2 branches missed.">        if (employeeJobApplicant.getResumeAttachment() != null) {</span>
+<span class="nc" id="L169">            String resumeAttachmentUrl = baseUrl + &quot;/api/jobApplicant/downloadResume/&quot; + employeeJobApplicant.getResumeAttachment();</span>
+<span class="nc" id="L170">            responseDTO.setResumeAttachment(resumeAttachmentUrl);</span>
+<span class="nc" id="L171">        } else {</span>
+<span class="nc" id="L172">            responseDTO.setResumeAttachment(null);</span>
+        }
+
+<span class="nc" id="L175">        return responseDTO;</span>
+    }
+
+    public Map&lt;String, Object&gt; getAllJobApplicants(
+            Pageable pageable, String searchColumn, String searchValue) {
+        Page&lt;JobApplicant&gt; applicantList;
+<span class="nc bnc" id="L181" title="All 2 branches missed.">        if (&quot;designationName&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L182">            applicantList = jobApplicantRepository.findByDesignationEntity_DesignationNameContainingIgnoreCase(searchValue, pageable);</span>
+<span class="nc bnc" id="L183" title="All 2 branches missed.">        } else if (&quot;jobOpeningName&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L184">            applicantList = jobApplicantRepository.findByJobOpening_JobTitleContainingIgnoreCase(searchValue, pageable);</span>
+<span class="nc bnc" id="L185" title="All 4 branches missed.">        } else if (!searchColumn.isBlank() &amp;&amp; !searchValue.isBlank()) {</span>
+<span class="nc" id="L186">            Specification&lt;JobApplicant&gt; spec = searchByColumn(searchColumn, searchValue);</span>
+<span class="nc" id="L187">            applicantList = jobApplicantRepository.findAll(spec, pageable);</span>
+<span class="nc" id="L188">        } else {</span>
+<span class="nc" id="L189">            applicantList = jobApplicantRepository.findAll(pageable);</span>
+        }
+
+<span class="nc" id="L192">        List&lt;JobApplicantDTO&gt; jobApplicantDTOS = applicantList.getContent().stream()</span>
+<span class="nc" id="L193">                .map(applicant -&gt; {</span>
+<span class="nc" id="L194">                            JobApplicantDTO dto = modelMapper.map(applicant, JobApplicantDTO.class);</span>
+<span class="nc bnc" id="L195" title="All 2 branches missed.">                            dto.setDesignationName(applicant.getDesignationEntity() != null ? applicant.getDesignationEntity().getDesignationName() : &quot;Unknown Designation&quot;);</span>
+<span class="nc bnc" id="L196" title="All 2 branches missed.">                            dto.setJobOpeningName(applicant.getJobOpening() != null ? applicant.getJobOpening().getJobTitle() : &quot;Unknown Job&quot;);</span>
+<span class="nc" id="L197">                            dto.setCountry(applicant.getCountry());</span>
+<span class="nc" id="L198">                            dto.setSource(fetchLookupName(applicant.getSource()));</span>
+<span class="nc" id="L199">                            dto.setFlag(&quot;E&quot;);</span>
+<span class="nc" id="L200">                            dto.setIsApplicantOffer(jobOfferRepository.findByJobApplicantId(dto.getId()).isPresent());</span>
+<span class="nc" id="L201">                            return dto;</span>
+                        }
+                )
+<span class="nc" id="L204">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L206">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L207">        response.put(&quot;result&quot;, jobApplicantDTOS);</span>
+<span class="nc" id="L208">        response.put(&quot;currentPage&quot;, pageable.getPageNumber() + 1);</span>
+<span class="nc" id="L209">        response.put(&quot;pageSize&quot;, pageable.getPageSize());</span>
+<span class="nc" id="L210">        response.put(&quot;totalItems&quot;, applicantList.getTotalElements());</span>
+<span class="nc" id="L211">        response.put(&quot;totalPages&quot;, applicantList.getTotalPages());</span>
+
+<span class="nc" id="L213">        return response;</span>
+    }
+
+    public static Specification&lt;JobApplicant&gt; searchByColumn(String column, String value) {
+<span class="nc" id="L217">        return (Root&lt;JobApplicant&gt; root, CriteriaQuery&lt;?&gt; query, CriteriaBuilder criteriaBuilder) -&gt; {</span>
+<span class="nc" id="L218">            javax.persistence.criteria.Path&lt;?&gt; path = root.get(column);</span>
+
+<span class="nc bnc" id="L220" title="All 2 branches missed.">            if (path.getJavaType().equals(String.class)) {</span>
+<span class="nc" id="L221">                return criteriaBuilder.like(criteriaBuilder.lower(root.get(column)), &quot;%&quot; + value.toLowerCase() + &quot;%&quot;);</span>
+<span class="nc bnc" id="L222" title="All 2 branches missed.">            } else if (path.getJavaType().equals(Date.class)) {</span>
+                try {
+<span class="nc" id="L224">                    Date parsedDate = new SimpleDateFormat(&quot;yyyy-MM-dd&quot;).parse(value);</span>
+<span class="nc" id="L225">                    return criteriaBuilder.equal(root.get(column), parsedDate);</span>
+<span class="nc" id="L226">                } catch (ParseException e) {</span>
+<span class="nc" id="L227">                    throw new RuntimeException(&quot;Invalid date format for field: &quot; + column, e);</span>
+                }
+            } else {
+<span class="nc" id="L230">                return criteriaBuilder.equal(root.get(column), value);</span>
+            }
+        };
+    }
+
+    private String fetchLookupName(String lookupCode) {
+<span class="nc" id="L236">        List&lt;Object&gt; lookupResults = lookupCodeRepository.findByLookupCode(lookupCode);</span>
+<span class="nc bnc" id="L237" title="All 2 branches missed.">        return lookupResults.isEmpty() ? &quot;Unknown&quot; : lookupResults.get(0).toString();</span>
+    }
+
+    public JobApplicantDTO getJobApplicantById(Integer id) {
+<span class="nc" id="L241">        JobApplicant applicant = jobApplicantRepository.findById(id)</span>
+<span class="nc" id="L242">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Job Applicant with ID &quot; + id + &quot; not found&quot;));</span>
+
+<span class="nc" id="L244">        List&lt;Object[]&gt; customJobOpenings = jobApplicantRepository.findCustomJobOpeningsById(applicant.getJobOpeningId());</span>
+<span class="nc" id="L245">        String jobOpeningName = customJobOpenings.stream()</span>
+<span class="nc" id="L246">                .filter(obj -&gt; obj[0].equals(applicant.getJobOpeningId()))</span>
+<span class="nc" id="L247">                .map(obj -&gt; (String) obj[1])</span>
+<span class="nc" id="L248">                .findFirst()</span>
+<span class="nc" id="L249">                .orElse(&quot;Unknown&quot;);</span>
+
+<span class="nc" id="L251">        List&lt;Object[]&gt; customDesignations = jobApplicantRepository.findCustomJobDesignationById(applicant.getDesignationId());</span>
+<span class="nc" id="L252">        String designationName = customDesignations.stream()</span>
+<span class="nc" id="L253">                .filter(obj -&gt; obj[0].equals(applicant.getDesignationId()))</span>
+<span class="nc" id="L254">                .map(obj -&gt; (String) obj[1])</span>
+<span class="nc" id="L255">                .findFirst()</span>
+<span class="nc" id="L256">                .orElse(&quot;Unknown&quot;);</span>
+
+<span class="nc" id="L258">        JobApplicantDTO responseDTO = modelMapper.map(applicant, JobApplicantDTO.class);</span>
+<span class="nc" id="L259">        responseDTO.setJobOpeningId(applicant.getJobOpeningId());</span>
+<span class="nc" id="L260">        responseDTO.setJobOpeningName(jobOpeningName);</span>
+<span class="nc" id="L261">        responseDTO.setFlag(&quot;E&quot;);</span>
+<span class="nc" id="L262">        responseDTO.setStatus(applicant.getStatus());</span>
+<span class="nc" id="L263">        responseDTO.setDesignationId(applicant.getDesignationId());</span>
+<span class="nc" id="L264">        responseDTO.setDesignationName(designationName);</span>
+<span class="nc" id="L265">        responseDTO.setDepartmentId(applicant.getDepartmentId());</span>
+
+<span class="nc" id="L267">        String baseUrl = httpServletRequest.getScheme() + &quot;://&quot; + httpServletRequest.getServerName() +</span>
+<span class="nc bnc" id="L268" title="All 4 branches missed.">                (httpServletRequest.getServerPort() == 80 || httpServletRequest.getServerPort() == 443 ? &quot;&quot; : &quot;:&quot; + httpServletRequest.getServerPort()) +</span>
+<span class="nc" id="L269">                httpServletRequest.getContextPath();</span>
+
+<span class="nc bnc" id="L271" title="All 2 branches missed.">        if (applicant.getResumeAttachment() != null) {</span>
+<span class="nc" id="L272">            String fullResumeAttachmentPath = baseUrl + &quot;/api/jobApplicant/downloadResume/&quot; + applicant.getResumeAttachment();</span>
+<span class="nc" id="L273">            responseDTO.setResumeAttachment(fullResumeAttachmentPath); // Update the DTO with the full path</span>
+        }
+
+<span class="nc bnc" id="L276" title="All 2 branches missed.">        if (applicant.getResumeLink() != null) {</span>
+<span class="nc" id="L277">            responseDTO.setResumeLink(applicant.getResumeLink()); // Set the resumeLink from DB</span>
+        }
+<span class="nc" id="L279">        return responseDTO;</span>
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; findApplicantDetails() {
+<span class="nc" id="L283">        List&lt;Integer&gt; existingJobApplicantIds = this.employeeRepository.findAllJobApplicantIds();</span>
+<span class="nc" id="L284">        List&lt;Object[]&gt; result = jobApplicantRepository</span>
+<span class="nc bnc" id="L285" title="All 2 branches missed.">                .findApplicantDetailsExcludingExisting(existingJobApplicantIds.isEmpty() ? List.of(-1) : existingJobApplicantIds);</span>
+<span class="nc" id="L286">        List&lt;Map&lt;String, Object&gt;&gt; responseList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L287" title="All 2 branches missed.">        for (Object[] row : result) {</span>
+<span class="nc" id="L288">            Map&lt;String, Object&gt; map = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L289">            map.put(&quot;applicantId&quot;, row[0]);</span>
+<span class="nc" id="L290">            map.put(&quot;applicantName&quot;, row[1]);</span>
+<span class="nc" id="L291">            map.put(&quot;emailAddress&quot;, row[2]);</span>
+<span class="nc" id="L292">            map.put(&quot;designationId&quot;, row[3]);</span>
+<span class="nc" id="L293">            map.put(&quot;phoneNumber&quot;, row[4]);</span>
+<span class="nc" id="L294">            map.put(&quot;country&quot;, row[5]);</span>
+<span class="nc" id="L295">            map.put(&quot;departmentId&quot;, row[6]);</span>
+<span class="nc bnc" id="L296" title="All 4 branches missed.">            if (row.length &gt; 7 &amp;&amp; row[7] != null) {</span>
+<span class="nc" id="L297">                byte[] bytes = (byte[]) row[7];</span>
+<span class="nc" id="L298">                String content = new String(bytes, StandardCharsets.UTF_8);</span>
+<span class="nc" id="L299">                map.put(&quot;resumeAttachment&quot;, content);</span>
+            }
+<span class="nc" id="L301">            responseList.add(map);</span>
+<span class="nc" id="L302">        }</span>
+<span class="nc" id="L303">        return responseList;</span>
+    }
+
+    @Transactional
+    public List&lt;Map&lt;String, Object&gt;&gt; getNonAssociateJobApplicantOffer() {
+<span class="nc" id="L308">        List&lt;Integer&gt; existingApplicantIds = jobOfferRepository.findAllApplicantWithOffer();// [1,2]</span>
+<span class="nc" id="L309">        List&lt;Integer&gt; passApplicant = interviewFeedbackRepository.findAllApplicantByResultCode(RESULT_CODE_PASS);//[1,2,3]</span>
+<span class="nc" id="L310">        List&lt;Integer&gt; filteredApplicantIds = passApplicant.stream()</span>
+<span class="nc bnc" id="L311" title="All 2 branches missed.">                .filter(id -&gt; !existingApplicantIds.contains(id))</span>
+<span class="nc" id="L312">                .collect(Collectors.toList());</span>
+
+<span class="nc bnc" id="L314" title="All 2 branches missed.">        if (filteredApplicantIds.isEmpty()) {</span>
+<span class="nc" id="L315">            return new ArrayList&lt;&gt;();</span>
+        }
+
+<span class="nc" id="L318">        List&lt;Object[]&gt; employeeJobApplicants = jobApplicantRepository</span>
+<span class="nc" id="L319">                .findApplicantDetails(filteredApplicantIds);</span>
+
+<span class="nc" id="L321">        List&lt;Map&lt;String, Object&gt;&gt; responseList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L322" title="All 2 branches missed.">        for (Object[] row : employeeJobApplicants) {</span>
+<span class="nc" id="L323">            Map&lt;String, Object&gt; map = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L324">            map.put(&quot;applicantId&quot;, row[0]);</span>
+<span class="nc" id="L325">            map.put(&quot;applicantName&quot;, row[1]);</span>
+<span class="nc" id="L326">            map.put(&quot;emailAddress&quot;, row[2]);</span>
+<span class="nc" id="L327">            map.put(&quot;designationId&quot;, row[3]);</span>
+<span class="nc" id="L328">            map.put(&quot;phoneNumber&quot;, row[4]);</span>
+<span class="nc" id="L329">            map.put(&quot;country&quot;, row[5]);</span>
+<span class="nc" id="L330">            map.put(&quot;departmentId&quot;, row[6]);</span>
+<span class="nc" id="L331">            responseList.add(map);</span>
+<span class="nc" id="L332">        }</span>
+<span class="nc" id="L333">        return responseList;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

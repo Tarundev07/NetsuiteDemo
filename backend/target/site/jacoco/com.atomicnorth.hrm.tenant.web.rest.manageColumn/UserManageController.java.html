@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserManageController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.manageColumn</a> &gt; <span class="el_source">UserManageController.java</span></div><h1>UserManageController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.manageColumn;
+
+
+import com.atomicnorth.hrm.configuration.multitenant.TenantContextHolder;
+import com.atomicnorth.hrm.exception.BadApiRequestException;
+import com.atomicnorth.hrm.tenant.service.dto.manageColumn.SesM00UserManageColumnsDTO;
+import com.atomicnorth.hrm.tenant.service.dto.manageColumn.SesM00UserManageColumnsResponseDTO;
+import com.atomicnorth.hrm.tenant.service.dto.manageColumn.get_data_dto.SesM00UserManageColumnsGetResponseDTO;
+import com.atomicnorth.hrm.tenant.service.dto.manageColumn.get_data_dto.UserManageColumnDetailsGetDTO;
+import com.atomicnorth.hrm.tenant.service.manageColumn.UserManageService;
+import com.atomicnorth.hrm.util.OldApiResponseMessage;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+
+@RestController
+@RequestMapping(&quot;/api/usermanage&quot;)
+<span class="nc" id="L28">public class UserManageController {</span>
+
+<span class="nc" id="L30">    private final Logger log = LoggerFactory.getLogger(UserManageController.class);</span>
+    @Autowired
+    private UserManageService userManageService;
+
+    @PostMapping(&quot;/saveOrUpdate&quot;)
+    public ResponseEntity&lt;Object&gt; saveOrUpdateUserManageColumns(
+            @RequestParam Integer userId,
+            @RequestParam String pageKey,
+            @Valid @RequestBody SesM00UserManageColumnsDTO userManageColumnsDTO) {
+        try {
+            // Check if userId and pageKey from the request parameters match the DTO
+<span class="nc bnc" id="L41" title="All 2 branches missed.">            if (!userManageColumnsDTO.getUserId().equals(userId)) {</span>
+<span class="nc" id="L42">                throw new BadApiRequestException(&quot;UserId in request parameters and DTO do not match.&quot;);</span>
+            }
+
+<span class="nc bnc" id="L45" title="All 2 branches missed.">            if (!userManageColumnsDTO.getPageKey().equals(pageKey)) {</span>
+<span class="nc" id="L46">                throw new BadApiRequestException(&quot;PageKey in request parameters and DTO do not match.&quot;);</span>
+            }
+
+            // Check if userId and pageKey exist in the database
+<span class="nc bnc" id="L50" title="All 2 branches missed.">            if (userManageService.isExisting(userId, pageKey)) {</span>
+                // If record exists, call the update method
+<span class="nc" id="L52">                SesM00UserManageColumnsResponseDTO updatedResponse = userManageService.updateUserManageColumns(userId, pageKey, userManageColumnsDTO);</span>
+<span class="nc" id="L53">                return new ResponseEntity&lt;&gt;(updatedResponse, HttpStatus.OK);</span>
+            } else {
+                // If record does not exist, call the create method
+<span class="nc" id="L56">                SesM00UserManageColumnsResponseDTO createdResponse = userManageService.createUserManageColumns(userManageColumnsDTO);</span>
+<span class="nc" id="L57">                return new ResponseEntity&lt;&gt;(createdResponse, HttpStatus.CREATED);</span>
+            }
+<span class="nc" id="L59">        } catch (BadApiRequestException ex) {</span>
+            // Handle custom exceptions
+<span class="nc" id="L61">            OldApiResponseMessage responseMessage = OldApiResponseMessage.builder()</span>
+<span class="nc" id="L62">                    .message(&quot;Operation failed. &quot; + ex.getMessage())</span>
+<span class="nc" id="L63">                    .status(HttpStatus.CONFLICT)</span>
+<span class="nc" id="L64">                    .success(false)</span>
+<span class="nc" id="L65">                    .build();</span>
+<span class="nc" id="L66">            return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.CONFLICT);</span>
+<span class="nc" id="L67">        } catch (Exception ex) {</span>
+            // Handle general exceptions
+<span class="nc" id="L69">            OldApiResponseMessage responseMessage = OldApiResponseMessage.builder()</span>
+<span class="nc" id="L70">                    .message(&quot;An error occurred while processing the request. &quot; + ex.getMessage())</span>
+<span class="nc" id="L71">                    .status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L72">                    .success(false)</span>
+<span class="nc" id="L73">                    .build();</span>
+<span class="nc" id="L74">            return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.INTERNAL_SERVER_ERROR);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getDetails&quot;)
+    public ResponseEntity&lt;Object&gt; getUserManageColumnsByUserIdAndPageKey(
+            @RequestParam Integer userId,
+            @RequestParam String pageKey) {
+        try {
+            // Fetch user manage columns based on userId and pageKey
+<span class="nc" id="L84">            SesM00UserManageColumnsGetResponseDTO responseDTO = userManageService.getUserManageColumnsByUserIdAndPageKey(userId, pageKey);</span>
+<span class="nc" id="L85">            return new ResponseEntity&lt;&gt;(responseDTO, HttpStatus.OK);</span>
+<span class="nc" id="L86">        } catch (NoSuchElementException ex) {</span>
+            // Handle case where no data is found
+<span class="nc" id="L88">            OldApiResponseMessage responseMessage = OldApiResponseMessage.builder()</span>
+<span class="nc" id="L89">                    .message(&quot;User manage columns not found for userId: &quot; + userId + &quot; and pageKey: &quot; + pageKey)</span>
+<span class="nc" id="L90">                    .status(HttpStatus.NOT_FOUND)</span>
+<span class="nc" id="L91">                    .success(false)</span>
+<span class="nc" id="L92">                    .build();</span>
+<span class="nc" id="L93">            return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.NOT_FOUND);</span>
+<span class="nc" id="L94">        } catch (Exception ex) {</span>
+            // Handle general exceptions
+<span class="nc" id="L96">            OldApiResponseMessage responseMessage = OldApiResponseMessage.builder()</span>
+<span class="nc" id="L97">                    .message(&quot;An error occurred while processing the request: &quot; + ex.getMessage())</span>
+<span class="nc" id="L98">                    .status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L99">                    .success(false)</span>
+<span class="nc" id="L100">                    .build();</span>
+<span class="nc" id="L101">            return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.INTERNAL_SERVER_ERROR);</span>
+        }
+    }
+
+    @GetMapping(&quot;/userManageColumnDetails&quot;)
+    public ResponseEntity&lt;Object&gt; getUserManageColumnDetailsByUserManageColumnId(
+            @RequestParam Integer userManageColumnId) {
+        try {
+            // Fetch user manage column details based on userManageColumnId
+<span class="nc" id="L110">            List&lt;UserManageColumnDetailsGetDTO&gt; detailsDTOs = userManageService.getUserManageColumnDetailsByUserManageColumnId(userManageColumnId);</span>
+
+            // Check if the details were found
+<span class="nc bnc" id="L113" title="All 2 branches missed.">            if (detailsDTOs.isEmpty()) {</span>
+<span class="nc" id="L114">                OldApiResponseMessage responseMessage = OldApiResponseMessage.builder()</span>
+<span class="nc" id="L115">                        .message(&quot;User manage column details not found for userManageColumnId: &quot; + userManageColumnId)</span>
+<span class="nc" id="L116">                        .status(HttpStatus.OK)</span>
+<span class="nc" id="L117">                        .success(false)</span>
+<span class="nc" id="L118">                        .build();</span>
+<span class="nc" id="L119">                return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.OK);</span>
+            }
+
+<span class="nc" id="L122">            return new ResponseEntity&lt;&gt;(detailsDTOs, HttpStatus.OK);</span>
+<span class="nc" id="L123">        } catch (Exception ex) {</span>
+            // Handle general exceptions
+<span class="nc" id="L125">            OldApiResponseMessage responseMessage = OldApiResponseMessage.builder()</span>
+<span class="nc" id="L126">                    .message(&quot;An error occurred while processing the request: &quot; + ex.getMessage())</span>
+<span class="nc" id="L127">                    .status(HttpStatus.OK)</span>
+<span class="nc" id="L128">                    .success(false)</span>
+<span class="nc" id="L129">                    .build();</span>
+<span class="nc" id="L130">            return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.OK);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getManageColumnDetails&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; getManageColumnDetails(
+            @RequestParam int userId,
+            @RequestParam String pageKey) {
+        try {
+<span class="nc" id="L139">            String schemaName = TenantContextHolder.getTenant();</span>
+<span class="nc" id="L140">            List&lt;Map&lt;String, Object&gt;&gt; columnDetails = userManageService.getManageColumnDetails(userId, pageKey, schemaName);</span>
+
+<span class="nc bnc" id="L142" title="All 2 branches missed.">            if (columnDetails.isEmpty()) {</span>
+<span class="nc" id="L143">                return ResponseEntity.status(HttpStatus.OK)</span>
+<span class="nc" id="L144">                        .body(new ApiResponse&lt;&gt;(null, false, &quot;COLUMN_DETAILS_NOT_FOUND&quot;, &quot;FAILURE&quot;,</span>
+<span class="nc" id="L145">                                Collections.singletonList(&quot;No data found for the provided User ID and Page Key.&quot;)));</span>
+            }
+
+<span class="nc" id="L148">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(columnDetails, true, &quot;COLUMN_DETAILS_FETCHED&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L149">        } catch (Exception e) {</span>
+<span class="nc" id="L150">            log.error(&quot;Error occurred while fetching Manage Column Details: {}&quot;, e.getMessage(), e);</span>
+<span class="nc" id="L151">            return ResponseEntity.status(HttpStatus.OK)</span>
+<span class="nc" id="L152">                    .body(new ApiResponse&lt;&gt;(null, false, &quot;COLUMN_DETAILS_FETCH_ERROR&quot;, &quot;FAILURE&quot;,</span>
+<span class="nc" id="L153">                            Collections.singletonList(&quot;An unexpected error occurred while fetching column details.&quot;)));</span>
+        }
+    }
+}
+
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

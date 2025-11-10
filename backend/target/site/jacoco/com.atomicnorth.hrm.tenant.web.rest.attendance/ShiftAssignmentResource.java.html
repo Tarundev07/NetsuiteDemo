@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ShiftAssignmentResource.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.attendance</a> &gt; <span class="el_source">ShiftAssignmentResource.java</span></div><h1>ShiftAssignmentResource.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.attendance;
+
+import com.atomicnorth.hrm.exception.ResourceNotFoundException;
+import com.atomicnorth.hrm.tenant.domain.attendance.SupraShiftEntity;
+import com.atomicnorth.hrm.tenant.service.attendance.ShiftAssignmentsServices;
+import com.atomicnorth.hrm.tenant.service.dto.attendance.ShiftEmployeeDTO;
+import com.atomicnorth.hrm.tenant.service.dto.attendance.SupraShiftDTO;
+import com.atomicnorth.hrm.tenant.service.dto.attendance.SupraShiftDetailsDTO;
+import com.atomicnorth.hrm.tenant.service.dto.employement.Response.EmployeeResponseDTO;
+import com.atomicnorth.hrm.util.OldApiResponseMessage;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.web.bind.annotation.*;
+
+import javax.persistence.EntityNotFoundException;
+import javax.validation.Valid;
+import java.util.*;
+
+@RestController
+@RequestMapping(&quot;/api/shift-assignment&quot;)
+@EnableTransactionManagement
+<span class="nc" id="L28">public class ShiftAssignmentResource {</span>
+
+    @Autowired
+    private ShiftAssignmentsServices shiftAssignmentsServices;
+    @PostMapping(&quot;/assignShift-saveOrUpdate&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;ShiftEmployeeDTO&gt;&gt; saveOrUpdateCustomer(@Valid @RequestBody ShiftEmployeeDTO dto) {
+        try {
+<span class="nc bnc" id="L35" title="All 2 branches missed.">            boolean isUpdate = dto.getShiftEmpId() != null;</span>
+<span class="nc" id="L36">            ShiftEmployeeDTO savedDto = shiftAssignmentsServices.saveOrUpdate(dto);</span>
+<span class="nc bnc" id="L37" title="All 2 branches missed.">            String message = isUpdate ? &quot;Shift Assign updated successfully&quot; : &quot;Shift Assign  created successfully&quot;;</span>
+<span class="nc bnc" id="L38" title="All 2 branches missed.">            String code = isUpdate ? &quot;UPDATE-SUCCESS&quot; : &quot;CREATE-SUCCESS&quot;;</span>
+<span class="nc" id="L39">            ApiResponse&lt;ShiftEmployeeDTO&gt; response = new ApiResponse&lt;&gt;(savedDto, true, code, message);</span>
+<span class="nc" id="L40">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L41">        } catch (Exception ex) {</span>
+<span class="nc" id="L42">            ApiResponse&lt;ShiftEmployeeDTO&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;SAVE-OR-UPDATE-FAILED&quot;, &quot;Error while saving/updating customer&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L43">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+    @GetMapping(&quot;/getAllUser&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; getAllUser() {
+        try {
+<span class="nc" id="L49">            List&lt;Map&lt;String, Object&gt;&gt; employeeData = shiftAssignmentsServices.getAllUsers();</span>
+
+<span class="nc bnc" id="L51" title="All 2 branches missed.">            if (employeeData.isEmpty()) {</span>
+<span class="nc" id="L52">                ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; response = new ApiResponse&lt;&gt;(employeeData, false, &quot;NO_USERS_FOUND&quot;, &quot;Warning&quot;);</span>
+<span class="nc" id="L53">                return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+            }
+<span class="nc" id="L55">            ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; response = new ApiResponse&lt;&gt;(employeeData, true, &quot;USER_FETCH_SUCCESS&quot;, &quot;Information&quot;);</span>
+<span class="nc" id="L56">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+
+<span class="nc" id="L58">        } catch (ResourceNotFoundException ex) {</span>
+<span class="nc" id="L59">            ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(Collections.emptyList(), false, &quot;USER_FETCH_FAILURE&quot;, &quot;Warning&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L60">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+
+<span class="nc" id="L62">        } catch (Exception ex) {</span>
+<span class="nc" id="L63">            ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(Collections.emptyList(), false, &quot;USER_FETCH_FAILURE&quot;, &quot;Error&quot;, Collections.singletonList(&quot;An unexpected error occurred.&quot;));</span>
+<span class="nc" id="L64">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getSingleUserDetails&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;EmployeeResponseDTO&gt;&gt;&gt; getUserById(@RequestParam String username) {
+        try {
+<span class="nc" id="L71">            List&lt;EmployeeResponseDTO&gt; employeeData = shiftAssignmentsServices.getUserDetails(Integer.parseInt(username));</span>
+
+            // Check if employee data exists
+<span class="nc bnc" id="L74" title="All 2 branches missed.">            if (employeeData.isEmpty()) {</span>
+<span class="nc" id="L75">                ApiResponse&lt;List&lt;EmployeeResponseDTO&gt;&gt; response = new ApiResponse&lt;&gt;(Collections.emptyList(), false, &quot;USER_NOT_FOUND&quot;, &quot;Warning&quot;, Collections.singletonList(&quot;Employee not found with this username: &quot; + username));</span>
+<span class="nc" id="L76">                return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+            }
+
+<span class="nc" id="L79">            ApiResponse&lt;List&lt;EmployeeResponseDTO&gt;&gt; response = new ApiResponse&lt;&gt;(employeeData, true, &quot;USER_FETCH_SUCCESS&quot;, &quot;Information&quot;);</span>
+<span class="nc" id="L80">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+
+<span class="nc" id="L82">        } catch (NumberFormatException ex) {</span>
+<span class="nc" id="L83">            ApiResponse&lt;List&lt;EmployeeResponseDTO&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(Collections.emptyList(), false, &quot;INVALID_USERNAME_FORMAT&quot;, &quot;Error&quot;, Collections.singletonList(&quot;Invalid username format. It must be a number.&quot;));</span>
+<span class="nc" id="L84">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+
+<span class="nc" id="L86">        } catch (ResourceNotFoundException ex) {</span>
+<span class="nc" id="L87">            ApiResponse&lt;List&lt;EmployeeResponseDTO&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(Collections.emptyList(), false, &quot;USER_NOT_FOUND&quot;, &quot;Warning&quot;, Collections.singletonList(&quot;Employee not found with this username: &quot; + username));</span>
+<span class="nc" id="L88">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+
+<span class="nc" id="L90">        } catch (Exception ex) {</span>
+<span class="nc" id="L91">            ApiResponse&lt;List&lt;EmployeeResponseDTO&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(Collections.emptyList(), false, &quot;USER_FETCH_FAILURE&quot;, &quot;Error&quot;, Collections.singletonList(&quot;An unexpected error occurred while fetching the employee.&quot;));</span>
+<span class="nc" id="L92">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getAllActiveUser&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; getAllActiveUser() {
+        try {
+<span class="nc" id="L99">            List&lt;Map&lt;String, Object&gt;&gt; activeUsers = shiftAssignmentsServices.getAllActiveUser();</span>
+
+<span class="nc bnc" id="L101" title="All 2 branches missed.">            if (activeUsers.isEmpty()) {</span>
+<span class="nc" id="L102">                return ResponseEntity.ok(new ApiResponse&lt;&gt;(activeUsers, false, &quot;NO_ACTIVE_USERS_FOUND&quot;, &quot;Warning&quot;));</span>
+            }
+<span class="nc" id="L104">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(activeUsers, true, &quot;ACTIVE_USERS_FETCH_SUCCESS&quot;, &quot;Information&quot;));</span>
+<span class="nc" id="L105">        } catch (Exception ex) {</span>
+<span class="nc" id="L106">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(Collections.emptyList(), false, &quot;ACTIVE_USERS_FETCH_FAILURE&quot;, &quot;Error&quot;, Collections.singletonList(&quot;Unexpected error occurred&quot;)));</span>
+        }
+    }
+
+    @GetMapping(&quot;/getDataAddShift&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;SupraShiftEntity&gt;&gt;&gt; getEmployeeSupraM06Shift() {
+<span class="nc" id="L112">        List&lt;SupraShiftEntity&gt; employeeData = shiftAssignmentsServices.getEmployeeSupraM06Shift();</span>
+
+        try {
+            // BranchDto createdBranchMessage = branchService.createBranch(branchDto);
+<span class="nc" id="L116">            ApiResponse&lt;List&lt;SupraShiftEntity&gt;&gt; response = new ApiResponse&lt;&gt;(employeeData, true, &quot;DATA_ADD_SHIFT-CREATED-SUCCESS&quot;, &quot;Information&quot;);</span>
+<span class="nc" id="L117">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L118">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L119">            ApiResponse&lt;List&lt;SupraShiftEntity&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(employeeData, false, &quot;DATA_ADD_SHIFT-CREATED-FAILURE&quot;, &quot;Warning&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L120">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+<span class="nc" id="L121">        } catch (Exception ex) {</span>
+<span class="nc" id="L122">            ApiResponse&lt;List&lt;SupraShiftEntity&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(employeeData, false, &quot;DATA_ADD_SHIFT-CREATED-FAILURE&quot;, &quot;Error&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L123">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+
+    }
+
+    @GetMapping(&quot;/getShiftDetails/{shiftId}&quot;)
+    public ResponseEntity&lt;Object&gt; getEmployeeById(@PathVariable Integer shiftId) {
+        try {
+<span class="nc" id="L131">            List&lt;SupraShiftDetailsDTO&gt; employeeData = shiftAssignmentsServices.getShiftDetail(shiftId);</span>
+
+<span class="nc bnc" id="L133" title="All 2 branches missed.">            if (employeeData != null) {</span>
+<span class="nc" id="L134">                return new ResponseEntity&lt;&gt;(employeeData, HttpStatus.OK);</span>
+            } else {
+<span class="nc" id="L136">                OldApiResponseMessage responseMessage = OldApiResponseMessage.builder().message(&quot;Employee not found with this id: &quot; + employeeData).status(HttpStatus.OK).success(false).build();</span>
+<span class="nc" id="L137">                return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.OK);</span>
+            }
+<span class="nc" id="L139">        } catch (ResourceNotFoundException ex) {</span>
+            // Handle the case where the employee is not found
+<span class="nc" id="L141">            OldApiResponseMessage responseMessage = OldApiResponseMessage.builder().message(&quot;Employee not found with this id: &quot; + shiftId).status(HttpStatus.OK).success(false).build();</span>
+<span class="nc" id="L142">            return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.OK);</span>
+<span class="nc" id="L143">        } catch (Exception ex) {</span>
+            // Handle other exceptions
+<span class="nc" id="L145">            OldApiResponseMessage responseMessage = OldApiResponseMessage.builder().message(&quot;An error occurred while fetching the employee.&quot;).status(HttpStatus.OK).success(false).build();</span>
+<span class="nc" id="L146">            return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.OK);</span>
+        }
+    }
+
+    @DeleteMapping(&quot;/deleteAssignShift/{shiftEmployeeId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;String&gt;&gt; deleteAssignShift(@PathVariable Integer shiftEmployeeId) {
+        try {
+<span class="nc" id="L153">            shiftAssignmentsServices.delete(shiftEmployeeId);</span>
+
+<span class="nc" id="L155">            ApiResponse&lt;String&gt; response = new ApiResponse&lt;&gt;(&quot;Shift with ID &quot; + shiftEmployeeId + &quot; has been deleted successfully.&quot;, true, &quot;SHIFT_DELETION_SUCCESS&quot;, &quot;Information&quot;);</span>
+
+<span class="nc" id="L157">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+
+<span class="nc" id="L159">        } catch (ResourceNotFoundException ex) {</span>
+<span class="nc" id="L160">            ApiResponse&lt;String&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;SHIFT_DELETION_FAILURE&quot;, &quot;Warning&quot;, Collections.singletonList(&quot;Shift not found with ID: &quot; + shiftEmployeeId));</span>
+
+<span class="nc" id="L162">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+
+<span class="nc" id="L164">        } catch (Exception ex) {</span>
+<span class="nc" id="L165">            ApiResponse&lt;String&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;SHIFT_DELETION_FAILURE&quot;, &quot;Error&quot;, Collections.singletonList(&quot;An error occurred while deleting the shift.&quot;));</span>
+
+<span class="nc" id="L167">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/fetchUserShiftAssignHistory&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; fetchUserShiftAssignHistory(
+            @RequestParam(value = &quot;employeeId&quot;) Integer employeeId,
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;shiftEmpId&quot;, required = false) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;, required = false) String sortDir,
+            @RequestParam(value = &quot;searchField&quot;, required = false) String searchField,
+            @RequestParam(value = &quot;searchKeyword&quot;,required = false) String searchKeyword) {
+        try {
+<span class="nc bnc" id="L181" title="All 2 branches missed.">            if (employeeId == null) {</span>
+<span class="nc" id="L182">                return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;EMPLOYEE_ID_IS_MANDATORY&quot;, &quot;ERROR&quot;, Collections.singletonList(&quot;Employee Id is mandatory.&quot;)), HttpStatus.BAD_REQUEST);</span>
+            }
+<span class="nc" id="L184">            Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc" id="L185">            Map&lt;String, Object&gt; resultMap = shiftAssignmentsServices.fetchUserShiftAssignment(employeeId, sortBy, sortDir, searchField, searchKeyword, pageable);</span>
+<span class="nc" id="L186">            ApiResponse&lt;Object&gt; response = new ApiResponse&lt;&gt;(resultMap, true, &quot;SHIFT_ASSIGN_HISTORY_FETCH_SUCCESS&quot;, &quot;SUCCESS&quot;);</span>
+<span class="nc" id="L187">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L188">        } catch (Exception ex) {</span>
+<span class="nc" id="L189">            ApiResponse&lt;Object&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;SHIFT_ASSIGN_HISTORY_FETCH_FAILURE&quot;, &quot;ERROR&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L190">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+    @GetMapping(&quot;/getByUsername/{username}&quot;)
+    public ResponseEntity&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; getByUsername(@PathVariable Integer username) {
+<span class="nc" id="L195">        List&lt;Map&lt;String, Object&gt;&gt; result = shiftAssignmentsServices.getShiftDetailsByUsername(username);</span>
+<span class="nc" id="L196">        return ResponseEntity.ok(result);</span>
+    }
+
+    @GetMapping(&quot;/fetchAvailableShiftList&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; fetchAvailableShiftList() {
+        try {
+<span class="nc" id="L202">            List&lt;Map&lt;String, Object&gt;&gt; shiftList = new LinkedList&lt;&gt;();</span>
+<span class="nc" id="L203">            List&lt;Object[]&gt; activeShiftList = shiftAssignmentsServices.activeShifts();</span>
+<span class="nc bnc" id="L204" title="All 4 branches missed.">            if (activeShiftList != null &amp;&amp; !activeShiftList.isEmpty()) {</span>
+<span class="nc bnc" id="L205" title="All 2 branches missed.">                for (Object[] shift : activeShiftList) {</span>
+<span class="nc" id="L206">                    Map&lt;String, Object&gt; shiftMap = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L207">                    shiftMap.put(&quot;SHIFT_ID&quot;, shift[0]);</span>
+<span class="nc" id="L208">                    shiftMap.put(&quot;CALENDAR_ID&quot;, shift[1]);</span>
+<span class="nc" id="L209">                    shiftMap.put(&quot;SHIFT_CODE&quot;, shift[2]);</span>
+<span class="nc" id="L210">                    shiftMap.put(&quot;NAME&quot;, shift[3]);</span>
+<span class="nc" id="L211">                    shiftMap.put(&quot;DESCRIPTION&quot;, shift[4]);</span>
+<span class="nc" id="L212">                    shiftMap.put(&quot;IS_DEFAULT&quot;, shift[5]);</span>
+<span class="nc" id="L213">                    shiftMap.put(&quot;WEEK_OFFS&quot;, shift[6]);</span>
+<span class="nc" id="L214">                    shiftList.add(shiftMap);</span>
+<span class="nc" id="L215">                }</span>
+<span class="nc" id="L216">                ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; response = new ApiResponse&lt;&gt;(shiftList, true, &quot;AVAILABLE_SHIFT_LIST_FETCH_SUCCESS&quot;, &quot;Information&quot;, null);</span>
+
+<span class="nc" id="L218">                return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+            } else {
+<span class="nc" id="L220">                ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; noDataResponse = new ApiResponse&lt;&gt;(new LinkedList&lt;&gt;(), false, &quot;AVAILABLE_SHIFT_LIST_NOT_FOUND&quot;, &quot;Warning&quot;, Collections.singletonList(&quot;No available shifts found&quot;));</span>
+
+<span class="nc" id="L222">                return ResponseEntity.status(HttpStatus.OK).body(noDataResponse);</span>
+            }
+<span class="nc" id="L224">        } catch (Exception ex) {</span>
+<span class="nc" id="L225">            ex.printStackTrace();</span>
+<span class="nc" id="L226">            ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(new LinkedList&lt;&gt;(), false, &quot;AVAILABLE_SHIFT_LIST_FETCH_FAILURE&quot;, &quot;Error&quot;, Collections.singletonList(&quot;An error occurred while fetching the available shift list.&quot;));</span>
+<span class="nc" id="L227">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @PostMapping(&quot;/saveOrUpdateMasterShift&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;SupraShiftDTO&gt;&gt; saveOrUpdateShift(@Valid @RequestBody SupraShiftDTO dto) {
+        try {
+<span class="nc bnc" id="L234" title="All 2 branches missed.">            boolean isUpdate = dto.getShiftId() != null;</span>
+<span class="nc" id="L235">            SupraShiftDTO savedDto = shiftAssignmentsServices.saveOrUpdateShift(dto);</span>
+<span class="nc bnc" id="L236" title="All 2 branches missed.">            String message = isUpdate ? &quot;Shift updated successfully&quot; : &quot;Shift created successfully&quot;;</span>
+<span class="nc bnc" id="L237" title="All 2 branches missed.">            String code = isUpdate ? &quot;SHIFT-UPDATE-SUCCESS&quot; : &quot;SHIFT-CREATE-SUCCESS&quot;;</span>
+<span class="nc" id="L238">            ApiResponse&lt;SupraShiftDTO&gt; response = new ApiResponse&lt;&gt;(savedDto, true, code, message);</span>
+<span class="nc" id="L239">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L240">        } catch (IllegalArgumentException ex) {</span>
+            // Handle duplicate shift name or other validation errors
+<span class="nc" id="L242">            ApiResponse&lt;SupraShiftDTO&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;SHIFT-VALIDATION-FAILED&quot;, ex.getMessage(), Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L243">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+
+<span class="nc" id="L245">        } catch (Exception ex) {</span>
+<span class="nc" id="L246">            ApiResponse&lt;SupraShiftDTO&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;SHIFT-SAVE-OR-UPDATE-FAILED&quot;, &quot;Error while saving/updating shift&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L247">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getById/{shiftId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;SupraShiftDTO&gt;&gt; getByShiftId(@PathVariable Integer shiftId) {
+        try {
+<span class="nc" id="L254">            SupraShiftDTO dto = shiftAssignmentsServices.getShiftById(shiftId);</span>
+<span class="nc" id="L255">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(dto, true, &quot;FETCH-SUCCESS&quot;, &quot;Shift fetched successfully&quot;));</span>
+<span class="nc" id="L256">        } catch (EntityNotFoundException ex) {</span>
+<span class="nc" id="L257">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;NOT-FOUND&quot;, ex.getMessage()));</span>
+<span class="nc" id="L258">        } catch (Exception ex) {</span>
+<span class="nc" id="L259">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;ERROR&quot;, &quot;An error occurred&quot;, List.of(ex.getMessage())));</span>
+        }
+    }
+
+    @GetMapping(&quot;/getAllShifts&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getAllShifts(@RequestParam(defaultValue = &quot;1&quot;) int page, @RequestParam(defaultValue = &quot;10&quot;) int size, @RequestParam(defaultValue = &quot;shiftId&quot;) String sortBy, @RequestParam(defaultValue = &quot;desc&quot;) String sortDir, @RequestParam(required = false) String searchField, @RequestParam(required = false) String searchKeyword) {
+        try {
+<span class="nc bnc" id="L266" title="All 2 branches missed.">            Sort sort = &quot;desc&quot;.equalsIgnoreCase(sortDir) ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();</span>
+
+<span class="nc" id="L268">            Pageable pageable = PageRequest.of(page - 1, size, sort);</span>
+
+<span class="nc" id="L270">            Map&lt;String, Object&gt; response = shiftAssignmentsServices.getAllShifts(pageable, searchField, searchKeyword);</span>
+
+<span class="nc" id="L272">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(response, true, &quot;FETCH-SUCCESS&quot;, &quot;Shift list fetched successfully&quot;));</span>
+
+<span class="nc" id="L274">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L275">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;INVALID-FIELD&quot;, &quot;Invalid search field&quot;, List.of(ex.getMessage())));</span>
+<span class="nc" id="L276">        } catch (Exception ex) {</span>
+<span class="nc" id="L277">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;ERROR&quot;, &quot;An error occurred&quot;, List.of(ex.getMessage())));</span>
+        }
+    }
+
+    @GetMapping(&quot;getActiveShifts&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;SupraShiftDTO&gt;&gt;&gt; getActiveShifts() {
+        try {
+<span class="nc" id="L284">            List&lt;SupraShiftDTO&gt; activeShifts = shiftAssignmentsServices.getActiveShifts();</span>
+<span class="nc" id="L285">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(activeShifts, true, &quot;ACTIVE_SHIFT_FETCH_SUCCESS&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L286">        } catch (IllegalArgumentException e) {</span>
+<span class="nc" id="L287">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ACTIVE_SHIFT_FETCH_ERROR&quot;, &quot;ERROR&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

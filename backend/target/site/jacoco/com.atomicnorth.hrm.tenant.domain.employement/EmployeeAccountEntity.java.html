@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmployeeAccountEntity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.domain.employement</a> &gt; <span class="el_source">EmployeeAccountEntity.java</span></div><h1>EmployeeAccountEntity.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.domain.employement;
+
+import com.atomicnorth.hrm.tenant.domain.Employee;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.persistence.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+<span class="nc bnc" id="L12" title="All 422 branches missed.">@Data</span>
+<span class="nc" id="L13">@AllArgsConstructor</span>
+<span class="nc" id="L14">@NoArgsConstructor</span>
+@Entity
+@Table(name = &quot;ses_m25_user_account&quot;)
+public class EmployeeAccountEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = &quot;ACCOUNT_ID&quot;)
+<span class="nc" id="L22">    private Integer accountId;</span>
+
+    @Column(name = &quot;EMPLOYEE_ID&quot;, nullable = false)
+<span class="nc" id="L25">    private Integer employeeId;</span>
+
+    @Column(name = &quot;ORGANIZATION_ID&quot;, nullable = false)
+<span class="nc" id="L28">    private String orgId;</span>
+
+    @Column(name = &quot;ACCOUNT_TYPE_CODE&quot;, length = 50, columnDefinition = &quot;VARCHAR(50) COLLATE utf8mb4_0900_ai_ci&quot;)
+<span class="nc" id="L31">    private String accountTypeCode;</span>
+
+    @Column(name = &quot;ACCOUNT_NUMBER&quot;,unique = true, length = 100, columnDefinition = &quot;VARCHAR(100) COLLATE utf8mb4_0900_ai_ci&quot;)
+<span class="nc" id="L34">    private String accountNumber;</span>
+
+    @Column(name = &quot;ACCOUNT_HOLDER_NAME&quot;, length = 100, columnDefinition = &quot;VARCHAR(100) COLLATE utf8mb4_0900_ai_ci&quot;)
+<span class="nc" id="L37">    private String accountHolderName;</span>
+
+    @Column(name = &quot;ACCOUNT_DESCRIPTION&quot;, length = 500, columnDefinition = &quot;VARCHAR(500) COLLATE utf8mb4_0900_ai_ci&quot;)
+<span class="nc" id="L40">    private String accountDescription;</span>
+
+    @Column(name = &quot;BANK_NAME&quot;, length = 500, columnDefinition = &quot;VARCHAR(100) COLLATE utf8mb4_0900_ai_ci&quot;)
+<span class="nc" id="L43">    private String bankName;</span>
+
+    @Column(name = &quot;IFSC_CODE&quot;, length = 100, columnDefinition = &quot;VARCHAR(100) COLLATE utf8mb4_0900_ai_ci&quot;)
+<span class="nc" id="L46">    private String ifscCode;</span>
+
+    @Column(name = &quot;IS_DELETED&quot;, length = 1, columnDefinition = &quot;VARCHAR(1) COLLATE utf8mb4_0900_ai_ci&quot;)
+<span class="nc" id="L49">    private String isDeleted;</span>
+
+    @Column(name = &quot;ASSIGNMENT_ID&quot;)
+<span class="nc" id="L52">    private Integer assignmentId;</span>
+
+    @Column(name = &quot;ENTITY_ID&quot;)
+<span class="nc" id="L55">    private Integer entityId;</span>
+
+    @Column(name = &quot;CLIENT_ID&quot;)
+<span class="nc" id="L58">    private Integer clientId;</span>
+
+    // Relationship with Employee for employeeFullName
+    @ManyToOne
+    @JoinColumn(name = &quot;EMPLOYEE_ID&quot;, referencedColumnName = &quot;EMPLOYEE_ID&quot;, insertable = false, updatable = false)
+<span class="nc" id="L63">    private Employee employee;</span>
+
+    @Column(name = &quot;LAST_UPDATE_SESSION_ID&quot;)
+<span class="nc" id="L66">    private Integer lastUpdateSessionId;</span>
+    @Column(name = &quot;C_ATTRIBUTE1&quot;, length = 240)
+<span class="nc" id="L68">    private String cAttribute1;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE2&quot;, length = 240)
+<span class="nc" id="L71">    private String cAttribute2;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE3&quot;, length = 240)
+<span class="nc" id="L74">    private String cAttribute3;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE4&quot;, length = 240)
+<span class="nc" id="L77">    private String cAttribute4;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE5&quot;, length = 240)
+<span class="nc" id="L80">    private String cAttribute5;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE6&quot;, length = 240)
+<span class="nc" id="L83">    private String cAttribute6;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE7&quot;, length = 240)
+<span class="nc" id="L86">    private String cAttribute7;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE8&quot;, length = 240)
+<span class="nc" id="L89">    private String cAttribute8;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE9&quot;, length = 240)
+<span class="nc" id="L92">    private String cAttribute9;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE10&quot;, length = 240)
+<span class="nc" id="L95">    private String cAttribute10;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE11&quot;, length = 240)
+<span class="nc" id="L98">    private String cAttribute11;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE12&quot;, length = 240)
+<span class="nc" id="L101">    private String cAttribute12;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE13&quot;, length = 240)
+<span class="nc" id="L104">    private String cAttribute13;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE14&quot;, length = 240)
+<span class="nc" id="L107">    private String cAttribute14;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE15&quot;, length = 240)
+<span class="nc" id="L110">    private String cAttribute15;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE16&quot;)
+<span class="nc" id="L113">    private Integer nAttribute16;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE17&quot;)
+<span class="nc" id="L116">    private Integer nAttribute17;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE18&quot;)
+<span class="nc" id="L119">    private Integer nAttribute18;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE19&quot;)
+<span class="nc" id="L122">    private Integer nAttribute19;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE20&quot;)
+<span class="nc" id="L125">    private Integer nAttribute20;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE21&quot;)
+<span class="nc" id="L128">    private Integer nAttribute21;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE22&quot;)
+<span class="nc" id="L131">    private Integer nAttribute22;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE23&quot;)
+<span class="nc" id="L134">    private Integer nAttribute23;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE24&quot;)
+<span class="nc" id="L137">    private Integer nAttribute24;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE25&quot;)
+<span class="nc" id="L140">    private Integer nAttribute25;</span>
+
+    @Column(name = &quot;D_ATTRIBUTE26&quot;)
+<span class="nc" id="L143">    private LocalDateTime dAttribute26;</span>
+
+    @Column(name = &quot;D_ATTRIBUTE27&quot;)
+<span class="nc" id="L146">    private LocalDateTime dAttribute27;</span>
+
+    @Column(name = &quot;D_ATTRIBUTE28&quot;)
+<span class="nc" id="L149">    private LocalDateTime dAttribute28;</span>
+
+    @Column(name = &quot;D_ATTRIBUTE29&quot;)
+<span class="nc" id="L152">    private LocalDateTime dAttribute29;</span>
+
+    @Column(name = &quot;D_ATTRIBUTE30&quot;)
+<span class="nc" id="L155">    private LocalDateTime dAttribute30;</span>
+
+    @Column(name = &quot;J_ATTRIBUTE31&quot;, columnDefinition = &quot;TEXT&quot;)
+<span class="nc" id="L158">    private String jAttribute31;</span>
+
+    @Column(name = &quot;J_ATTRIBUTE32&quot;, columnDefinition = &quot;TEXT&quot;)
+<span class="nc" id="L161">    private String jAttribute32;</span>
+
+    @Column(name = &quot;LAST_UPDATED_BY&quot;, length = 50, columnDefinition = &quot;VARCHAR(50) COLLATE utf8mb4_0900_ai_ci&quot;)
+<span class="nc" id="L164">    private String lastUpdatedBy;</span>
+
+    @Column(name = &quot;LAST_UPDATED_DATE&quot;)
+<span class="nc" id="L167">    private LocalDate lastUpdateDate;</span>
+
+    @Column(name = &quot;CREATED_BY&quot;, length = 30, columnDefinition = &quot;VARCHAR(30) COLLATE utf8mb4_0900_ai_ci&quot;)
+<span class="nc" id="L170">    private String createdBy;</span>
+
+    @Column(name = &quot;CREATION_DATE&quot;)
+<span class="nc" id="L173">    private LocalDate creationDate;</span>
+
+    @Column(name = &quot;RECORD_INFO&quot;, columnDefinition = &quot;TEXT&quot;)
+<span class="nc" id="L176">    private String recordInfo;</span>
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

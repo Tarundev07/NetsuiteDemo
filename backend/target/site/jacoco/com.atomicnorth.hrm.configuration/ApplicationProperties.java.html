@@ -1,0 +1,377 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ApplicationProperties.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.configuration</a> &gt; <span class="el_source">ApplicationProperties.java</span></div><h1>ApplicationProperties.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.configuration;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.web.cors.CorsConfiguration;
+
+import javax.validation.constraints.NotNull;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+@ConfigurationProperties(prefix = &quot;application&quot;, ignoreUnknownFields = false)
+<span class="nc" id="L12">public class ApplicationProperties {</span>
+
+<span class="nc" id="L14">    private final Cache cache = new Cache();</span>
+
+<span class="nc" id="L16">    private final Mail mail = new Mail();</span>
+
+<span class="nc" id="L18">    private final Security security = new Security();</span>
+
+<span class="nc" id="L20">    private final CorsConfiguration cors = new CorsConfiguration();</span>
+
+<span class="nc" id="L22">    private final Logging logging = new Logging();</span>
+
+<span class="nc" id="L24">    private final ClientApp clientApp = new ClientApp();</span>
+
+<span class="nc" id="L26">    private final Datasource datasource = new Datasource();</span>
+
+    public Cache getCache() {
+<span class="nc" id="L29">        return cache;</span>
+    }
+
+    public Mail getMail() {
+<span class="nc" id="L33">        return mail;</span>
+    }
+
+    public Security getSecurity() {
+<span class="nc" id="L37">        return security;</span>
+    }
+
+    public CorsConfiguration getCors() {
+<span class="nc" id="L41">        return cors;</span>
+    }
+
+    public Logging getLogging() {
+<span class="nc" id="L45">        return logging;</span>
+    }
+
+    public ClientApp getClientApp() {
+<span class="nc" id="L49">        return clientApp;</span>
+    }
+
+    public Datasource getDatasource() {
+<span class="nc" id="L53">        return datasource;</span>
+    }
+
+<span class="nc" id="L56">    public static class Cache {</span>
+
+<span class="nc" id="L58">        private final Ehcache ehcache = new Ehcache();</span>
+
+
+        public Ehcache getEhcache() {
+<span class="nc" id="L62">            return ehcache;</span>
+        }
+
+
+<span class="nc" id="L66">        public static class Ehcache {</span>
+
+<span class="nc" id="L68">            private int timeToLiveSeconds = ApplicationDefaults.Cache.Ehcache.timeToLiveSeconds;</span>
+
+<span class="nc" id="L70">            private long maxEntries = ApplicationDefaults.Cache.Ehcache.maxEntries;</span>
+
+            public int getTimeToLiveSeconds() {
+<span class="nc" id="L73">                return timeToLiveSeconds;</span>
+            }
+
+            public void setTimeToLiveSeconds(int timeToLiveSeconds) {
+<span class="nc" id="L77">                this.timeToLiveSeconds = timeToLiveSeconds;</span>
+<span class="nc" id="L78">            }</span>
+
+            public long getMaxEntries() {
+<span class="nc" id="L81">                return maxEntries;</span>
+            }
+
+            public void setMaxEntries(long maxEntries) {
+<span class="nc" id="L85">                this.maxEntries = maxEntries;</span>
+<span class="nc" id="L86">            }</span>
+        }
+
+    }
+
+<span class="nc" id="L91">    public static class Mail {</span>
+
+<span class="nc" id="L93">        private boolean enabled = ApplicationDefaults.Mail.enabled;</span>
+
+<span class="nc" id="L95">        private String from = ApplicationDefaults.Mail.from;</span>
+
+<span class="nc" id="L97">        private String baseUrl = ApplicationDefaults.Mail.baseUrl;</span>
+
+        public boolean isEnabled() {
+<span class="nc" id="L100">            return enabled;</span>
+        }
+
+        public void setEnabled(boolean enabled) {
+<span class="nc" id="L104">            this.enabled = enabled;</span>
+<span class="nc" id="L105">        }</span>
+
+        public String getFrom() {
+<span class="nc" id="L108">            return from;</span>
+        }
+
+        public void setFrom(String from) {
+<span class="nc" id="L112">            this.from = from;</span>
+<span class="nc" id="L113">        }</span>
+
+        public String getBaseUrl() {
+<span class="nc" id="L116">            return baseUrl;</span>
+        }
+
+        public void setBaseUrl(String baseUrl) {
+<span class="nc" id="L120">            this.baseUrl = baseUrl;</span>
+<span class="nc" id="L121">        }</span>
+    }
+
+<span class="nc" id="L124">    public static class Security {</span>
+
+<span class="nc" id="L126">        private final ClientAuthorization clientAuthorization = new ClientAuthorization();</span>
+<span class="nc" id="L127">        private final Authentication authentication = new Authentication();</span>
+<span class="nc" id="L128">        private final RememberMe rememberMe = new RememberMe();</span>
+<span class="nc" id="L129">        private final OAuth2 oauth2 = new OAuth2();</span>
+<span class="nc" id="L130">        private String contentSecurityPolicy = ApplicationDefaults.Security.contentSecurityPolicy;</span>
+
+        public ClientAuthorization getClientAuthorization() {
+<span class="nc" id="L133">            return clientAuthorization;</span>
+        }
+
+        public Authentication getAuthentication() {
+<span class="nc" id="L137">            return authentication;</span>
+        }
+
+        public RememberMe getRememberMe() {
+<span class="nc" id="L141">            return rememberMe;</span>
+        }
+
+        public OAuth2 getOauth2() {
+<span class="nc" id="L145">            return oauth2;</span>
+        }
+
+        public String getContentSecurityPolicy() {
+<span class="nc" id="L149">            return contentSecurityPolicy;</span>
+        }
+
+        public void setContentSecurityPolicy(String contentSecurityPolicy) {
+<span class="nc" id="L153">            this.contentSecurityPolicy = contentSecurityPolicy;</span>
+<span class="nc" id="L154">        }</span>
+
+<span class="nc" id="L156">        public static class ClientAuthorization {</span>
+
+<span class="nc" id="L158">            private String accessTokenUri = ApplicationDefaults.Security.ClientAuthorization.accessTokenUri;</span>
+
+<span class="nc" id="L160">            private String tokenServiceId = ApplicationDefaults.Security.ClientAuthorization.tokenServiceId;</span>
+
+<span class="nc" id="L162">            private String clientId = ApplicationDefaults.Security.ClientAuthorization.clientId;</span>
+
+<span class="nc" id="L164">            private String clientSecret = ApplicationDefaults.Security.ClientAuthorization.clientSecret;</span>
+
+            public String getAccessTokenUri() {
+<span class="nc" id="L167">                return accessTokenUri;</span>
+            }
+
+            public void setAccessTokenUri(String accessTokenUri) {
+<span class="nc" id="L171">                this.accessTokenUri = accessTokenUri;</span>
+<span class="nc" id="L172">            }</span>
+
+            public String getTokenServiceId() {
+<span class="nc" id="L175">                return tokenServiceId;</span>
+            }
+
+            public void setTokenServiceId(String tokenServiceId) {
+<span class="nc" id="L179">                this.tokenServiceId = tokenServiceId;</span>
+<span class="nc" id="L180">            }</span>
+
+            public String getClientId() {
+<span class="nc" id="L183">                return clientId;</span>
+            }
+
+            public void setClientId(String clientId) {
+<span class="nc" id="L187">                this.clientId = clientId;</span>
+<span class="nc" id="L188">            }</span>
+
+            public String getClientSecret() {
+<span class="nc" id="L191">                return clientSecret;</span>
+            }
+
+            public void setClientSecret(String clientSecret) {
+<span class="nc" id="L195">                this.clientSecret = clientSecret;</span>
+<span class="nc" id="L196">            }</span>
+        }
+
+<span class="nc" id="L199">        public static class Authentication {</span>
+
+<span class="nc" id="L201">            private final Jwt jwt = new Jwt();</span>
+
+            public Jwt getJwt() {
+<span class="nc" id="L204">                return jwt;</span>
+            }
+
+<span class="nc" id="L207">            public static class Jwt {</span>
+
+<span class="nc" id="L209">                private String secret = ApplicationDefaults.Security.Authentication.Jwt.secret;</span>
+
+<span class="nc" id="L211">                private String base64Secret = ApplicationDefaults.Security.Authentication.Jwt.base64Secret;</span>
+
+<span class="nc" id="L213">                private long tokenValidityInSeconds = ApplicationDefaults.Security.Authentication.Jwt</span>
+                        .tokenValidityInSeconds;
+
+<span class="nc" id="L216">                private long tokenValidityInSecondsForRememberMe = ApplicationDefaults.Security.Authentication.Jwt</span>
+                        .tokenValidityInSecondsForRememberMe;
+
+                public String getSecret() {
+<span class="nc" id="L220">                    return secret;</span>
+                }
+
+                public void setSecret(String secret) {
+<span class="nc" id="L224">                    this.secret = secret;</span>
+<span class="nc" id="L225">                }</span>
+
+                public String getBase64Secret() {
+<span class="nc" id="L228">                    return base64Secret;</span>
+                }
+
+                public void setBase64Secret(String base64Secret) {
+<span class="nc" id="L232">                    this.base64Secret = base64Secret;</span>
+<span class="nc" id="L233">                }</span>
+
+                public long getTokenValidityInSeconds() {
+<span class="nc" id="L236">                    return tokenValidityInSeconds;</span>
+                }
+
+                public void setTokenValidityInSeconds(long tokenValidityInSeconds) {
+<span class="nc" id="L240">                    this.tokenValidityInSeconds = tokenValidityInSeconds;</span>
+<span class="nc" id="L241">                }</span>
+
+                public long getTokenValidityInSecondsForRememberMe() {
+<span class="nc" id="L244">                    return tokenValidityInSecondsForRememberMe;</span>
+                }
+
+                public void setTokenValidityInSecondsForRememberMe(long tokenValidityInSecondsForRememberMe) {
+<span class="nc" id="L248">                    this.tokenValidityInSecondsForRememberMe = tokenValidityInSecondsForRememberMe;</span>
+<span class="nc" id="L249">                }</span>
+            }
+        }
+
+<span class="nc" id="L253">        public static class RememberMe {</span>
+
+<span class="nc" id="L255">            @NotNull</span>
+            private String key = ApplicationDefaults.Security.RememberMe.key;
+
+            public String getKey() {
+<span class="nc" id="L259">                return key;</span>
+            }
+
+            public void setKey(String key) {
+<span class="nc" id="L263">                this.key = key;</span>
+<span class="nc" id="L264">            }</span>
+        }
+
+<span class="nc" id="L267">        public static class OAuth2 {</span>
+<span class="nc" id="L268">            private final List&lt;String&gt; audience = new ArrayList&lt;&gt;();</span>
+
+            public List&lt;String&gt; getAudience() {
+<span class="nc" id="L271">                return Collections.unmodifiableList(audience);</span>
+            }
+
+            public void setAudience(@NotNull List&lt;String&gt; audience) {
+<span class="nc" id="L275">                this.audience.addAll(audience);</span>
+<span class="nc" id="L276">            }</span>
+        }
+    }
+
+<span class="nc" id="L280">    public static class Logging {</span>
+
+<span class="nc" id="L282">        private final Logstash logstash = new Logstash();</span>
+<span class="nc" id="L283">        private boolean useJsonFormat = ApplicationDefaults.Logging.useJsonFormat;</span>
+
+        public boolean isUseJsonFormat() {
+<span class="nc" id="L286">            return useJsonFormat;</span>
+        }
+
+        public void setUseJsonFormat(boolean useJsonFormat) {
+<span class="nc" id="L290">            this.useJsonFormat = useJsonFormat;</span>
+<span class="nc" id="L291">        }</span>
+
+        public Logstash getLogstash() {
+<span class="nc" id="L294">            return logstash;</span>
+        }
+
+<span class="nc" id="L297">        public static class Logstash {</span>
+
+<span class="nc" id="L299">            private boolean enabled = ApplicationDefaults.Logging.Logstash.enabled;</span>
+
+<span class="nc" id="L301">            private String host = ApplicationDefaults.Logging.Logstash.host;</span>
+
+<span class="nc" id="L303">            private int port = ApplicationDefaults.Logging.Logstash.port;</span>
+
+<span class="nc" id="L305">            private int ringBufferSize = ApplicationDefaults.Logging.Logstash.ringBufferSize;</span>
+
+            public boolean isEnabled() {
+<span class="nc" id="L308">                return enabled;</span>
+            }
+
+            public void setEnabled(boolean enabled) {
+<span class="nc" id="L312">                this.enabled = enabled;</span>
+<span class="nc" id="L313">            }</span>
+
+            public String getHost() {
+<span class="nc" id="L316">                return host;</span>
+            }
+
+            public void setHost(String host) {
+<span class="nc" id="L320">                this.host = host;</span>
+<span class="nc" id="L321">            }</span>
+
+            public int getPort() {
+<span class="nc" id="L324">                return port;</span>
+            }
+
+            public void setPort(int port) {
+<span class="nc" id="L328">                this.port = port;</span>
+<span class="nc" id="L329">            }</span>
+
+            public int getRingBufferSize() {
+<span class="nc" id="L332">                return ringBufferSize;</span>
+            }
+
+            public void setRingBufferSize(int ringBufferSize) {
+<span class="nc" id="L336">                this.ringBufferSize = ringBufferSize;</span>
+<span class="nc" id="L337">            }</span>
+        }
+    }
+
+<span class="nc" id="L341">    public static class ClientApp {</span>
+
+<span class="nc" id="L343">        private String name = ApplicationDefaults.ClientApp.name;</span>
+
+        public String getName() {
+<span class="nc" id="L346">            return name;</span>
+        }
+
+        public void setName(String name) {
+<span class="nc" id="L350">            this.name = name;</span>
+<span class="nc" id="L351">        }</span>
+    }
+<span class="nc" id="L353">    public static class Datasource {</span>
+        private String id;
+        private String name;
+        private String url;
+        private String username;
+        private String password;
+
+        // Getters and Setters
+<span class="nc" id="L361">        public String getId() { return id; }</span>
+<span class="nc" id="L362">        public void setId(String id) { this.id = id; }</span>
+
+<span class="nc" id="L364">        public String getName() { return name; }</span>
+<span class="nc" id="L365">        public void setName(String name) { this.name = name; }</span>
+
+<span class="nc" id="L367">        public String getUrl() { return url; }</span>
+<span class="nc" id="L368">        public void setUrl(String url) { this.url = url; }</span>
+
+<span class="nc" id="L370">        public String getUsername() { return username; }</span>
+<span class="nc" id="L371">        public void setUsername(String username) { this.username = username; }</span>
+
+<span class="nc" id="L373">        public String getPassword() { return password; }</span>
+<span class="nc" id="L374">        public void setPassword(String password) { this.password = password; }</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

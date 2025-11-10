@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmpExitFinanceClearanceService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.employeeExit</a> &gt; <span class="el_source">EmpExitFinanceClearanceService.java</span></div><h1>EmpExitFinanceClearanceService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.employeeExit;
+
+import com.atomicnorth.hrm.tenant.domain.Employee;
+import com.atomicnorth.hrm.tenant.domain.employeeExit.EmpExitFinanceClearance;
+import com.atomicnorth.hrm.tenant.domain.employeeExit.EmpExitFinanceClearanceDetails;
+import com.atomicnorth.hrm.tenant.domain.employeeExit.EmpExitRequest;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.repository.EmployeeExit.EmpExitFinanceClearanceDetailsRepo;
+import com.atomicnorth.hrm.tenant.repository.EmployeeExit.EmpExitFinanceClearanceRepository;
+import com.atomicnorth.hrm.tenant.repository.EmployeeExit.EmpExitRequestRepository;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.service.dto.employeeExit.FinanceClearanceDTO;
+import com.atomicnorth.hrm.tenant.service.dto.employeeExit.FinanceClearanceDetailsDTO;
+import com.atomicnorth.hrm.util.FileStorageService;
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.persistence.EntityNotFoundException;
+import javax.servlet.http.HttpServletRequest;
+import javax.transaction.Transactional;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L35">public class EmpExitFinanceClearanceService {</span>
+
+    @Autowired
+    private EmpExitFinanceClearanceRepository financeRepo;
+    @Autowired
+    private EmpExitRequestRepository requestRepository;
+    @Autowired
+    private EmployeeRepository employeeRepository;
+    @Autowired
+    private ModelMapper modelMapper;
+    @Autowired
+    private FileStorageService fileStorageService;
+    @Autowired
+    private EmpExitFinanceClearanceDetailsRepo detailsRepo;
+
+    @Transactional
+    public void createFinanceClearance(Integer exitRequestId) {
+<span class="nc" id="L52">        EmpExitFinanceClearance clearance = new EmpExitFinanceClearance();</span>
+<span class="nc" id="L53">        clearance.setExitRequestId(exitRequestId);</span>
+<span class="nc" id="L54">        clearance.setClearanceStatus(&quot;Pending&quot;);</span>
+<span class="nc" id="L55">        financeRepo.save(clearance);</span>
+<span class="nc" id="L56">    }</span>
+
+    public boolean existsByExitRequestId(Integer exitRequestId) {
+<span class="nc" id="L59">        return financeRepo.existsByExitRequestId(exitRequestId);</span>
+    }
+
+    @Transactional
+    public FinanceClearanceDTO getFinanceClearanceDetails(Integer exitRequestId, HttpServletRequest request) {
+<span class="nc" id="L64">        EmpExitFinanceClearance exitFinanceClearance = financeRepo.findByExitRequestId(exitRequestId).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Request not found.&quot;));</span>
+<span class="nc" id="L65">        EmpExitRequest empExitRequest = requestRepository.findById(exitRequestId).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Request not found.&quot;));</span>
+<span class="nc" id="L66">        Employee employee = employeeRepository.findByEmployeeId(empExitRequest.getEmployeeId()).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Employee not found.&quot;));</span>
+<span class="nc" id="L67">        String baseUrl = request.getScheme() + &quot;://&quot; + request.getServerName() + &quot;:&quot; + request.getServerPort();</span>
+
+<span class="nc" id="L69">        FinanceClearanceDTO dto = new FinanceClearanceDTO();</span>
+<span class="nc" id="L70">        dto.setId(exitFinanceClearance.getId());</span>
+<span class="nc" id="L71">        dto.setExitRequestId(empExitRequest.getId());</span>
+<span class="nc" id="L72">        dto.setEmployeeName(employee.getFullName() + &quot; (&quot; + employee.getEmployeeNumber() + &quot;)&quot;);</span>
+<span class="nc" id="L73">        dto.setExitRequestNumber(empExitRequest.getExitRequestNumber());</span>
+<span class="nc" id="L74">        dto.setStatus(empExitRequest.getStatus());</span>
+<span class="nc" id="L75">        dto.setEmployeeId(empExitRequest.getEmployeeId());</span>
+<span class="nc" id="L76">        dto.setLastWorkingDay(empExitRequest.getLastWorkingDate());</span>
+<span class="nc" id="L77">        dto.setFinalDocument(exitFinanceClearance.getFinalDocument());</span>
+<span class="nc" id="L78">        dto.setFinanceClearanceStatus(empExitRequest.getFinanceClearanceStatus());</span>
+<span class="nc" id="L79">        List&lt;FinanceClearanceDetailsDTO&gt; clearanceDetailsDTOList = exitFinanceClearance.getFinanceClearanceDetails().stream().map(finance -&gt; {</span>
+<span class="nc" id="L80">            FinanceClearanceDetailsDTO detailsDTO = new FinanceClearanceDetailsDTO();</span>
+<span class="nc" id="L81">            detailsDTO.setFinanceDetailsId(finance.getFinanceDetailsId());</span>
+<span class="nc" id="L82">            detailsDTO.setFinanceClearanceId(exitFinanceClearance.getId());</span>
+<span class="nc" id="L83">            detailsDTO.setItemType(finance.getItemType());</span>
+<span class="nc" id="L84">            detailsDTO.setItemAmount(finance.getItemAmount());</span>
+<span class="nc" id="L85">            detailsDTO.setDate(finance.getDate());</span>
+<span class="nc" id="L86">            detailsDTO.setStatus(finance.getStatus());</span>
+<span class="nc" id="L87">            detailsDTO.setRemarks(finance.getRemarks());</span>
+<span class="nc bnc" id="L88" title="All 4 branches missed.">            if (finance.getDocument() != null &amp;&amp; !finance.getDocument().isBlank()) {</span>
+<span class="nc" id="L89">                String path = finance.getDocument();</span>
+<span class="nc" id="L90">                String fileNameWithPrefix = path.substring(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1);</span>
+<span class="nc" id="L91">                int firstUnderscore = fileNameWithPrefix.indexOf(&quot;_&quot;);</span>
+<span class="nc bnc" id="L92" title="All 2 branches missed.">                String cleanFileName = (firstUnderscore != -1) ? fileNameWithPrefix.substring(firstUnderscore + 1) : fileNameWithPrefix;</span>
+<span class="nc" id="L93">                detailsDTO.setDocument(baseUrl + &quot;/api/clearance/download/&quot; + cleanFileName);</span>
+            }
+<span class="nc" id="L95">            return detailsDTO;</span>
+<span class="nc" id="L96">        }).collect(Collectors.toList());</span>
+<span class="nc" id="L97">        dto.setDetailsDTOList(clearanceDetailsDTOList);</span>
+<span class="nc" id="L98">        return dto;</span>
+    }
+
+    @Transactional
+    public EmpExitRequest approveFinanceClearance(Integer exitRequestId) {
+<span class="nc" id="L103">        EmpExitRequest empExitRequest = requestRepository.findById(exitRequestId).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Request not found.&quot;));</span>
+<span class="nc" id="L104">        empExitRequest.setFinanceClearanceStatus(&quot;Approved&quot;);</span>
+<span class="nc" id="L105">        empExitRequest.setLastUpdatedBy(String.valueOf(SessionHolder.getUserLoginDetail().getUsername()));</span>
+<span class="nc" id="L106">        empExitRequest.setLastUpdatedDate(Instant.now());</span>
+<span class="nc" id="L107">        return requestRepository.save(empExitRequest);</span>
+    }
+
+    @Transactional
+    public EmpExitFinanceClearance saveFinanceClearance(FinanceClearanceDTO dto, MultipartFile file) {
+        EmpExitFinanceClearance exitFinanceClearance;
+<span class="nc bnc" id="L113" title="All 2 branches missed.">        if (dto.getId() != null) {</span>
+<span class="nc" id="L114">            exitFinanceClearance = financeRepo.findById(dto.getId()).orElse(new EmpExitFinanceClearance());</span>
+        } else {
+<span class="nc" id="L116">            exitFinanceClearance = new EmpExitFinanceClearance();</span>
+        }
+<span class="nc" id="L118">        modelMapper.map(dto, exitFinanceClearance);</span>
+<span class="nc" id="L119">        exitFinanceClearance.setLastUpdatedBy(String.valueOf(SessionHolder.getUserLoginDetail().getUsername()));</span>
+<span class="nc" id="L120">        exitFinanceClearance.setLastUpdatedDate(Instant.now());</span>
+<span class="nc" id="L121">        List&lt;EmpExitFinanceClearanceDetails&gt; clearanceDetails = dto.getDetailsDTOList().stream().map(finance -&gt; {</span>
+<span class="nc" id="L122">            EmpExitFinanceClearanceDetails details = new EmpExitFinanceClearanceDetails();</span>
+<span class="nc" id="L123">            details.setDate(finance.getDate());</span>
+<span class="nc" id="L124">            details.setItemType(finance.getItemType());</span>
+<span class="nc" id="L125">            details.setItemAmount(finance.getItemAmount());</span>
+<span class="nc" id="L126">            details.setStatus(finance.getStatus());</span>
+<span class="nc" id="L127">            details.setRemarks(finance.getRemarks());</span>
+<span class="nc bnc" id="L128" title="All 4 branches missed.">            if (file != null &amp;&amp; !file.isEmpty()) {</span>
+                String storeFile;
+                try {
+<span class="nc" id="L131">                    storeFile = fileStorageService.storeFile(file, &quot;finance_clearance&quot;);</span>
+<span class="nc" id="L132">                } catch (IOException e) {</span>
+<span class="nc" id="L133">                    throw new RuntimeException(e);</span>
+<span class="nc" id="L134">                }</span>
+<span class="nc" id="L135">                details.setDocument(storeFile);</span>
+            }
+<span class="nc" id="L137">            details.setExitFinanceClearance(exitFinanceClearance);</span>
+<span class="nc" id="L138">            return details;</span>
+<span class="nc" id="L139">        }).collect(Collectors.toList());</span>
+<span class="nc bnc" id="L140" title="All 2 branches missed.">        if (exitFinanceClearance.getFinanceClearanceDetails() == null) {</span>
+<span class="nc" id="L141">            exitFinanceClearance.setFinanceClearanceDetails(new ArrayList&lt;&gt;());</span>
+        }
+<span class="nc" id="L143">        exitFinanceClearance.getFinanceClearanceDetails().addAll(clearanceDetails);</span>
+<span class="nc" id="L144">        return financeRepo.save(exitFinanceClearance);</span>
+    }
+
+    public Map&lt;String, Object&gt; downloadFile(Integer financeDetailsId) throws IOException {
+<span class="nc" id="L148">        EmpExitFinanceClearanceDetails details = detailsRepo.findById(financeDetailsId).orElseThrow(() -&gt; new EntityNotFoundException(&quot;No record found for the given input.&quot;));</span>
+<span class="nc" id="L149">        String filePath = details.getDocument();</span>
+<span class="nc bnc" id="L150" title="All 4 branches missed.">        if (filePath == null || filePath.isBlank()) {</span>
+<span class="nc" id="L151">            throw new IllegalArgumentException(&quot;No clearance file found for finance clearance ID: &quot; + financeDetailsId);</span>
+        }
+<span class="nc" id="L153">        Resource resource = fileStorageService.loadFile(filePath);</span>
+<span class="nc bnc" id="L154" title="All 4 branches missed.">        if (!resource.exists() || !resource.isReadable()) {</span>
+<span class="nc" id="L155">            throw new IOException(&quot;File not found or not readable: &quot; + filePath);</span>
+        }
+<span class="nc" id="L157">        String contentType = Files.probeContentType(Paths.get(filePath));</span>
+<span class="nc bnc" id="L158" title="All 2 branches missed.">        if (contentType == null) {</span>
+<span class="nc" id="L159">            contentType = &quot;application/pdf&quot;;</span>
+        }
+<span class="nc" id="L161">        Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L162">        result.put(&quot;resource&quot;, resource);</span>
+<span class="nc" id="L163">        result.put(&quot;contentType&quot;, contentType);</span>
+<span class="nc" id="L164">        return result;</span>
+    }
+
+    public List&lt;FinanceClearanceDetailsDTO&gt; detailsData(Integer financeId) {
+<span class="nc" id="L168">        return detailsRepo.findByExitFinanceClearance_Id(financeId)</span>
+<span class="nc" id="L169">                .stream().map(x -&gt; modelMapper.map(x, FinanceClearanceDetailsDTO.class)).collect(Collectors.toList());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

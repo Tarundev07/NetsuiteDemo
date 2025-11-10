@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Interview.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.domain</a> &gt; <span class="el_source">Interview.java</span></div><h1>Interview.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.domain;
+
+import com.atomicnorth.hrm.util.LongListConverter;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import javax.persistence.*;
+import javax.validation.constraints.FutureOrPresent;
+import java.io.Serializable;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Entity
+<span class="nc" id="L19">@AllArgsConstructor</span>
+<span class="fc" id="L20">@NoArgsConstructor</span>
+<span class="pc bnc" id="L21" title="All 390 branches missed.">@Data</span>
+@Table(name = &quot;ses_m05_interview&quot;)
+@Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
+public class Interview implements Serializable {
+
+    @Id
+    @Column(name = &quot;INTERVIEW_ID&quot;)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<span class="fc" id="L29">    private Long interviewId;</span>
+    @Column(name = &quot;INTERVIEW_ROUND_ID&quot;, nullable = false)
+<span class="fc" id="L31">    private Long interviewRoundId;</span>
+    @Column(name = &quot;INTERVIEWER_ID&quot;, columnDefinition = &quot;json&quot;)
+    @Convert(converter = LongListConverter.class) // Custom Converter for JSON storage
+<span class="fc" id="L34">    private List&lt;Long&gt; interviewerId;</span>
+    @Column(name = &quot;STATUS&quot;)
+<span class="fc" id="L36">    private String status;</span>
+    @Column(name = &quot;JOB_APPLICANT_ID&quot;, nullable = false)
+<span class="fc" id="L38">    private Integer jobApplicantId;</span>
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+    @Column(name = &quot;INTERVIEW_SCHEDULED_DATE&quot;, nullable = false)
+<span class="fc" id="L41">    private LocalDate interviewScheduledDate;</span>
+    @Column(name = &quot;FROM_TIME&quot;, nullable = false)
+<span class="fc" id="L43">    private String fromTime;</span>
+    @Column(name = &quot;TO_TIME&quot;, nullable = false)
+<span class="fc" id="L45">    private String toTime;</span>
+    @Column(name = &quot;RATING&quot;)
+<span class="fc" id="L47">    private Long rating;</span>
+    @Column(name = &quot;SUMMARY&quot;)
+<span class="fc" id="L49">    private String summary;</span>
+    @Column(name = &quot;RESUME_LINK&quot;)
+<span class="fc" id="L51">    private String resumeLink;</span>
+    @Column(name = &quot;IS_ACTIVE&quot;, nullable = false)
+<span class="nc" id="L53">    private Boolean isActive;</span>
+    @Column(name = &quot;CREATED_DATE&quot;, nullable = false, updatable = false)
+<span class="fc" id="L55">    private LocalDate createdDate;</span>
+    @Column(name = &quot;CREATED_BY&quot;, nullable = false)
+<span class="fc" id="L57">    private String createdBy;</span>
+    @Column(name = &quot;UPDATED_DATE&quot;)
+<span class="fc" id="L59">    private LocalDate updatedDate;</span>
+    @Column(name = &quot;UPDATED_BY&quot;)
+<span class="fc" id="L61">    private String updatedBy;</span>
+    @Column(name = &quot;C_ATTRIBUTE1&quot;, length = 240)
+<span class="nc" id="L63">    private String cAttribute1;</span>
+    @Column(name = &quot;C_ATTRIBUTE2&quot;, length = 240)
+<span class="nc" id="L65">    private String cAttribute2;</span>
+    @Column(name = &quot;C_ATTRIBUTE3&quot;, length = 240)
+<span class="nc" id="L67">    private String cAttribute3;</span>
+    @Column(name = &quot;C_ATTRIBUTE4&quot;, length = 240)
+<span class="nc" id="L69">    private String cAttribute4;</span>
+    @Column(name = &quot;C_ATTRIBUTE5&quot;, length = 240)
+<span class="nc" id="L71">    private String cAttribute5;</span>
+    @Column(name = &quot;C_ATTRIBUTE6&quot;, length = 240)
+<span class="nc" id="L73">    private String cAttribute6;</span>
+    @Column(name = &quot;C_ATTRIBUTE7&quot;, length = 240)
+<span class="nc" id="L75">    private String cAttribute7;</span>
+    @Column(name = &quot;C_ATTRIBUTE8&quot;, length = 240)
+<span class="nc" id="L77">    private String cAttribute8;</span>
+    @Column(name = &quot;C_ATTRIBUTE9&quot;, length = 240)
+<span class="nc" id="L79">    private String cAttribute9;</span>
+    @Column(name = &quot;C_ATTRIBUTE10&quot;, length = 240)
+<span class="nc" id="L81">    private String cAttribute10;</span>
+    @Column(name = &quot;C_ATTRIBUTE11&quot;, length = 240)
+<span class="nc" id="L83">    private String cAttribute11;</span>
+    @Column(name = &quot;C_ATTRIBUTE12&quot;, length = 240)
+<span class="nc" id="L85">    private String cAttribute12;</span>
+    @Column(name = &quot;C_ATTRIBUTE13&quot;, length = 240)
+<span class="nc" id="L87">    private String cAttribute13;</span>
+    @Column(name = &quot;C_ATTRIBUTE14&quot;, length = 240)
+<span class="nc" id="L89">    private String cAttribute14;</span>
+    @Column(name = &quot;C_ATTRIBUTE15&quot;, length = 240)
+<span class="nc" id="L91">    private String cAttribute15;</span>
+    @Column(name = &quot;N_ATTRIBUTE16&quot;)
+<span class="nc" id="L93">    private Integer nAttribute16;</span>
+    @Column(name = &quot;N_ATTRIBUTE17&quot;)
+<span class="nc" id="L95">    private Integer nAttribute17;</span>
+    @Column(name = &quot;N_ATTRIBUTE18&quot;)
+<span class="nc" id="L97">    private Integer nAttribute18;</span>
+    @Column(name = &quot;N_ATTRIBUTE19&quot;)
+<span class="nc" id="L99">    private Integer nAttribute19;</span>
+    @Column(name = &quot;N_ATTRIBUTE20&quot;)
+<span class="nc" id="L101">    private Integer nAttribute20;</span>
+    @Column(name = &quot;N_ATTRIBUTE21&quot;)
+<span class="nc" id="L103">    private Integer nAttribute21;</span>
+    @Column(name = &quot;N_ATTRIBUTE22&quot;)
+<span class="nc" id="L105">    private Integer nAttribute22;</span>
+    @Column(name = &quot;N_ATTRIBUTE23&quot;)
+<span class="nc" id="L107">    private Integer nAttribute23;</span>
+    @Column(name = &quot;N_ATTRIBUTE24&quot;)
+<span class="nc" id="L109">    private Integer nAttribute24;</span>
+    @Column(name = &quot;N_ATTRIBUTE25&quot;)
+<span class="nc" id="L111">    private Integer nAttribute25;</span>
+    @Column(name = &quot;D_ATTRIBUTE26&quot;)
+<span class="nc" id="L113">    private LocalDateTime dAttribute26;</span>
+    @Column(name = &quot;D_ATTRIBUTE27&quot;)
+<span class="nc" id="L115">    private LocalDateTime dAttribute27;</span>
+    @Column(name = &quot;D_ATTRIBUTE28&quot;)
+<span class="nc" id="L117">    private LocalDateTime dAttribute28;</span>
+    @Column(name = &quot;D_ATTRIBUTE29&quot;)
+<span class="nc" id="L119">    private LocalDateTime dAttribute29;</span>
+    @Column(name = &quot;D_ATTRIBUTE30&quot;)
+<span class="nc" id="L121">    private LocalDateTime dAttribute30;</span>
+    @Column(name = &quot;J_ATTRIBUTE31&quot;, length = 50)
+<span class="nc" id="L123">    private String jAttribute31;</span>
+    @Column(name = &quot;J_ATTRIBUTE32&quot;, length = 50)
+<span class="nc" id="L125">    private String jAttribute32;</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

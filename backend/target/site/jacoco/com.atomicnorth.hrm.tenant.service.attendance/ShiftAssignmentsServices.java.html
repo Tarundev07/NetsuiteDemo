@@ -1,0 +1,730 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ShiftAssignmentsServices.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.attendance</a> &gt; <span class="el_source">ShiftAssignmentsServices.java</span></div><h1>ShiftAssignmentsServices.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.attendance;
+
+import com.atomicnorth.hrm.exception.BadApiRequestException;
+import com.atomicnorth.hrm.exception.ResourceNotFoundException;
+import com.atomicnorth.hrm.tenant.domain.Employee;
+import com.atomicnorth.hrm.tenant.domain.attendance.ShiftEmployeeEntity;
+import com.atomicnorth.hrm.tenant.domain.attendance.SupraShiftDetailEntity;
+import com.atomicnorth.hrm.tenant.domain.attendance.SupraShiftEntity;
+import com.atomicnorth.hrm.tenant.helper.Constant;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.repository.attendance.ShiftEmployeeRepo;
+import com.atomicnorth.hrm.tenant.repository.attendance.SupraShiftDetailRepo;
+import com.atomicnorth.hrm.tenant.repository.attendance.SupraShiftRepo;
+import com.atomicnorth.hrm.tenant.service.dto.attendance.FetchUserShiftAssignHistoryReturnDataDTO;
+import com.atomicnorth.hrm.tenant.service.dto.attendance.ShiftEmployeeDTO;
+import com.atomicnorth.hrm.tenant.service.dto.attendance.SupraShiftDTO;
+import com.atomicnorth.hrm.tenant.service.dto.attendance.SupraShiftDetailsDTO;
+import com.atomicnorth.hrm.tenant.service.dto.employement.Response.EmployeeResponseDTO;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import javax.persistence.EntityNotFoundException;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.Predicate;
+import java.lang.reflect.Field;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+@Service
+<span class="nc" id="L62">public class ShiftAssignmentsServices {</span>
+<span class="nc" id="L63">    private final Logger log = LoggerFactory.getLogger(ShiftAssignmentsServices.class);</span>
+<span class="nc" id="L64">    SimpleDateFormat sdf2 = new SimpleDateFormat(&quot;yyyy-MM-dd&quot;);</span>
+    @Autowired
+    private ModelMapper modelMapper;
+    @Autowired
+    private EmployeeRepository employeeRepository;
+    @Autowired
+    private SupraShiftRepo supraShiftRepo;
+    @Autowired
+    private SupraShiftDetailRepo supraShiftDetailRepo;
+    @Autowired
+    private ShiftEmployeeRepo shiftEmployeeRepo;
+
+    private boolean isTimeOverlap(LocalTime start1, LocalTime end1, LocalTime start2, LocalTime end2) {
+<span class="nc bnc" id="L77" title="All 4 branches missed.">        return start1.isBefore(end2) &amp;&amp; end1.isAfter(start2);</span>
+    }
+
+    public ShiftEmployeeDTO saveOrUpdate(ShiftEmployeeDTO dto) {
+<span class="nc" id="L81">        UserLoginDetail user = SessionHolder.getUserLoginDetail();</span>
+
+<span class="nc" id="L83">        SupraShiftEntity shiftEntity = supraShiftRepo.findById(dto.getShiftId()).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Shift not found with ID &quot; + dto.getShiftId()));</span>
+
+<span class="nc" id="L85">        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern(&quot;HH:mm&quot;);</span>
+<span class="nc" id="L86">        LocalTime newShiftStart = LocalTime.parse(shiftEntity.getGeneralStartTime(), timeFormatter);</span>
+<span class="nc" id="L87">        LocalTime newShiftEnd = LocalTime.parse(shiftEntity.getGeneralEndTime(), timeFormatter);</span>
+
+<span class="nc" id="L89">        List&lt;ShiftEmployeeEntity&gt; overlappingAssignments = shiftEmployeeRepo.findByEmployeeIdAndStartDateLessThanEqualAndEndDateGreaterThanEqualAndIsActive(dto.getEmployeeId(), dto.getEndDate(), dto.getStartDate(), &quot;Y&quot;);</span>
+<span class="nc" id="L90">        Set&lt;Integer&gt; shiftIds = overlappingAssignments.stream().map(ShiftEmployeeEntity::getShiftId).collect(Collectors.toSet());</span>
+<span class="nc" id="L91">        Map&lt;Integer, SupraShiftEntity&gt; shiftMap = supraShiftRepo.findAllById(shiftIds).stream().collect(Collectors.toMap(SupraShiftEntity::getShiftId, s -&gt; s));</span>
+
+<span class="nc bnc" id="L93" title="All 2 branches missed.">        for (ShiftEmployeeEntity existing : overlappingAssignments) {</span>
+<span class="nc bnc" id="L94" title="All 4 branches missed.">            if (dto.getShiftEmpId() != null &amp;&amp; existing.getShiftEmpId().equals(dto.getShiftEmpId())) {</span>
+<span class="nc" id="L95">                continue;</span>
+            }
+
+<span class="nc" id="L98">            SupraShiftEntity existingShift = shiftMap.get(existing.getShiftId());</span>
+<span class="nc bnc" id="L99" title="All 2 branches missed.">            if (existingShift != null) {</span>
+<span class="nc" id="L100">                LocalTime existingStart = LocalTime.parse(existingShift.getGeneralStartTime(), timeFormatter);</span>
+<span class="nc" id="L101">                LocalTime existingEnd = LocalTime.parse(existingShift.getGeneralEndTime(), timeFormatter);</span>
+<span class="nc bnc" id="L102" title="All 2 branches missed.">                if (isTimeOverlap(newShiftStart, newShiftEnd, existingStart, existingEnd)) {</span>
+<span class="nc" id="L103">                    throw new IllegalArgumentException(&quot;Shift timings overlap with another assigned shift.&quot;);</span>
+                }
+            }
+<span class="nc" id="L106">        }</span>
+
+        ShiftEmployeeEntity shiftEmployee;
+<span class="nc bnc" id="L109" title="All 2 branches missed.">        if (dto.getShiftEmpId() != null) {</span>
+            // Update existing
+<span class="nc" id="L111">            shiftEmployee = shiftEmployeeRepo.findById(dto.getShiftEmpId()).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Shift not found with ID &quot; + dto.getShiftEmpId()));</span>
+        } else {
+            // Create new
+<span class="nc" id="L114">            shiftEmployee = new ShiftEmployeeEntity();</span>
+<span class="nc" id="L115">            shiftEmployee.setCreatedDate(Instant.now());</span>
+        }
+<span class="nc" id="L117">        modelMapper.map(dto, shiftEmployee);</span>
+<span class="nc" id="L118">        shiftEmployee.setCreatedBy(String.valueOf(user.getEmpId()));</span>
+        //  isValidShiftDates(dto.getShiftStartDate(),dto.getShiftEndDate());
+<span class="nc" id="L120">        shiftEmployee.setLastUpdatedDate(Instant.now());</span>
+<span class="nc" id="L121">        shiftEmployee.setLastUpdatedBy(String.valueOf(user.getEmpId()));</span>
+<span class="nc" id="L122">        ShiftEmployeeEntity employee = shiftEmployeeRepo.save(shiftEmployee);</span>
+<span class="nc" id="L123">        return modelMapper.map(employee, ShiftEmployeeDTO.class);</span>
+    }
+
+    public List&lt;SupraShiftEntity&gt; getEmployeeSupraM06Shift() {
+        try {
+<span class="nc" id="L128">            return supraShiftRepo.findAll();</span>
+<span class="nc" id="L129">        } catch (Exception ex) {</span>
+<span class="nc" id="L130">            throw new BadApiRequestException();</span>
+        }
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; getAllUsers() {
+        try {
+<span class="nc" id="L136">            List&lt;Employee&gt; userList = employeeRepository.findAll();</span>
+
+<span class="nc" id="L138">            return userList.stream().map(user -&gt; {</span>
+<span class="nc" id="L139">                Map&lt;String, Object&gt; userMap = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L140">                userMap.put(&quot;employeeId&quot;, user.getEmployeeId());</span>
+<span class="nc" id="L141">                String fullName = Stream.of(user.getFirstName(), user.getLastName(), user.getEmployeeNumber())</span>
+<span class="nc" id="L142">                        .filter(Objects::nonNull)</span>
+<span class="nc" id="L143">                        .collect(Collectors.joining(&quot; &quot;));</span>
+<span class="nc" id="L144">                userMap.put(&quot;fullName&quot;, fullName);</span>
+<span class="nc" id="L145">                userMap.put(&quot;workEmail&quot;, user.getWorkEmail());</span>
+<span class="nc" id="L146">                userMap.put(&quot;employeeNumber&quot;, user.getEmployeeNumber());</span>
+<span class="nc bnc" id="L147" title="All 2 branches missed.">                if (user.getIsActive() != null)</span>
+<span class="nc" id="L148">                    userMap.put(&quot;isActive&quot;, user.getIsActive());</span>
+                else
+<span class="nc" id="L150">                    userMap.put(&quot;isActive&quot;, &quot;Disable&quot;);</span>
+<span class="nc" id="L151">                return userMap;</span>
+<span class="nc" id="L152">            }).collect(Collectors.toList());</span>
+<span class="nc" id="L153">        } catch (Exception ex) {</span>
+<span class="nc" id="L154">            log.error(&quot;Error occurred while fetching user data: {}&quot;, ex.getMessage(), ex);</span>
+<span class="nc" id="L155">            throw new BadApiRequestException(&quot;Error while getting user details&quot;);</span>
+        }
+    }
+
+    @Transactional
+    public List&lt;EmployeeResponseDTO&gt; getUserDetails(Integer username) {
+<span class="nc" id="L161">        Optional&lt;Employee&gt; userTableEntities = employeeRepository.findById(username);</span>
+<span class="nc bnc" id="L162" title="All 2 branches missed.">        if (userTableEntities.isPresent()) {</span>
+<span class="nc" id="L163">            return userTableEntities.stream()</span>
+<span class="nc" id="L164">                    .map(entity -&gt; modelMapper.map(entity, EmployeeResponseDTO.class))</span>
+<span class="nc" id="L165">                    .collect(Collectors.toList());</span>
+        } else {
+<span class="nc" id="L167">            return List.of();</span>
+        }
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; getAllActiveUser() {
+<span class="nc" id="L172">        List&lt;Employee&gt; userDetails = employeeRepository.findByIsActive(&quot;Y&quot;);</span>
+
+<span class="nc" id="L174">        return userDetails.stream()</span>
+<span class="nc" id="L175">                .map(user -&gt; {</span>
+<span class="nc" id="L176">                    Map&lt;String, Object&gt; map = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L177">                    map.put(&quot;employeeId&quot;, user.getEmployeeId());</span>
+<span class="nc" id="L178">                    String fullName = Stream.of(user.getFirstName(), user.getLastName(), user.getEmployeeNumber())</span>
+<span class="nc" id="L179">                            .filter(Objects::nonNull)</span>
+<span class="nc" id="L180">                            .collect(Collectors.joining(&quot; &quot;));</span>
+<span class="nc" id="L181">                    map.put(&quot;employeeNumber&quot;, user.getEmployeeNumber());</span>
+<span class="nc" id="L182">                    map.put(&quot;fullName&quot;, fullName);</span>
+<span class="nc" id="L183">                    map.put(&quot;workEmail&quot;, user.getWorkEmail());</span>
+<span class="nc" id="L184">                    map.put(&quot;isActive&quot;, user.getIsActive());</span>
+
+<span class="nc" id="L186">                    return map;</span>
+                })
+<span class="nc" id="L188">                .collect(Collectors.toList());</span>
+    }
+
+    public List&lt;SupraShiftDetailsDTO&gt; getShiftDetail(Integer shiftId) {
+<span class="nc" id="L192">        List&lt;SupraShiftDetailEntity&gt; shiftDetails = supraShiftDetailRepo.findBySupraShift_ShiftId(shiftId);</span>
+<span class="nc bnc" id="L193" title="All 2 branches missed.">        if (!shiftDetails.isEmpty()) {</span>
+<span class="nc" id="L194">            return shiftDetails.stream()</span>
+<span class="nc" id="L195">                    .map(entity -&gt; modelMapper.map(entity, SupraShiftDetailsDTO.class))</span>
+<span class="nc" id="L196">                    .collect(Collectors.toList());</span>
+        } else {
+<span class="nc" id="L198">            return List.of();</span>
+        }
+    }
+
+    @Transactional
+    public void delete(Integer shiftEmpId) {
+<span class="nc" id="L204">        ShiftEmployeeEntity shiftEmployee = shiftEmployeeRepo.findById(shiftEmpId)</span>
+<span class="nc" id="L205">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;ShiftEmployee with ID &quot; + shiftEmpId + &quot; not found.&quot;));</span>
+<span class="nc" id="L206">        shiftEmployee.setIsActive(&quot;N&quot;);</span>
+<span class="nc" id="L207">        shiftEmployeeRepo.save(shiftEmployee);</span>
+<span class="nc" id="L208">    }</span>
+
+    public Map&lt;String, Object&gt; fetchUserShiftAssignment(Integer empId, String sortBy, String sortDir, String searchField, String searchKeyword, Pageable pageable) {
+<span class="nc" id="L211">        List&lt;ShiftEmployeeEntity&gt; shiftEmployeeList = shiftEmployeeRepo.findByEmployeeId(empId).stream().filter(x -&gt; &quot;Y&quot;.equalsIgnoreCase(x.getIsActive())).collect(Collectors.toList());</span>
+<span class="nc" id="L212">        Set&lt;Integer&gt; shiftIds = shiftEmployeeList.stream().map(ShiftEmployeeEntity::getShiftId).collect(Collectors.toSet());</span>
+<span class="nc" id="L213">        Map&lt;Integer, SupraShiftEntity&gt; shiftEntityMap = supraShiftDetailRepo.findBySupraShift_ShiftIdIn(shiftIds).stream().map(SupraShiftDetailEntity::getSupraShift).distinct().collect(Collectors.toMap(</span>
+                SupraShiftEntity::getShiftId,
+<span class="nc" id="L215">                Function.identity()</span>
+        ));
+<span class="nc" id="L217">        Map&lt;Integer, Employee&gt; employeeMap = employeeRepository.findAll().stream().collect(Collectors.toMap(Employee::getEmployeeId, emp -&gt; emp));</span>
+
+<span class="nc" id="L219">        List&lt;FetchUserShiftAssignHistoryReturnDataDTO&gt; dtoList = shiftEmployeeList.stream().map(shiftEmp -&gt; {</span>
+<span class="nc" id="L220">            SupraShiftEntity shiftEntity = shiftEntityMap.get(shiftEmp.getShiftId());</span>
+<span class="nc" id="L221">            Employee employee = employeeMap.get(empId);</span>
+<span class="nc bnc" id="L222" title="All 2 branches missed.">            Employee empCreated = StringUtils.hasText(shiftEmp.getLastUpdatedBy()) ?</span>
+<span class="nc" id="L223">                    employeeMap.getOrDefault(Integer.parseInt(shiftEmp.getLastUpdatedBy()), null) : null;</span>
+<span class="nc" id="L224">            FetchUserShiftAssignHistoryReturnDataDTO dto = new FetchUserShiftAssignHistoryReturnDataDTO();</span>
+<span class="nc" id="L225">            dto.setShiftEmpId(shiftEmp.getShiftEmpId());</span>
+<span class="nc" id="L226">            dto.setShiftId(shiftEmp.getShiftId());</span>
+<span class="nc bnc" id="L227" title="All 2 branches missed.">            dto.setShift(shiftEntity != null ? shiftEntity.getName() + &quot; (&quot; + shiftEntity.getGeneralStartTime() + &quot;-&quot; + shiftEntity.getGeneralEndTime() + &quot;)&quot; : &quot;Unknown Shift&quot;);</span>
+<span class="nc" id="L228">            dto.setShiftStartDate(shiftEmp.getStartDate());</span>
+<span class="nc" id="L229">            dto.setShiftEndDate(shiftEmp.getEndDate());</span>
+<span class="nc" id="L230">            dto.setIsActive(shiftEmp.getIsActive());</span>
+<span class="nc" id="L231">            dto.setFullName(employee.getFullName() + &quot; (&quot; + employee.getEmployeeNumber() + &quot;)&quot;);</span>
+<span class="nc bnc" id="L232" title="All 2 branches missed.">            LocalDate localDate = shiftEmp.getCreatedDate() != null ? shiftEmp.getCreatedDate().atZone(ZoneId.systemDefault()).toLocalDate() : null;</span>
+<span class="nc bnc" id="L233" title="All 2 branches missed.">            dto.setLastUpdateDate(localDate != null ? java.sql.Date.valueOf(localDate) : null);</span>
+<span class="nc bnc" id="L234" title="All 2 branches missed.">            dto.setLastUpdatedBy(empCreated != null ? empCreated.getFullName() : &quot;Unknown&quot;);</span>
+<span class="nc" id="L235">            dto.setUsername(empId);</span>
+<span class="nc" id="L236">            return dto;</span>
+<span class="nc" id="L237">        }).collect(Collectors.toList());</span>
+
+<span class="nc bnc" id="L239" title="All 8 branches missed.">        if (searchField != null &amp;&amp; searchKeyword != null &amp;&amp; !searchField.isBlank() &amp;&amp; !searchKeyword.isBlank()) {</span>
+<span class="nc" id="L240">            dtoList = dtoList.stream().filter(dto -&gt; {</span>
+                try {
+<span class="nc" id="L242">                    Field field = FetchUserShiftAssignHistoryReturnDataDTO.class.getDeclaredField(searchField);</span>
+<span class="nc" id="L243">                    field.setAccessible(true);</span>
+<span class="nc" id="L244">                    Object fieldValue = field.get(dto);</span>
+<span class="nc bnc" id="L245" title="All 4 branches missed.">                    return fieldValue != null &amp;&amp; fieldValue.toString().toLowerCase().contains(searchKeyword.toLowerCase());</span>
+<span class="nc" id="L246">                } catch (NoSuchFieldException | IllegalAccessException e) {</span>
+<span class="nc" id="L247">                    return false;</span>
+                }
+<span class="nc" id="L249">            }).collect(Collectors.toList());</span>
+        }
+
+<span class="nc bnc" id="L252" title="All 4 branches missed.">        if (sortBy != null &amp;&amp; !sortBy.isBlank()) {</span>
+            try {
+<span class="nc" id="L254">                Comparator&lt;FetchUserShiftAssignHistoryReturnDataDTO&gt; comparator = getFetchUserShiftAssignHistoryReturnDataDTOComparator(sortBy, sortDir);</span>
+
+<span class="nc" id="L256">                dtoList.sort(comparator);</span>
+
+<span class="nc" id="L258">            } catch (NoSuchFieldException e) {</span>
+<span class="nc" id="L259">                log.info(&quot;Invalid sort field: {}&quot;, sortBy);</span>
+<span class="nc" id="L260">            }</span>
+        }
+
+<span class="nc" id="L263">        int totalItems = dtoList.size();</span>
+<span class="nc" id="L264">        int currentPage = pageable.getPageNumber();</span>
+<span class="nc" id="L265">        int pageSize = pageable.getPageSize();</span>
+<span class="nc" id="L266">        int totalPages = (int) Math.ceil((double) totalItems / pageSize);</span>
+
+<span class="nc" id="L268">        int startIndex = currentPage * pageSize;</span>
+<span class="nc" id="L269">        int endIndex = Math.min(startIndex + pageSize, totalItems);</span>
+
+        List&lt;FetchUserShiftAssignHistoryReturnDataDTO&gt; paginatedResult =
+<span class="nc bnc" id="L272" title="All 2 branches missed.">                (startIndex &lt; totalItems) ? dtoList.subList(startIndex, endIndex) : Collections.emptyList();</span>
+
+<span class="nc" id="L274">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L275">        response.put(&quot;result&quot;, paginatedResult);</span>
+<span class="nc" id="L276">        response.put(&quot;currentPage&quot;, currentPage + 1);</span>
+<span class="nc" id="L277">        response.put(&quot;pageSize&quot;, pageSize);</span>
+<span class="nc" id="L278">        response.put(&quot;totalItems&quot;, totalItems);</span>
+<span class="nc" id="L279">        response.put(&quot;totalPages&quot;, totalPages);</span>
+
+<span class="nc" id="L281">        return response;</span>
+    }
+
+    private static Comparator&lt;FetchUserShiftAssignHistoryReturnDataDTO&gt; getFetchUserShiftAssignHistoryReturnDataDTOComparator(String sortBy, String sortDir) throws NoSuchFieldException {
+<span class="nc" id="L285">        Field sortField = FetchUserShiftAssignHistoryReturnDataDTO.class.getDeclaredField(sortBy);</span>
+<span class="nc" id="L286">        sortField.setAccessible(true);</span>
+
+<span class="nc" id="L288">        Comparator&lt;FetchUserShiftAssignHistoryReturnDataDTO&gt; comparator = Comparator.comparing(dto -&gt; {</span>
+            try {
+<span class="nc" id="L290">                Object val = sortField.get(dto);</span>
+<span class="nc" id="L291">                return (Comparable&lt;Object&gt;) val;</span>
+<span class="nc" id="L292">            } catch (IllegalAccessException e) {</span>
+<span class="nc" id="L293">                return null;</span>
+            }
+<span class="nc" id="L295">        }, Comparator.nullsLast(Comparator.naturalOrder()));</span>
+
+<span class="nc bnc" id="L297" title="All 2 branches missed.">        if (&quot;desc&quot;.equalsIgnoreCase(sortDir)) {</span>
+<span class="nc" id="L298">            comparator = comparator.reversed();</span>
+        }
+<span class="nc" id="L300">        return comparator;</span>
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; getShiftDetailsByUsername(Integer username) {
+<span class="nc" id="L304">        List&lt;Integer&gt; shiftIds = shiftEmployeeRepo.findByEmployeeId(username).stream()</span>
+<span class="nc" id="L305">                .map(ShiftEmployeeEntity::getShiftId)</span>
+<span class="nc" id="L306">                .filter(Objects::nonNull)</span>
+<span class="nc" id="L307">                .distinct()</span>
+<span class="nc" id="L308">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L310">        List&lt;Map&lt;String, Object&gt;&gt; results = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L311">        System.out.println(&quot;shiftIds : &quot; + shiftIds);</span>
+<span class="nc bnc" id="L312" title="All 2 branches missed.">        for (Integer shiftId : shiftIds) {</span>
+            try {
+<span class="nc" id="L314">                SupraShiftDetailEntity shiftDetail = supraShiftDetailRepo.findById(shiftId)</span>
+<span class="nc" id="L315">                        .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Shift Detail not found for ID: &quot; + shiftId));</span>
+
+<span class="nc" id="L317">                ShiftEmployeeEntity shiftEmployee = shiftEmployeeRepo.findByShiftId(shiftId)</span>
+<span class="nc" id="L318">                        .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Shift Employee not found for shift ID: &quot; + shiftId));</span>
+
+<span class="nc" id="L320">                Employee employee = employeeRepository.findById(username)</span>
+<span class="nc" id="L321">                        .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Employee not found for username: &quot; + username));</span>
+
+                // Get updated by name
+<span class="nc" id="L324">                Employee updatedByEmployee = null;</span>
+<span class="nc" id="L325">                String updatedByName = &quot;&quot;;</span>
+<span class="nc bnc" id="L326" title="All 2 branches missed.">                if (shiftEmployee.getLastUpdatedBy() != null) {</span>
+<span class="nc" id="L327">                    updatedByEmployee = employeeRepository.findById(Integer.valueOf(shiftEmployee.getLastUpdatedBy())).orElse(null);</span>
+<span class="nc bnc" id="L328" title="All 2 branches missed.">                    if (updatedByEmployee != null) {</span>
+<span class="nc" id="L329">                        updatedByName = updatedByEmployee.getFirstName() + &quot; &quot; + updatedByEmployee.getLastName();</span>
+                    }
+                }
+
+<span class="nc" id="L333">                SupraShiftEntity shift = supraShiftRepo.findById(shiftId)</span>
+<span class="nc" id="L334">                        .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Shift not found for ID: &quot; + shiftId));</span>
+
+<span class="nc" id="L336">                Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L337">                result.put(&quot;shiftEmpId&quot;, shiftEmployee.getShiftEmpId());</span>
+<span class="nc" id="L338">                result.put(&quot;shiftEndDate&quot;, shiftEmployee.getEndDate());</span>
+<span class="nc" id="L339">                result.put(&quot;shiftId&quot;, shiftEmployee.getShiftId());</span>
+<span class="nc" id="L340">                result.put(&quot;shift&quot;, shift.getName());</span>
+<span class="nc" id="L341">                result.put(&quot;shiftStartDate&quot;, shiftEmployee.getStartDate());</span>
+<span class="nc" id="L342">                result.put(&quot;isActive&quot;, shiftEmployee.getIsActive());</span>
+<span class="nc" id="L343">                result.put(&quot;lastUpdateDate&quot;, shiftEmployee.getLastUpdatedDate());</span>
+<span class="nc" id="L344">                result.put(&quot;fullName&quot;, employee.getFullName());</span>
+<span class="nc" id="L345">                result.put(&quot;userCode&quot;, employee.getEmployeeNumber());</span>
+<span class="nc" id="L346">                result.put(&quot;lastUpdatedBy&quot;, updatedByName);</span>
+<span class="nc" id="L347">                results.add(result);</span>
+<span class="nc" id="L348">            } catch (EntityNotFoundException ex) {</span>
+                // Log and skip the record
+<span class="nc" id="L350">                System.err.println(&quot;Skipping shift ID &quot; + shiftId + &quot;: &quot; + ex.getMessage());</span>
+<span class="nc" id="L351">            } catch (Exception ex) {</span>
+                // Handle any unexpected exception
+<span class="nc" id="L353">                System.err.println(&quot;Unexpected error for shift ID &quot; + shiftId + &quot;: &quot; + ex.getMessage());</span>
+<span class="nc" id="L354">            }</span>
+<span class="nc" id="L355">        }</span>
+
+<span class="nc" id="L357">        return results;</span>
+    }
+
+    public List&lt;Object[]&gt; getActiveShiftList(String username) {
+        try {
+<span class="nc" id="L362">            UserLoginDetail user = SessionHolder.getUserLoginDetail();</span>
+<span class="nc bnc" id="L363" title="All 4 branches missed.">            if (username == null || username.isEmpty()) {</span>
+<span class="nc" id="L364">                username = user.getUsername().toString();</span>
+<span class="nc" id="L365">                log.warn(&quot;Username not provided. Implement your logic to retrieve username.&quot;);</span>
+<span class="nc" id="L366">                return null;</span>
+            }
+<span class="nc" id="L368">            return supraShiftDetailRepo.findShiftDetails(username, sdf2.format(new Date()));</span>
+<span class="nc" id="L369">        } catch (Exception e) {</span>
+<span class="nc" id="L370">            e.printStackTrace();</span>
+<span class="nc" id="L371">            log.error(&quot;Error while fetching active shift list for &quot; + username + &quot;.&quot;, e);</span>
+<span class="nc" id="L372">            return null;</span>
+        }
+    }
+
+    public List&lt;Object[]&gt; getActiveShiftLists(List&lt;Object[]&gt; username) {
+        try {
+<span class="nc" id="L378">            UserLoginDetail user = SessionHolder.getUserLoginDetail();</span>
+<span class="nc bnc" id="L379" title="All 4 branches missed.">            if (username == null || username.isEmpty()) {</span>
+                //  username = user.getUsername().toString();
+<span class="nc" id="L381">                log.warn(&quot;Username not provided. Implement your logic to retrieve username.&quot;);</span>
+<span class="nc" id="L382">                return null;</span>
+            }
+<span class="nc" id="L384">            return supraShiftDetailRepo.findShiftDetail(username, sdf2.format(new Date()));</span>
+<span class="nc" id="L385">        } catch (Exception e) {</span>
+<span class="nc" id="L386">            e.printStackTrace();</span>
+<span class="nc" id="L387">            log.error(&quot;Error while fetching active shift list for &quot; + username + &quot;.&quot;, e);</span>
+<span class="nc" id="L388">            return null;</span>
+        }
+    }
+
+    public List&lt;Date&gt; getDaysBetweenDates(Date startdate, Date enddate) {
+<span class="nc" id="L393">        List&lt;Date&gt; dates = new ArrayList&lt;Date&gt;();</span>
+<span class="nc" id="L394">        Calendar calendar = new GregorianCalendar();</span>
+<span class="nc" id="L395">        calendar.setTime(startdate);</span>
+
+<span class="nc bnc" id="L397" title="All 2 branches missed.">        while (calendar.getTime().before(enddate)) {</span>
+<span class="nc" id="L398">            Date result = calendar.getTime();</span>
+<span class="nc" id="L399">            dates.add(result);</span>
+<span class="nc" id="L400">            calendar.add(Calendar.DATE, 1);</span>
+<span class="nc" id="L401">        }</span>
+<span class="nc" id="L402">        Calendar callast = new GregorianCalendar();</span>
+<span class="nc" id="L403">        callast.setTime(enddate);</span>
+<span class="nc" id="L404">        dates.add(callast.getTime());</span>
+<span class="nc" id="L405">        return dates;</span>
+    }
+
+    public List&lt;Object[]&gt; activeShifts() {
+<span class="nc" id="L409">        return supraShiftDetailRepo.activeShiftsBasedOnCurrDate(sdf2.format(new Date()));</span>
+    }
+
+    @Transactional
+    public SupraShiftDTO saveOrUpdateShift(SupraShiftDTO dto) throws JsonProcessingException {
+<span class="nc" id="L414">        UserLoginDetail user = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L415">        String username = String.valueOf(user.getUsername());</span>
+
+<span class="nc" id="L417">        validateDuplicateAccountName(dto.getShiftCode(), dto.getShiftId());</span>
+
+<span class="nc bnc" id="L419" title="All 2 branches missed.">        if (dto.getShiftId() != null) {</span>
+<span class="nc" id="L420">            List&lt;Map&lt;String, Object&gt;&gt; conflicts = validateShiftUpdateDoesNotCauseOverlap(dto);</span>
+<span class="nc bnc" id="L421" title="All 2 branches missed.">            if (!conflicts.isEmpty()) {</span>
+<span class="nc" id="L422">                throw new IllegalArgumentException(new ObjectMapper().writeValueAsString(conflicts));</span>
+            }
+        }
+
+        SupraShiftEntity entity;
+
+<span class="nc" id="L428">        Instant now = Instant.now();</span>
+
+<span class="nc bnc" id="L430" title="All 2 branches missed.">        if (dto.getShiftId() != null) {</span>
+<span class="nc" id="L431">            entity = supraShiftRepo.findById(dto.getShiftId())</span>
+<span class="nc" id="L432">                    .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Shift not found with ID: &quot; + dto.getShiftId()));</span>
+
+<span class="nc" id="L434">            entity.setCalendarId(dto.getCalendarId());</span>
+<span class="nc" id="L435">            entity.setShiftCode(dto.getShiftCode());</span>
+<span class="nc" id="L436">            entity.setColorCode(dto.getColorCode());</span>
+<span class="nc" id="L437">            entity.setName(dto.getName());</span>
+<span class="nc" id="L438">            entity.setDescription(dto.getDescription());</span>
+<span class="nc" id="L439">            entity.setGeneralStartTime(dto.getGeneralStartTime());</span>
+<span class="nc" id="L440">            entity.setGeneralEndTime(dto.getGeneralEndTime());</span>
+<span class="nc" id="L441">            entity.setDateChangeFlag(dto.getDateChangeFlag());</span>
+<span class="nc" id="L442">            entity.setIsActive(dto.getIsActive());</span>
+<span class="nc" id="L443">            entity.setStartDate(dto.getStartDate());</span>
+<span class="nc" id="L444">            entity.setEndDate(dto.getEndDate());</span>
+<span class="nc" id="L445">            entity.setIsDefault(dto.getIsDefault());</span>
+
+<span class="nc" id="L447">            entity.setLastUpdatedDate(now);</span>
+<span class="nc" id="L448">            entity.setLastUpdatedBy(username);</span>
+<span class="nc bnc" id="L449" title="All 2 branches missed.">            List&lt;SupraShiftDetailEntity&gt; existingDetails = entity.getShiftDetails() != null</span>
+<span class="nc" id="L450">                    ? entity.getShiftDetails()</span>
+<span class="nc" id="L451">                    : new ArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L453">            List&lt;SupraShiftDetailsDTO&gt; incomingDetails = dto.getShiftDetails();</span>
+<span class="nc" id="L454">            List&lt;SupraShiftDetailEntity&gt; updatedList = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L456" title="All 2 branches missed.">            for (SupraShiftDetailsDTO detailDTO : incomingDetails) {</span>
+<span class="nc bnc" id="L457" title="All 2 branches missed.">                if (detailDTO.getShiftDetailId() != null) {</span>
+<span class="nc" id="L458">                    SupraShiftDetailEntity existing = existingDetails.stream()</span>
+<span class="nc" id="L459">                            .filter(e -&gt; e.getShiftDetailId().equals(detailDTO.getShiftDetailId()))</span>
+<span class="nc" id="L460">                            .findFirst()</span>
+<span class="nc" id="L461">                            .orElseThrow(() -&gt; new RuntimeException(&quot;Detail not found: ID = &quot; + detailDTO.getShiftDetailId()));</span>
+
+<span class="nc" id="L463">                    existing.setIsActive(detailDTO.getIsActive());</span>
+<span class="nc" id="L464">                    existing.setStartDate(detailDTO.getStartDate());</span>
+<span class="nc" id="L465">                    existing.setEndDate(detailDTO.getEndDate());</span>
+<span class="nc" id="L466">                    existing.setDateChangeFlag(detailDTO.getDateChangeFlag());</span>
+<span class="nc" id="L467">                    existing.setShiftStartTime(detailDTO.getShiftStartTime());</span>
+<span class="nc" id="L468">                    existing.setShiftEndTime(detailDTO.getShiftEndTime());</span>
+<span class="nc" id="L469">                    existing.setMinStartHour(detailDTO.getMinStartHour());</span>
+<span class="nc" id="L470">                    existing.setMaxEndHour(detailDTO.getMaxEndHour());</span>
+<span class="nc" id="L471">                    existing.setWeekDay(detailDTO.getWeekDay());</span>
+<span class="nc" id="L472">                    existing.setWeeklyOff(detailDTO.getWeeklyOff());</span>
+<span class="nc" id="L473">                    existing.setSupraShift(entity);</span>
+
+<span class="nc" id="L475">                    updatedList.add(existing);</span>
+<span class="nc" id="L476">                } else {</span>
+<span class="nc" id="L477">                    SupraShiftDetailEntity newDetail = modelMapper.map(detailDTO, SupraShiftDetailEntity.class);</span>
+<span class="nc" id="L478">                    newDetail.setSupraShift(entity);</span>
+<span class="nc" id="L479">                    updatedList.add(newDetail);</span>
+                }
+<span class="nc" id="L481">            }</span>
+
+<span class="nc" id="L483">            List&lt;Integer&gt; incomingIds = incomingDetails.stream()</span>
+<span class="nc bnc" id="L484" title="All 2 branches missed.">                    .filter(d -&gt; d.getShiftDetailId() != null)</span>
+<span class="nc" id="L485">                    .map(SupraShiftDetailsDTO::getShiftDetailId)</span>
+<span class="nc" id="L486">                    .collect(Collectors.toList());</span>
+
+<span class="nc bnc" id="L488" title="All 2 branches missed.">            for (SupraShiftDetailEntity old : existingDetails) {</span>
+<span class="nc bnc" id="L489" title="All 4 branches missed.">                if (old.getShiftDetailId() != null &amp;&amp; !incomingIds.contains(old.getShiftDetailId())) {</span>
+<span class="nc" id="L490">                    updatedList.add(old);</span>
+                }
+<span class="nc" id="L492">            }</span>
+
+<span class="nc" id="L494">            entity.getShiftDetails().clear();</span>
+<span class="nc" id="L495">            entity.getShiftDetails().addAll(updatedList);</span>
+
+<span class="nc" id="L497">        } else {</span>
+<span class="nc" id="L498">            entity = new SupraShiftEntity();</span>
+<span class="nc" id="L499">            entity.setCalendarId(dto.getCalendarId());</span>
+<span class="nc" id="L500">            entity.setShiftCode(dto.getShiftCode());</span>
+<span class="nc" id="L501">            entity.setColorCode(dto.getColorCode());</span>
+<span class="nc" id="L502">            entity.setName(dto.getName());</span>
+<span class="nc" id="L503">            entity.setDescription(dto.getDescription());</span>
+<span class="nc" id="L504">            entity.setGeneralStartTime(dto.getGeneralStartTime());</span>
+<span class="nc" id="L505">            entity.setGeneralEndTime(dto.getGeneralEndTime());</span>
+<span class="nc" id="L506">            entity.setDateChangeFlag(dto.getDateChangeFlag());</span>
+<span class="nc" id="L507">            entity.setIsActive(dto.getIsActive());</span>
+<span class="nc" id="L508">            entity.setStartDate(dto.getStartDate());</span>
+<span class="nc" id="L509">            entity.setEndDate(dto.getEndDate());</span>
+<span class="nc" id="L510">            entity.setIsDefault(dto.getIsDefault());</span>
+
+            // Audit info for create
+<span class="nc" id="L513">            entity.setCreatedDate(now);</span>
+<span class="nc" id="L514">            entity.setCreatedBy(username);</span>
+<span class="nc" id="L515">            entity.setLastUpdatedDate(now);</span>
+<span class="nc" id="L516">            entity.setLastUpdatedBy(username);</span>
+
+            // Child list
+<span class="nc" id="L519">            List&lt;SupraShiftDetailEntity&gt; detailEntities = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L520" title="All 2 branches missed.">            if (dto.getShiftDetails() != null) {</span>
+<span class="nc bnc" id="L521" title="All 2 branches missed.">                for (SupraShiftDetailsDTO detailDTO : dto.getShiftDetails()) {</span>
+<span class="nc" id="L522">                    SupraShiftDetailEntity detail = modelMapper.map(detailDTO, SupraShiftDetailEntity.class);</span>
+<span class="nc" id="L523">                    detail.setSupraShift(entity);</span>
+<span class="nc" id="L524">                    detailEntities.add(detail);</span>
+<span class="nc" id="L525">                }</span>
+            }
+<span class="nc" id="L527">            entity.setShiftDetails(detailEntities);</span>
+        }
+
+<span class="nc" id="L530">        SupraShiftEntity savedEntity = supraShiftRepo.save(entity);</span>
+
+<span class="nc" id="L532">        return modelMapper.map(savedEntity, SupraShiftDTO.class);</span>
+    }
+
+    private void validateDuplicateAccountName(String shiftCode, Integer shiftId) {
+<span class="nc" id="L536">        String normalizedInput = shiftCode.trim().replaceAll(&quot;\\s+&quot;, &quot; &quot;).toLowerCase();</span>
+
+<span class="nc" id="L538">        List&lt;SupraShiftEntity&gt; accounts = supraShiftRepo.findAll();</span>
+
+<span class="nc bnc" id="L540" title="All 2 branches missed.">        for (SupraShiftEntity acc : accounts) {</span>
+<span class="nc bnc" id="L541" title="All 2 branches missed.">            if (acc.getShiftId().equals(shiftId)) {</span>
+<span class="nc" id="L542">                continue; // Skip the current record on update</span>
+            }
+<span class="nc" id="L544">            String dbName = acc.getShiftCode();</span>
+<span class="nc bnc" id="L545" title="All 2 branches missed.">            String normalizedDbName = dbName == null ? &quot;&quot; : dbName.trim().replaceAll(&quot;\\s+&quot;, &quot; &quot;).toLowerCase();</span>
+<span class="nc bnc" id="L546" title="All 2 branches missed.">            if (normalizedDbName.equals(normalizedInput)) {</span>
+<span class="nc" id="L547">                throw new IllegalArgumentException(&quot;Shift &quot; + shiftCode + &quot; already exists.&quot;);</span>
+            }
+<span class="nc" id="L549">        }</span>
+<span class="nc" id="L550">    }</span>
+
+    public SupraShiftDTO getShiftById(Integer shiftId) {
+        // Fetch shift entity by ID or throw exception
+<span class="nc" id="L554">        SupraShiftEntity entity = supraShiftRepo.findById(shiftId)</span>
+<span class="nc" id="L555">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Shift not found with ID: &quot; + shiftId));</span>
+<span class="nc" id="L556">        List&lt;SupraShiftDetailEntity&gt; shiftDetails = new ArrayList&lt;&gt;(entity.getShiftDetails());</span>
+<span class="nc" id="L557">        entity.setShiftDetails(shiftDetails);</span>
+        // Map parent entity to DTO
+<span class="nc" id="L559">        SupraShiftDTO dto = modelMapper.map(entity, SupraShiftDTO.class);</span>
+        // Map child entities (shift details) to DTOs
+<span class="nc" id="L561">        List&lt;SupraShiftDetailsDTO&gt; detailDTOs = entity.getShiftDetails()</span>
+<span class="nc" id="L562">                .stream()</span>
+<span class="nc" id="L563">                .map(detail -&gt; modelMapper.map(detail, SupraShiftDetailsDTO.class))</span>
+<span class="nc" id="L564">                .collect(Collectors.toList());</span>
+<span class="nc" id="L565">        dto.setShiftDetails(detailDTOs); // Set mapped child list</span>
+<span class="nc" id="L566">        return dto;</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Map&lt;String, Object&gt; getAllShifts(Pageable pageable, String searchField, String searchKeyword) {
+        Page&lt;SupraShiftEntity&gt; shifts;
+<span class="nc bnc" id="L572" title="All 8 branches missed.">        if (searchField != null &amp;&amp; searchKeyword != null &amp;&amp; !searchKeyword.trim().isEmpty() &amp;&amp; !searchField.trim().isEmpty()) {</span>
+<span class="nc" id="L573">            Specification&lt;SupraShiftEntity&gt; spec = buildShiftSpecification(searchField, searchKeyword);</span>
+<span class="nc" id="L574">            shifts = supraShiftRepo.findAll(spec, pageable);</span>
+<span class="nc" id="L575">        } else {</span>
+<span class="nc" id="L576">            shifts = supraShiftRepo.findAll(pageable);</span>
+        }
+<span class="nc" id="L578">        List&lt;SupraShiftDTO&gt; shiftDTOs = shifts.getContent().stream()</span>
+<span class="nc" id="L579">                .map(this::mapToShiftDTO)</span>
+<span class="nc" id="L580">                .collect(Collectors.toList());</span>
+<span class="nc" id="L581">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L582">        response.put(&quot;result&quot;, shiftDTOs);</span>
+<span class="nc" id="L583">        response.put(&quot;currentPage&quot;, pageable.getPageNumber() + 1);</span>
+<span class="nc" id="L584">        response.put(&quot;pageSize&quot;, pageable.getPageSize());</span>
+<span class="nc" id="L585">        response.put(&quot;totalItems&quot;, shifts.getTotalElements());</span>
+<span class="nc" id="L586">        response.put(&quot;totalPages&quot;, shifts.getTotalPages());</span>
+<span class="nc" id="L587">        return response;</span>
+    }
+
+    private Specification&lt;SupraShiftEntity&gt; buildShiftSpecification(String searchField, String searchKeyword) {
+<span class="nc" id="L591">        return (root, query, cb) -&gt; {</span>
+<span class="nc" id="L592">            Predicate predicate = null;</span>
+<span class="nc" id="L593">            String keyword = &quot;%&quot; + searchKeyword.toLowerCase() + &quot;%&quot;;</span>
+<span class="nc bnc" id="L594" title="All 7 branches missed.">            switch (searchField.toLowerCase()) {</span>
+                case &quot;name&quot;:
+<span class="nc" id="L596">                    predicate = cb.like(cb.lower(root.get(&quot;name&quot;)), keyword);</span>
+<span class="nc" id="L597">                    break;</span>
+                case &quot;shiftcode&quot;:
+<span class="nc" id="L599">                    predicate = cb.like(cb.lower(root.get(&quot;shiftCode&quot;)), keyword);</span>
+<span class="nc" id="L600">                    break;</span>
+                case &quot;description&quot;:
+<span class="nc" id="L602">                    predicate = cb.like(cb.lower(root.get(&quot;description&quot;)), keyword);</span>
+<span class="nc" id="L603">                    break;</span>
+                case &quot;isactive&quot;:
+<span class="nc" id="L605">                    predicate = cb.equal(cb.lower(root.get(&quot;isActive&quot;)), searchKeyword.toLowerCase());</span>
+<span class="nc" id="L606">                    break;</span>
+                case &quot;colorcode&quot;:
+<span class="nc" id="L608">                    predicate = cb.like(cb.lower(root.get(&quot;colorCode&quot;)), keyword);</span>
+<span class="nc" id="L609">                    break;</span>
+                case &quot;startdate&quot;:
+                case &quot;enddate&quot;:
+<span class="nc" id="L612">                    Expression&lt;String&gt; formattedDate = cb.function(&quot;DATE_FORMAT&quot;, String.class, root.get(searchField), cb.literal(&quot;%Y-%m-%d&quot;));</span>
+<span class="nc" id="L613">                    predicate = cb.like(cb.lower(formattedDate), keyword);</span>
+<span class="nc" id="L614">                    break;</span>
+                default:
+                    try {
+<span class="nc" id="L617">                        predicate = cb.like(cb.lower(root.get(searchField).as(String.class)), keyword);</span>
+<span class="nc" id="L618">                    } catch (IllegalArgumentException e) {</span>
+<span class="nc" id="L619">                        System.err.println(&quot;Invalid field: &quot; + searchField + &quot; — &quot; + e.getMessage());</span>
+<span class="nc" id="L620">                        predicate = cb.conjunction(); // no-op</span>
+<span class="nc" id="L621">                    }</span>
+            }
+<span class="nc" id="L623">            return predicate;</span>
+        };
+    }
+
+    private SupraShiftDTO mapToShiftDTO(SupraShiftEntity entity) {
+<span class="nc" id="L628">        return modelMapper.map(entity, SupraShiftDTO.class);</span>
+    }
+
+    public Map&lt;String, SupraShiftDetailEntity&gt; getWeekOffList(Integer empId, Date startDate, Date endDate) {
+<span class="nc" id="L632">        Set&lt;Integer&gt; shiftIds = shiftEmployeeRepo.findByEmployeeIdAndStartDateLessThanEqualAndEndDateGreaterThanEqualAndIsActive(empId, endDate, startDate, &quot;Y&quot;).stream()</span>
+<span class="nc" id="L633">                .map(ShiftEmployeeEntity::getShiftId).collect(Collectors.toSet());</span>
+<span class="nc" id="L634">        return supraShiftDetailRepo.findBySupraShift_ShiftIdIn(shiftIds)</span>
+<span class="nc" id="L635">                .stream().filter(x -&gt; &quot;A&quot;.equals(x.getWeeklyOff()))</span>
+<span class="nc" id="L636">                .collect(Collectors.toMap(</span>
+<span class="nc" id="L637">                        x -&gt; x.getWeekDay().toUpperCase(),</span>
+<span class="nc" id="L638">                        x -&gt; x,</span>
+<span class="nc" id="L639">                        (existing, replacement) -&gt; existing</span>
+                ));
+    }
+
+    public Map&lt;String, SupraShiftDetailEntity&gt; getShiftMap(Integer empId, Date startDate, Date endDate) {
+<span class="nc" id="L644">        Set&lt;Integer&gt; shiftIds = shiftEmployeeRepo.findByEmployeeIdAndStartDateLessThanEqualAndEndDateGreaterThanEqualAndIsActive(empId, endDate, startDate, &quot;Y&quot;).stream()</span>
+<span class="nc" id="L645">                .map(ShiftEmployeeEntity::getShiftId).collect(Collectors.toSet());</span>
+<span class="nc" id="L646">        return supraShiftDetailRepo.findBySupraShift_ShiftIdIn(shiftIds)</span>
+<span class="nc" id="L647">                .stream()</span>
+<span class="nc" id="L648">                .collect(Collectors.toMap(</span>
+<span class="nc" id="L649">                        x -&gt; x.getWeekDay().toUpperCase(),</span>
+<span class="nc" id="L650">                        x -&gt; x,</span>
+<span class="nc" id="L651">                        (existing, replacement) -&gt; replacement</span>
+                ));
+    }
+
+    public Map&lt;String, SupraShiftDetailEntity&gt; getDefaultWeekOffs() {
+<span class="nc" id="L656">        Set&lt;Integer&gt; shiftIds = supraShiftRepo.findAll().stream().filter(x -&gt; &quot;A&quot;.equals(x.getIsDefault()))</span>
+<span class="nc" id="L657">                .map(SupraShiftEntity::getShiftId).collect(Collectors.toSet());</span>
+<span class="nc" id="L658">        return supraShiftDetailRepo.findBySupraShift_ShiftIdIn(shiftIds)</span>
+<span class="nc" id="L659">                .stream().filter(x -&gt; &quot;A&quot;.equals(x.getWeeklyOff()))</span>
+<span class="nc" id="L660">                .collect(Collectors.toMap(</span>
+<span class="nc" id="L661">                        x -&gt; x.getWeekDay().toUpperCase(),</span>
+<span class="nc" id="L662">                        x -&gt; x,</span>
+<span class="nc" id="L663">                        (existing, replacement) -&gt; existing</span>
+                ));
+    }
+
+    public SupraShiftEntity getDefaultShift() {
+<span class="nc" id="L668">        return supraShiftRepo.findAll().stream().filter(s -&gt; &quot;A&quot;.equals(s.getIsDefault())).findFirst().orElse(null);</span>
+    }
+
+    private List&lt;Map&lt;String, Object&gt;&gt; validateShiftUpdateDoesNotCauseOverlap(SupraShiftDTO dto) {
+<span class="nc" id="L672">        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern(&quot;HH:mm&quot;);</span>
+<span class="nc" id="L673">        LocalTime newStart = LocalTime.parse(dto.getGeneralStartTime(), timeFormatter);</span>
+<span class="nc" id="L674">        LocalTime newEnd = LocalTime.parse(dto.getGeneralEndTime(), timeFormatter);</span>
+
+<span class="nc" id="L676">        List&lt;ShiftEmployeeEntity&gt; assignedEmployees = shiftEmployeeRepo.findByShiftIdAndIsActive(dto.getShiftId(), &quot;Y&quot;);</span>
+<span class="nc bnc" id="L677" title="All 2 branches missed.">        if (assignedEmployees.isEmpty()) {</span>
+<span class="nc" id="L678">            return Collections.emptyList();</span>
+        }
+
+<span class="nc" id="L681">        Set&lt;Integer&gt; employeeIds = assignedEmployees.stream().map(ShiftEmployeeEntity::getEmployeeId).collect(Collectors.toSet());</span>
+
+<span class="nc" id="L683">        List&lt;ShiftEmployeeEntity&gt; allAssignments = shiftEmployeeRepo.findByEmployeeIdInAndIsActive(employeeIds, &quot;Y&quot;);</span>
+
+<span class="nc" id="L685">        Set&lt;Integer&gt; shiftIds = allAssignments.stream().map(ShiftEmployeeEntity::getShiftId).collect(Collectors.toSet());</span>
+
+<span class="nc" id="L687">        Map&lt;Integer, SupraShiftEntity&gt; shiftMap = supraShiftRepo.findAllById(shiftIds).stream()</span>
+<span class="nc" id="L688">                .collect(Collectors.toMap(SupraShiftEntity::getShiftId, s -&gt; s));</span>
+
+<span class="nc" id="L690">        Map&lt;Integer, Employee&gt; employeeMap = employeeRepository.findAll().stream().collect(Collectors.toMap(Employee::getEmployeeId, emp -&gt; emp));</span>
+
+<span class="nc" id="L692">        return assignedEmployees.stream()</span>
+<span class="nc" id="L693">                .map(assignment -&gt; {</span>
+<span class="nc" id="L694">                    List&lt;ShiftEmployeeEntity&gt; otherAssignments = allAssignments.stream()</span>
+<span class="nc" id="L695">                            .filter(other -&gt; other.getEmployeeId().equals(assignment.getEmployeeId()))</span>
+<span class="nc bnc" id="L696" title="All 2 branches missed.">                            .filter(other -&gt; !other.getShiftId().equals(dto.getShiftId()))</span>
+<span class="nc" id="L697">                            .collect(Collectors.toList());</span>
+
+<span class="nc" id="L699">                    boolean hasConflict = otherAssignments.stream()</span>
+<span class="nc" id="L700">                            .map(other -&gt; shiftMap.get(other.getShiftId()))</span>
+<span class="nc" id="L701">                            .filter(Objects::nonNull)</span>
+<span class="nc" id="L702">                            .anyMatch(otherShift -&gt; {</span>
+<span class="nc" id="L703">                                LocalTime otherStart = LocalTime.parse(otherShift.getGeneralStartTime(), timeFormatter);</span>
+<span class="nc" id="L704">                                LocalTime otherEnd = LocalTime.parse(otherShift.getGeneralEndTime(), timeFormatter);</span>
+<span class="nc" id="L705">                                return isTimeOverlap(newStart, newEnd, otherStart, otherEnd);</span>
+                            });
+
+<span class="nc bnc" id="L708" title="All 2 branches missed.">                    if (hasConflict) {</span>
+<span class="nc" id="L709">                        Employee emp = employeeMap.getOrDefault(assignment.getEmployeeId(), null);</span>
+<span class="nc" id="L710">                        Map&lt;String, Object&gt; empInfo = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L711" title="All 2 branches missed.">                        empInfo.put(&quot;employeeId&quot;, emp != null ? emp.getEmployeeId() : null);</span>
+<span class="nc bnc" id="L712" title="All 2 branches missed.">                        empInfo.put(&quot;employeeNumber&quot;, emp != null ? emp.getEmployeeNumber() : &quot;Unknown&quot;);</span>
+<span class="nc bnc" id="L713" title="All 2 branches missed.">                        empInfo.put(&quot;employeeName&quot;, emp != null ? emp.getFullName() : &quot;Unknown&quot;);</span>
+<span class="nc" id="L714">                        return empInfo;</span>
+                    }
+<span class="nc" id="L716">                    return null;</span>
+                })
+<span class="nc" id="L718">                .filter(Objects::nonNull)</span>
+<span class="nc" id="L719">                .collect(Collectors.collectingAndThen(</span>
+<span class="nc" id="L720">                        Collectors.toMap(emp -&gt; (Integer) emp.get(&quot;employeeId&quot;), emp -&gt; emp, (e1, e2) -&gt; e1),</span>
+<span class="nc" id="L721">                        m -&gt; new ArrayList&lt;&gt;(m.values())</span>
+                ));
+    }
+
+    public List&lt;SupraShiftDTO&gt; getActiveShifts() {
+<span class="nc" id="L726">        List&lt;SupraShiftEntity&gt; shiftList = supraShiftRepo.findByIsActiveOrderByShiftCode(Constant.SHIFT_STATUS_ACTIVE);</span>
+<span class="nc" id="L727">        return shiftList.stream().map(s -&gt; modelMapper.map(s, SupraShiftDTO.class)).collect(Collectors.toList());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

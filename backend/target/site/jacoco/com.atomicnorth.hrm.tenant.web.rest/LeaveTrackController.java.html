@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LeaveTrackController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest</a> &gt; <span class="el_source">LeaveTrackController.java</span></div><h1>LeaveTrackController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest;
+
+import com.atomicnorth.hrm.tenant.service.LeaveTrackService;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Collections;
+import java.util.Map;
+
+@RestController
+@RequestMapping(&quot;/api/leave-track&quot;)
+<span class="nc" id="L23">public class LeaveTrackController {</span>
+
+<span class="nc" id="L25">    private final Logger log = LoggerFactory.getLogger(LeaveTrackController.class);</span>
+
+    @Autowired
+    private LeaveTrackService leaveTrackService;
+
+    @GetMapping(&quot;/getAllTrackLeaves&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getAllTrackLeaves(
+            @RequestParam(value = &quot;page&quot;, defaultValue = &quot;1&quot;) int page,
+            @RequestParam(value = &quot;size&quot;, defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;leaveRfNum&quot;) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;) String sortDir,
+            @RequestParam(value = &quot;searchKeyword&quot;, required = false) String searchKeyword,
+            @RequestParam(value = &quot;searchField&quot;, required = false) String searchField,
+            @RequestParam(value = &quot;empId&quot;, required = false) Integer empId
+    ) {
+<span class="nc" id="L40">        log.debug(&quot;REST request to get paginated track leave data&quot;);</span>
+        try {
+<span class="nc" id="L42">            Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc" id="L43">            Map&lt;String, Object&gt; leaveMap = leaveTrackService.getPaginatedTrackLeavesByEmpId(empId, pageable, searchField, searchKeyword);</span>
+
+<span class="nc" id="L45">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    leaveMap,
+                    true,
+                    &quot;TRACK-LEAVES-FETCHED&quot;,
+                    &quot;SUCCESS&quot;
+            );
+<span class="nc" id="L51">            return ResponseEntity.ok(response);</span>
+
+<span class="nc" id="L53">        } catch (Exception e) {</span>
+<span class="nc" id="L54">            log.error(&quot;Error fetching track leave data&quot;, e);</span>
+<span class="nc" id="L55">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;TRACK-LEAVES-FETCH-ERROR&quot;,
+                    &quot;FAILURE&quot;,
+<span class="nc" id="L60">                    Collections.singletonList(e.getMessage())</span>
+            );
+<span class="nc" id="L62">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DesignationDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.dto.designation</a> &gt; <span class="el_source">DesignationDTO.java</span></div><h1>DesignationDTO.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.dto.designation;
+
+import com.atomicnorth.hrm.tenant.service.dto.EmployeeDTO;
+import lombok.Data;
+import lombok.ToString;
+
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+import java.util.Date;
+import java.util.List;
+
+<span class="nc" id="L13">@ToString</span>
+<span class="nc bnc" id="L14" title="All 118 branches missed.">@Data</span>
+public class DesignationDTO {
+
+<span class="nc" id="L17">    private Integer id;</span>
+    @NotBlank(message = &quot;Designation name is mandatory&quot;)
+    @Size(max = 50, message = &quot;Designation name must not exceed 50 characters&quot;)
+<span class="nc" id="L20">    private String designationName;</span>
+    @Size(max = 150, message = &quot;Description must not    exceed 150 characters&quot;)
+<span class="nc" id="L22">    private String description;</span>
+<span class="nc" id="L23">    private Integer appraisalTemplateId;</span>
+    @NotNull(message = &quot;Start date is mandatory&quot;)
+<span class="nc" id="L25">    private Date startDate;</span>
+<span class="nc" id="L26">    private Date endDate;</span>
+    @NotBlank(message = &quot;Status is mandatory&quot;)
+    @Size(max = 50, message = &quot;Status must not exceed 50 characters&quot;)
+<span class="nc" id="L29">    private String status;</span>
+<span class="nc" id="L30">    private String createdBy;</span>
+<span class="nc" id="L31">    private Date createdDate;</span>
+<span class="nc" id="L32">    private String lastModifiedBy;</span>
+<span class="nc" id="L33">    private Date lastModifiedDate;</span>
+<span class="nc" id="L34">    List&lt;DesignationSkillDTO&gt; skills;</span>
+
+<span class="nc" id="L36">    public DesignationDTO(Integer id, String designationName) {</span>
+<span class="nc" id="L37">        this.id = id;</span>
+<span class="nc" id="L38">        this.designationName= designationName;</span>
+<span class="nc" id="L39">    }</span>
+
+<span class="nc" id="L41">    public DesignationDTO() {</span>
+
+<span class="nc" id="L43">    }</span>
+<span class="nc" id="L44">    private String isActive;</span>
+<span class="nc" id="L45">    private List&lt;EmployeeDTO&gt; employees;</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

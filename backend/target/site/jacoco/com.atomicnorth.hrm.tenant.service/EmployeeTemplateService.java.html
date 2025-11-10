@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmployeeTemplateService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service</a> &gt; <span class="el_source">EmployeeTemplateService.java</span></div><h1>EmployeeTemplateService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service;
+
+import com.atomicnorth.hrm.tenant.service.designation.DesignationSkillService;
+import com.atomicnorth.hrm.tenant.service.division.UserDivisionMasterService;
+import com.atomicnorth.hrm.tenant.service.dto.DepartmentIdNameDTO;
+import com.atomicnorth.hrm.tenant.service.dto.employement.EmployeeBasicDetails;
+import com.atomicnorth.hrm.tenant.service.lookup.LookupTypeConfigurationService;
+import org.apache.poi.ss.usermodel.BorderStyle;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.DataValidation;
+import org.apache.poi.ss.usermodel.DataValidationConstraint;
+import org.apache.poi.ss.usermodel.DataValidationHelper;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
+import org.apache.poi.ss.usermodel.Name;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.util.CellRangeAddressList;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.stereotype.Service;
+
+import java.io.ByteArrayOutputStream;
+import java.util.List;
+import java.util.Map;
+
+@Service
+public class EmployeeTemplateService {
+
+    private final UserDivisionMasterService divisionService;
+    private final DepartmentService departmentService;
+    private final EmployeeService employeeService;
+    private final DesignationSkillService designationService;
+    private final LookupTypeConfigurationService configurationService;
+
+<span class="nc" id="L37">    public EmployeeTemplateService(UserDivisionMasterService divisionService, DepartmentService departmentService, EmployeeService employeeService, DesignationSkillService designationService, LookupTypeConfigurationService configurationService) {</span>
+<span class="nc" id="L38">        this.divisionService = divisionService;</span>
+<span class="nc" id="L39">        this.departmentService = departmentService;</span>
+<span class="nc" id="L40">        this.employeeService = employeeService;</span>
+<span class="nc" id="L41">        this.designationService = designationService;</span>
+<span class="nc" id="L42">        this.configurationService = configurationService;</span>
+<span class="nc" id="L43">    }</span>
+
+    public byte[] generateTemplate() throws Exception {
+<span class="nc" id="L46">        Workbook workbook = new XSSFWorkbook();</span>
+
+        // Employee Upload sheet
+<span class="nc" id="L49">        Sheet employeeSheet = workbook.createSheet(&quot;Employee Upload&quot;);</span>
+
+        // Reference Data sheets
+<span class="nc" id="L52">        Sheet refEmployeeType = workbook.createSheet(&quot;ReferenceEmployeeTypeData&quot;);</span>
+<span class="nc" id="L53">        Sheet refDivisionSheet = workbook.createSheet(&quot;ReferenceDivisionData&quot;);</span>
+<span class="nc" id="L54">        Sheet refDepartmentSheet = workbook.createSheet(&quot;ReferenceDepartmentData&quot;);</span>
+<span class="nc" id="L55">        Sheet refDesignationSheet = workbook.createSheet(&quot;ReferenceDesignationData&quot;);</span>
+<span class="nc" id="L56">        Sheet refManagerSheet = workbook.createSheet(&quot;ReferenceManagerEmployeeData&quot;);</span>
+<span class="nc" id="L57">        Sheet refHrSheet = workbook.createSheet(&quot;ReferenceHrEmployeeData&quot;);</span>
+
+        // ---------------- Employee Type ----------------
+<span class="nc" id="L60">        List&lt;Map&lt;String, Object&gt;&gt; employeeTypes = configurationService.callGetLookUpTypeCodes(&quot;EMPLOYMENT_TYPE_LIST&quot;);</span>
+<span class="nc" id="L61">        int rowIndexType = 0;</span>
+<span class="nc bnc" id="L62" title="All 2 branches missed.">        for (Map&lt;String, Object&gt; employeeType : employeeTypes) {</span>
+<span class="nc" id="L63">            Row row = refEmployeeType.createRow(rowIndexType++);</span>
+<span class="nc" id="L64">            row.createCell(0).setCellValue((String) employeeType.get(&quot;LOOKUP_CODE&quot;));</span>
+<span class="nc" id="L65">            row.createCell(1).setCellValue((String) employeeType.get(&quot;MEANING&quot;));</span>
+<span class="nc" id="L66">        }</span>
+
+        // ---------------- Division ----------------
+<span class="nc" id="L69">        List&lt;Map&lt;String, Object&gt;&gt; divisionDetails = divisionService.findDivisionIdAndName();</span>
+<span class="nc" id="L70">        int rowIndex = 0;</span>
+<span class="nc bnc" id="L71" title="All 2 branches missed.">        for (Map&lt;String, Object&gt; division : divisionDetails) {</span>
+<span class="nc" id="L72">            Row row = refDivisionSheet.createRow(rowIndex++);</span>
+<span class="nc" id="L73">            row.createCell(0).setCellValue((Long) division.get(&quot;divisionId&quot;));</span>
+<span class="nc" id="L74">            row.createCell(1).setCellValue((String) division.get(&quot;name&quot;));</span>
+<span class="nc" id="L75">        }</span>
+
+        // ---------------- Department ----------------
+<span class="nc" id="L78">        List&lt;DepartmentIdNameDTO&gt; departmentDetails = departmentService.getAllDname();</span>
+<span class="nc" id="L79">        int rowIndexDept = 0;</span>
+<span class="nc bnc" id="L80" title="All 2 branches missed.">        for (DepartmentIdNameDTO department : departmentDetails) {</span>
+<span class="nc" id="L81">            Row row = refDepartmentSheet.createRow(rowIndexDept++);</span>
+<span class="nc" id="L82">            row.createCell(0).setCellValue(department.getId());</span>
+<span class="nc" id="L83">            row.createCell(1).setCellValue(department.getDname());</span>
+<span class="nc" id="L84">        }</span>
+
+        // ---------------- Designation ----------------
+<span class="nc" id="L87">        List&lt;Map&lt;String, Object&gt;&gt; designationDetails = designationService.findDesignationNameAndId();</span>
+<span class="nc" id="L88">        int rowIndexDes = 0;</span>
+<span class="nc bnc" id="L89" title="All 2 branches missed.">        for (Map&lt;String, Object&gt; designation : designationDetails) {</span>
+<span class="nc" id="L90">            Row row = refDesignationSheet.createRow(rowIndexDes++);</span>
+<span class="nc" id="L91">            row.createCell(0).setCellValue((Integer) designation.get(&quot;id&quot;));</span>
+<span class="nc" id="L92">            row.createCell(1).setCellValue((String) designation.get(&quot;designationName&quot;));</span>
+<span class="nc" id="L93">        }</span>
+
+        // ---------------- Manager ----------------
+<span class="nc" id="L96">        List&lt;EmployeeBasicDetails&gt; managerDetails = employeeService.getAllManager(null);</span>
+<span class="nc" id="L97">        int rowIndexMgr = 0;</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">        for (EmployeeBasicDetails employee : managerDetails) {</span>
+<span class="nc" id="L99">            Row row = refManagerSheet.createRow(rowIndexMgr++);</span>
+<span class="nc" id="L100">            row.createCell(0).setCellValue(employee.getEmployeeId());</span>
+<span class="nc" id="L101">            row.createCell(1).setCellValue(employee.getFullName());</span>
+<span class="nc" id="L102">        }</span>
+
+        // ---------------- HR ----------------
+<span class="nc" id="L105">        List&lt;EmployeeBasicDetails&gt; hrDetails = employeeService.getAllManager(5);</span>
+<span class="nc" id="L106">        int rowIndexHr = 0;</span>
+<span class="nc bnc" id="L107" title="All 2 branches missed.">        for (EmployeeBasicDetails employee : hrDetails) {</span>
+<span class="nc" id="L108">            Row row = refHrSheet.createRow(rowIndexHr++);</span>
+<span class="nc" id="L109">            row.createCell(0).setCellValue(employee.getEmployeeId());</span>
+<span class="nc" id="L110">            row.createCell(1).setCellValue(employee.getFullName());</span>
+<span class="nc" id="L111">        }</span>
+
+        // ---------------- Named Ranges ----------------
+<span class="nc bnc" id="L114" title="All 2 branches missed.">        if (!employeeTypes.isEmpty()) {</span>
+<span class="nc" id="L115">            Name typeName = workbook.createName();</span>
+<span class="nc" id="L116">            typeName.setNameName(&quot;EmployeeTypeList&quot;);</span>
+<span class="nc" id="L117">            typeName.setRefersToFormula(&quot;'ReferenceEmployeeTypeData'!$B$1:$B$&quot; + employeeTypes.size());</span>
+        }
+
+<span class="nc bnc" id="L120" title="All 2 branches missed.">        if (!divisionDetails.isEmpty()) {</span>
+<span class="nc" id="L121">            Name divisionName = workbook.createName();</span>
+<span class="nc" id="L122">            divisionName.setNameName(&quot;DivisionList&quot;);</span>
+<span class="nc" id="L123">            divisionName.setRefersToFormula(&quot;'ReferenceDivisionData'!$B$1:$B$&quot; + divisionDetails.size());</span>
+        }
+
+<span class="nc bnc" id="L126" title="All 2 branches missed.">        if (!departmentDetails.isEmpty()) {</span>
+<span class="nc" id="L127">            Name departmentName = workbook.createName();</span>
+<span class="nc" id="L128">            departmentName.setNameName(&quot;DepartmentList&quot;);</span>
+<span class="nc" id="L129">            departmentName.setRefersToFormula(&quot;'ReferenceDepartmentData'!$B$1:$B$&quot; + departmentDetails.size());</span>
+        }
+
+<span class="nc bnc" id="L132" title="All 2 branches missed.">        if (!departmentDetails.isEmpty()) {</span>
+<span class="nc" id="L133">            Name designationName = workbook.createName();</span>
+<span class="nc" id="L134">            designationName.setNameName(&quot;DesignationList&quot;);</span>
+<span class="nc" id="L135">            designationName.setRefersToFormula(&quot;'ReferenceDesignationData'!$B$1:$B$&quot; + designationDetails.size());</span>
+        }
+
+<span class="nc bnc" id="L138" title="All 2 branches missed.">        if (!managerDetails.isEmpty()) {</span>
+<span class="nc" id="L139">            Name managerName = workbook.createName();</span>
+<span class="nc" id="L140">            managerName.setNameName(&quot;ManagerList&quot;);</span>
+<span class="nc" id="L141">            managerName.setRefersToFormula(&quot;'ReferenceManagerEmployeeData'!$B$1:$B$&quot; + managerDetails.size());</span>
+        }
+
+<span class="nc bnc" id="L144" title="All 2 branches missed.">        if (!hrDetails.isEmpty()) {</span>
+<span class="nc" id="L145">            Name hrName = workbook.createName();</span>
+<span class="nc" id="L146">            hrName.setNameName(&quot;HrList&quot;);</span>
+<span class="nc" id="L147">            hrName.setRefersToFormula(&quot;'ReferenceHrEmployeeData'!$B$1:$B$&quot; + hrDetails.size());</span>
+        }
+
+        // ---------------- Header ----------------
+<span class="nc" id="L151">        Row header = employeeSheet.createRow(0);</span>
+<span class="nc" id="L152">        CellStyle headerStyle = createBoldDataStyle(employeeSheet.getWorkbook());</span>
+
+<span class="nc" id="L154">        String[] headers = {</span>
+                &quot;First Name&quot;, &quot;Middle Name&quot;, &quot;Last Name&quot;, &quot;Display Name&quot;, &quot;Mobile no&quot;,
+                &quot;Personal Email&quot;, &quot;Work Email&quot;, &quot;Employee Type&quot;, &quot;Division&quot;,
+                &quot;Department&quot;, &quot;Designation&quot;, &quot;Reporting Manager&quot;, &quot;Reporting HR&quot;
+        };
+
+<span class="nc bnc" id="L160" title="All 2 branches missed.">        for (int i = 0; i &lt; headers.length; i++) {</span>
+<span class="nc" id="L161">            Cell cell = header.createCell(i);</span>
+<span class="nc" id="L162">            cell.setCellValue(headers[i]);</span>
+<span class="nc" id="L163">            cell.setCellStyle(headerStyle);</span>
+<span class="nc" id="L164">            employeeSheet.autoSizeColumn(i);</span>
+        }
+
+        // ---------------- Dropdown &amp; Field Validations ----------------
+<span class="nc" id="L168">        DataValidationHelper dvHelper = employeeSheet.getDataValidationHelper();</span>
+
+        // Division (col 7 / H)
+<span class="nc" id="L171">        CellRangeAddressList typeRange = new CellRangeAddressList(1, 5000, 7, 7);</span>
+<span class="nc" id="L172">        employeeSheet.addValidationData(dvHelper.createValidation(</span>
+<span class="nc" id="L173">                dvHelper.createFormulaListConstraint(&quot;EmployeeTypeList&quot;), typeRange));</span>
+
+        // Division (col 8 / I)
+<span class="nc" id="L176">        CellRangeAddressList divisionRange = new CellRangeAddressList(1, 5000, 8, 8);</span>
+<span class="nc" id="L177">        employeeSheet.addValidationData(dvHelper.createValidation(</span>
+<span class="nc" id="L178">                dvHelper.createFormulaListConstraint(&quot;DivisionList&quot;), divisionRange));</span>
+
+        // Department (col 9 / J)
+<span class="nc" id="L181">        CellRangeAddressList deptRange = new CellRangeAddressList(1, 5000, 9, 9);</span>
+<span class="nc" id="L182">        employeeSheet.addValidationData(dvHelper.createValidation(</span>
+<span class="nc" id="L183">                dvHelper.createFormulaListConstraint(&quot;DepartmentList&quot;), deptRange));</span>
+
+        // Department (col 10 / K)
+<span class="nc" id="L186">        CellRangeAddressList desiRange = new CellRangeAddressList(1, 5000, 10, 10);</span>
+<span class="nc" id="L187">        employeeSheet.addValidationData(dvHelper.createValidation(</span>
+<span class="nc" id="L188">                dvHelper.createFormulaListConstraint(&quot;DesignationList&quot;), desiRange));</span>
+
+        // Manager (col 11 / L)
+<span class="nc" id="L191">        CellRangeAddressList mgrRange = new CellRangeAddressList(1, 5000, 11, 11);</span>
+<span class="nc" id="L192">        employeeSheet.addValidationData(dvHelper.createValidation(</span>
+<span class="nc" id="L193">                dvHelper.createFormulaListConstraint(&quot;ManagerList&quot;), mgrRange));</span>
+
+        // HR (col 12 / M)
+<span class="nc" id="L196">        CellRangeAddressList hrRange = new CellRangeAddressList(1, 5000, 12, 12);</span>
+<span class="nc" id="L197">        employeeSheet.addValidationData(dvHelper.createValidation(</span>
+<span class="nc" id="L198">                dvHelper.createFormulaListConstraint(&quot;HrList&quot;), hrRange));</span>
+
+        // Mobile number validation (col 4 / E) - exactly 10 digits
+<span class="nc" id="L201">        DataValidationConstraint mobileConstraint = dvHelper.createCustomConstraint(&quot;AND(ISNUMBER(INDIRECT(\&quot;RC\&quot;,FALSE)),LEN(INDIRECT(\&quot;RC\&quot;,FALSE))=10)&quot;);</span>
+<span class="nc" id="L202">        CellRangeAddressList mobileRange = new CellRangeAddressList(1, 5000, 4, 4);</span>
+<span class="nc" id="L203">        DataValidation mobileValidation = dvHelper.createValidation(mobileConstraint, mobileRange);</span>
+<span class="nc" id="L204">        mobileValidation.setShowErrorBox(true);</span>
+<span class="nc" id="L205">        mobileValidation.createErrorBox(&quot;Invalid Mobile&quot;, &quot;Please enter exactly 10 digits.&quot;);</span>
+<span class="nc" id="L206">        employeeSheet.addValidationData(mobileValidation);</span>
+
+
+        // Personal Email validation (col 5 / F)
+<span class="nc" id="L210">        DataValidationConstraint emailConstraint = dvHelper.createCustomConstraint(&quot;AND(ISNUMBER(SEARCH(\&quot;@\&quot;,INDIRECT(\&quot;RC\&quot;,FALSE))),ISNUMBER(SEARCH(\&quot;.\&quot;,INDIRECT(\&quot;RC\&quot;,FALSE))))&quot;);</span>
+<span class="nc" id="L211">        CellRangeAddressList emailRange = new CellRangeAddressList(1, 5000, 5, 5); // column F (Personal Email)</span>
+<span class="nc" id="L212">        DataValidation emailValidation = dvHelper.createValidation(emailConstraint, emailRange);</span>
+<span class="nc" id="L213">        emailValidation.setShowErrorBox(true);</span>
+<span class="nc" id="L214">        emailValidation.createErrorBox(&quot;Invalid Email&quot;, &quot;Please enter a valid email (must contain @ and .)&quot;);</span>
+<span class="nc" id="L215">        employeeSheet.addValidationData(emailValidation);</span>
+
+        // For Work Email (Column G)
+<span class="nc" id="L218">        DataValidationConstraint workEmailConstraint = dvHelper.createCustomConstraint(&quot;AND(ISNUMBER(SEARCH(\&quot;@\&quot;,INDIRECT(\&quot;RC\&quot;,FALSE))),ISNUMBER(SEARCH(\&quot;.\&quot;,INDIRECT(\&quot;RC\&quot;,FALSE))))&quot;);</span>
+<span class="nc" id="L219">        CellRangeAddressList workEmailRange = new CellRangeAddressList(1, 5000, 6, 6); // column G</span>
+<span class="nc" id="L220">        DataValidation workEmailValidation = dvHelper.createValidation(workEmailConstraint, workEmailRange);</span>
+<span class="nc" id="L221">        workEmailValidation.setShowErrorBox(true);</span>
+<span class="nc" id="L222">        workEmailValidation.createErrorBox(&quot;Invalid Work Email&quot;, &quot;Please enter a valid work email (must contain @ and .)&quot;);</span>
+<span class="nc" id="L223">        employeeSheet.addValidationData(workEmailValidation);</span>
+
+<span class="nc bnc" id="L225" title="All 2 branches missed.">        for (int col = 0; col &lt; headers.length; col++) {</span>
+<span class="nc" id="L226">            char columnLetter = (char) ('A' + col);</span>
+<span class="nc" id="L227">            String formula = &quot;LEN(TRIM(&quot; + columnLetter + &quot;1))&gt;0&quot;;</span>
+
+<span class="nc" id="L229">            CellRangeAddressList mandatoryRange = new CellRangeAddressList(1, 5000, col, col);</span>
+<span class="nc" id="L230">            DataValidationConstraint notBlankConstraint = dvHelper.createCustomConstraint(formula);</span>
+<span class="nc" id="L231">            DataValidation validation = dvHelper.createValidation(notBlankConstraint, mandatoryRange);</span>
+<span class="nc" id="L232">            validation.setEmptyCellAllowed(false);</span>
+<span class="nc" id="L233">            validation.setShowErrorBox(true);</span>
+<span class="nc" id="L234">            validation.createErrorBox(&quot;Required Field&quot;, headers[col] + &quot; is mandatory.&quot;);</span>
+<span class="nc" id="L235">            employeeSheet.addValidationData(validation);</span>
+        }
+
+
+        // ---------------- Hide Reference Sheets ----------------
+<span class="nc" id="L240">        workbook.setSheetHidden(workbook.getSheetIndex(refEmployeeType), true);</span>
+<span class="nc" id="L241">        workbook.setSheetHidden(workbook.getSheetIndex(refDivisionSheet), true);</span>
+<span class="nc" id="L242">        workbook.setSheetHidden(workbook.getSheetIndex(refDepartmentSheet), true);</span>
+<span class="nc" id="L243">        workbook.setSheetHidden(workbook.getSheetIndex(refDesignationSheet), true);</span>
+<span class="nc" id="L244">        workbook.setSheetHidden(workbook.getSheetIndex(refManagerSheet), true);</span>
+<span class="nc" id="L245">        workbook.setSheetHidden(workbook.getSheetIndex(refHrSheet), true);</span>
+
+        // ---------------- Export ----------------
+<span class="nc" id="L248">        int maxColumns = 13;</span>
+<span class="nc bnc" id="L249" title="All 2 branches missed.">        for (int i = 0; i &lt; maxColumns; i++) {</span>
+<span class="nc" id="L250">            employeeSheet.autoSizeColumn(i);</span>
+        }
+<span class="nc" id="L252">        ByteArrayOutputStream out = new ByteArrayOutputStream();</span>
+<span class="nc" id="L253">        workbook.write(out);</span>
+<span class="nc" id="L254">        workbook.close();</span>
+
+<span class="nc" id="L256">        return out.toByteArray();</span>
+    }
+
+    private CellStyle createBoldDataStyle(Workbook workbook) {
+<span class="nc" id="L260">        Font boldFont = workbook.createFont();</span>
+<span class="nc" id="L261">        boldFont.setBold(true);</span>
+
+<span class="nc" id="L263">        CellStyle boldStyle = workbook.createCellStyle();</span>
+<span class="nc" id="L264">        boldStyle.setFont(boldFont);</span>
+<span class="nc" id="L265">        boldStyle.setBorderBottom(BorderStyle.THIN);</span>
+<span class="nc" id="L266">        boldStyle.setBorderTop(BorderStyle.THIN);</span>
+<span class="nc" id="L267">        boldStyle.setBorderLeft(BorderStyle.THIN);</span>
+<span class="nc" id="L268">        boldStyle.setBorderRight(BorderStyle.THIN);</span>
+<span class="nc" id="L269">        boldStyle.setAlignment(HorizontalAlignment.CENTER);</span>
+<span class="nc" id="L270">        return boldStyle;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

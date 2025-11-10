@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SetUpCompanyController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.company</a> &gt; <span class="el_source">SetUpCompanyController.java</span></div><h1>SetUpCompanyController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.company;
+
+
+import com.atomicnorth.hrm.tenant.service.company.SetUpCompanyService;
+import com.atomicnorth.hrm.tenant.service.dto.company.SetUpCompanyDTOForRequest;
+import com.atomicnorth.hrm.tenant.service.dto.company.SetUpCompanyDTOForResponse;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.ConstraintViolationException;
+import javax.validation.Valid;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping(&quot;/api/companies&quot;)
+<span class="nc" id="L24">public class SetUpCompanyController {</span>
+
+    @Autowired
+    private SetUpCompanyService setUpCompanyService;
+
+    @PostMapping(&quot;/saveOrUpdate&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;SetUpCompanyDTOForResponse&gt;&gt; saveCompany(@Valid @RequestBody SetUpCompanyDTOForRequest request) {
+        try {
+<span class="nc" id="L32">            SetUpCompanyDTOForResponse responseCompany = setUpCompanyService.saveCompany(request);</span>
+
+<span class="nc" id="L34">            ApiResponse&lt;SetUpCompanyDTOForResponse&gt; response = new ApiResponse&lt;&gt;(</span>
+                    responseCompany, true, &quot;COMPANY-CREATED-SUCCESS&quot;, &quot;Information&quot;
+            );
+<span class="nc" id="L37">            return ResponseEntity.status(HttpStatus.CREATED).body(response);</span>
+
+<span class="nc" id="L39">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L40">            ApiResponse&lt;SetUpCompanyDTOForResponse&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+<span class="nc" id="L41">                    null, false, &quot;COMPANY-DUPLICATE-FAILURE&quot;, &quot;Warning&quot;, List.of(ex.getMessage())</span>
+            );
+<span class="nc" id="L43">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+
+<span class="nc" id="L45">        } catch (Exception ex) {</span>
+<span class="nc" id="L46">            ApiResponse&lt;SetUpCompanyDTOForResponse&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+<span class="nc" id="L47">                    null, false, &quot;COMPANY-CREATED-FAILURE&quot;, &quot;Error&quot;, List.of(ex.getMessage(), &quot;Please contact support.&quot;)</span>
+            );
+<span class="nc" id="L49">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getAllCompaniesData&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getAllCompaniesData(
+            @RequestParam(defaultValue = &quot;0&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(defaultValue = &quot;companyId&quot;,required = false) String sortColumn,
+            @RequestParam(defaultValue = &quot;desc&quot;,required = false) String sortDirection,
+            @RequestParam(required = false) String searchColumn,
+            @RequestParam(required = false) String searchValue
+    ) {
+        try {
+<span class="nc" id="L63">            Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.fromString(sortDirection), sortColumn);</span>
+<span class="nc" id="L64">            Map&lt;String, Object&gt; companies = setUpCompanyService.getAllCompanies(pageable, searchColumn, searchValue, sortColumn, sortDirection);</span>
+<span class="nc" id="L65">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    companies, true, &quot;COMPANIES-RETRIEVED-SUCCESS&quot;, &quot;Information&quot;
+            );
+
+<span class="nc" id="L69">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+
+<span class="nc" id="L71">        } catch (Exception ex) {</span>
+<span class="nc" id="L72">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+<span class="nc" id="L73">                    null, false, &quot;COMPANIES-RETRIEVED-FAILURE&quot;, &quot;Error&quot;, List.of(ex.getMessage())</span>
+            );
+<span class="nc" id="L75">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;SetUpCompanyDTOForResponse&gt;&gt; getCompanyById(@PathVariable(&quot;id&quot;) Integer id) {
+        try {
+<span class="nc" id="L82">            SetUpCompanyDTOForResponse companiesById = setUpCompanyService.getCompaniesById(id);</span>
+<span class="nc" id="L83">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(companiesById, true, &quot;SETUP_COMPANY_LIST_FETCHED_SUCCESS&quot;, &quot;SUCCESS&quot;),
+                    HttpStatus.OK);
+<span class="nc" id="L86">        } catch (Exception e) {</span>
+<span class="nc" id="L87">            return ResponseEntity.status(HttpStatus.OK)</span>
+<span class="nc" id="L88">                    .body(new ApiResponse&lt;&gt;(</span>
+                            null,
+                            false,
+                            &quot;SETUP_COMPANY_LIST_FETCHED_FAILURE&quot;,
+                            &quot;ERROR&quot;,
+<span class="nc" id="L93">                            Collections.singletonList(e.getMessage())</span>
+                    ));
+        }
+    }
+
+    @GetMapping(&quot;/companyDropdownList&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; companyDropdownList() {
+        try {
+<span class="nc" id="L101">            List&lt;Map&lt;String, Object&gt;&gt; companyDropdownList = setUpCompanyService.companyDropdownList();</span>
+<span class="nc" id="L102">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(companyDropdownList, true, &quot;COMPANY_LIST_FETCHED_SUCCESS&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L103">        } catch (Exception e) {</span>
+<span class="nc" id="L104">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;COMPANY_LIST_FETCHED_ERROR&quot;, &quot;ERROR&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

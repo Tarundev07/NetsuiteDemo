@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>KeycloakUserController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.keycloak.user</a> &gt; <span class="el_source">KeycloakUserController.java</span></div><h1>KeycloakUserController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.keycloak.user;
+
+
+import com.atomicnorth.hrm.tenant.service.dto.keycloak.user.KeycloakUserRequestDTO;
+import com.atomicnorth.hrm.tenant.service.dto.keycloak.user.KeycloakUserResponseDTO;
+import com.atomicnorth.hrm.tenant.service.keycloak.user.KeycloakUserService;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Mono;
+
+import javax.validation.Valid;
+import java.util.List;
+
+@RestController
+@RequestMapping(&quot;/api/KeycloakUser&quot;)
+public class KeycloakUserController {
+
+    private final KeycloakUserService keycloakUserService;
+
+
+<span class="nc" id="L26">    public KeycloakUserController(KeycloakUserService keycloakUserService) {</span>
+<span class="nc" id="L27">        this.keycloakUserService = keycloakUserService;</span>
+<span class="nc" id="L28">    }</span>
+
+    @GetMapping(&quot;/users/{realm}&quot;)
+    public ResponseEntity&lt;Mono&lt;ApiResponse&lt;List&lt;KeycloakUserResponseDTO&gt;&gt;&gt;&gt; getUsers(
+            @PathVariable String realm,
+            @RequestHeader(&quot;token&quot;) String token) {
+        try {
+            // Removing &quot;Bearer &quot; prefix from token
+<span class="nc" id="L36">            String accessToken = token.replace(&quot;Bearer &quot;, &quot;&quot;);</span>
+
+<span class="nc" id="L38">            Mono&lt;List&lt;KeycloakUserResponseDTO&gt;&gt; users = keycloakUserService.getUsers(realm, accessToken);</span>
+
+<span class="nc" id="L40">            ApiResponse&lt;List&lt;KeycloakUserResponseDTO&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+<span class="nc" id="L41">                    users.block(),</span>
+                    true,
+                    &quot;USER-FETCH-SUCCESS&quot;,
+                    &quot;Fetched users successfully&quot;
+            );
+
+<span class="nc" id="L47">            return ResponseEntity.status(HttpStatus.OK).body(Mono.just(response));</span>
+<span class="nc" id="L48">        } catch (Exception ex) {</span>
+<span class="nc" id="L49">            ApiResponse&lt;List&lt;KeycloakUserResponseDTO&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;USER-FETCH-FAILURE&quot;,
+                    &quot;Error fetching users&quot;,
+<span class="nc" id="L54">                    List.of(ex.getMessage(), &quot;Please contact support.&quot;)</span>
+            );
+<span class="nc" id="L56">            return ResponseEntity.status(HttpStatus.OK).body(Mono.just(errorResponse));</span>
+        }
+    }
+
+
+    @GetMapping(&quot;/getAllUsers/{realm}&quot;)
+    public ResponseEntity&lt;Mono&lt;ApiResponse&lt;List&lt;KeycloakUserResponseDTO&gt;&gt;&gt;&gt; getUsers(
+            @PathVariable String realm,
+            @RequestHeader(&quot;token&quot;) String token,
+            @RequestParam(required = false) String searchColumn,
+            @RequestParam(required = false) String searchValue,
+            @RequestParam(defaultValue = &quot;username&quot;) String sortBy,
+            @RequestParam(defaultValue = &quot;asc&quot;) String sortDir) {
+        try {
+<span class="nc" id="L70">            String accessToken = token.replace(&quot;Bearer &quot;, &quot;&quot;);</span>
+
+<span class="nc" id="L72">            Mono&lt;List&lt;KeycloakUserResponseDTO&gt;&gt; users = keycloakUserService.getAllUsers(</span>
+                    realm, accessToken, searchColumn, searchValue, sortBy, sortDir);
+
+<span class="nc" id="L75">            ApiResponse&lt;List&lt;KeycloakUserResponseDTO&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+<span class="nc" id="L76">                    users.block(),</span>
+                    true,
+                    &quot;USER-FETCH-SUCCESS&quot;,
+                    &quot;Fetched users successfully&quot;
+            );
+
+<span class="nc" id="L82">            return ResponseEntity.status(HttpStatus.OK).body(Mono.just(response));</span>
+<span class="nc" id="L83">        } catch (Exception ex) {</span>
+<span class="nc" id="L84">            ApiResponse&lt;List&lt;KeycloakUserResponseDTO&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;USER-FETCH-FAILURE&quot;,
+                    &quot;Error fetching users&quot;,
+<span class="nc" id="L89">                    List.of(ex.getMessage(), &quot;Please contact support.&quot;)</span>
+            );
+<span class="nc" id="L91">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Mono.just(errorResponse));</span>
+        }
+    }
+
+
+    private String extractKeycloakErrorMessage(WebClientResponseException ex) {
+        try {
+<span class="nc" id="L98">            String responseBody = ex.getResponseBodyAsString();</span>
+<span class="nc" id="L99">            ObjectMapper objectMapper = new ObjectMapper();</span>
+<span class="nc" id="L100">            JsonNode jsonNode = objectMapper.readTree(responseBody);</span>
+<span class="nc bnc" id="L101" title="All 2 branches missed.">            if (jsonNode.has(&quot;errorMessage&quot;)) {</span>
+<span class="nc" id="L102">                return jsonNode.get(&quot;errorMessage&quot;).asText();</span>
+<span class="nc bnc" id="L103" title="All 2 branches missed.">            } else if (jsonNode.has(&quot;error&quot;)) {</span>
+<span class="nc" id="L104">                return jsonNode.get(&quot;error&quot;).asText();</span>
+            }
+<span class="nc" id="L106">        } catch (Exception e) {</span>
+<span class="nc" id="L107">            return &quot;Unknown error occurred.&quot;;</span>
+<span class="nc" id="L108">        }</span>
+<span class="nc" id="L109">        return &quot;Unknown error occurred.&quot;;</span>
+    }
+
+
+    @PostMapping(&quot;/createUsers/{realm}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;String&gt;&gt; createUser(
+            @PathVariable String realm,
+            @RequestHeader(&quot;keycloakToken&quot;) String keycloakToken,
+            @RequestParam(value = &quot;saveToDatabase&quot;, defaultValue = &quot;true&quot;) boolean saveToDatabase,
+            @Valid @RequestBody KeycloakUserRequestDTO userRequest) {
+        try {
+            //  Step 1: Check if Keycloak is Up
+<span class="nc bnc" id="L121" title="All 2 branches missed.">            if (!keycloakUserService.isKeycloakUp(realm, keycloakToken)) {</span>
+<span class="nc" id="L122">                throw new RuntimeException(&quot;Keycloak is down. Cannot create user.&quot;);</span>
+            }
+
+            //  Step 2: Create User
+<span class="nc" id="L126">            String responseMessage = keycloakUserService.createUsers(realm, userRequest, keycloakToken, saveToDatabase);</span>
+
+            //  Step 3: Success Response
+<span class="nc" id="L129">            ApiResponse&lt;String&gt; response = new ApiResponse&lt;&gt;(</span>
+                    responseMessage, true, &quot;USER-CREATE-SUCCESS&quot;, &quot;User has been created successfully.&quot;
+            );
+<span class="nc" id="L132">            return ResponseEntity.status(HttpStatus.CREATED).body(response);</span>
+
+<span class="nc" id="L134">        } catch (WebClientResponseException ex) {</span>
+<span class="nc" id="L135">            String errorMessage = extractKeycloakErrorMessage(ex);</span>
+<span class="nc" id="L136">            return buildErrorResponse(&quot;USER-CREATE-FAILURE&quot;, &quot;Failed to create user: &quot; + errorMessage, ex.getStatusCode());</span>
+
+<span class="nc" id="L138">        } catch (Exception ex) {</span>
+<span class="nc" id="L139">            return buildErrorResponse(&quot;USER-CREATE-ERROR&quot;, ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);</span>
+        }
+    }
+
+    private ResponseEntity&lt;ApiResponse&lt;String&gt;&gt; buildErrorResponse(String errorCode, String errorMessage, HttpStatus status) {
+<span class="nc" id="L144">        ApiResponse&lt;String&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+<span class="nc" id="L145">                null, false, errorCode, &quot;Error&quot;, List.of(errorMessage, &quot;Please contact support.&quot;)</span>
+        );
+<span class="nc" id="L147">        return ResponseEntity.status(status).body(errorResponse);</span>
+    }
+
+
+    @PostMapping(&quot;/createUserAfterLocalApi/{realm}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;String&gt;&gt; createUserOnKeyClockAfterLocalApi(
+            @PathVariable String realm,
+            @RequestHeader(&quot;keycloakToken&quot;) String keycloakToken,
+            @RequestParam(&quot;localUserId&quot;) Long localUserId,
+            @Valid @RequestBody KeycloakUserRequestDTO userRequest) {
+        try {
+<span class="nc" id="L158">            String keycloakUserId = keycloakUserService.createUserAndUpdateLocalDB(realm, userRequest, keycloakToken, localUserId);</span>
+
+<span class="nc" id="L160">            return ResponseEntity.status(HttpStatus.CREATED)</span>
+<span class="nc" id="L161">                    .body(new ApiResponse&lt;&gt;(keycloakUserId, true, &quot;USER-CREATE-SUCCESS&quot;,</span>
+                            &quot;User created successfully in Keycloak. Keycloak User ID: &quot; + keycloakUserId));
+
+<span class="nc" id="L164">        } catch (Exception ex) {</span>
+<span class="nc" id="L165">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L166">                    .body(new ApiResponse&lt;&gt;(null, false, &quot;USER-CREATE-ERROR&quot;, ex.getMessage()));</span>
+        }
+    }
+}
+
+
+
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

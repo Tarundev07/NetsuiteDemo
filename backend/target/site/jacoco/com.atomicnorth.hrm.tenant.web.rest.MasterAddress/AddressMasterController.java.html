@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AddressMasterController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.MasterAddress</a> &gt; <span class="el_source">AddressMasterController.java</span></div><h1>AddressMasterController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.MasterAddress;
+
+import com.atomicnorth.hrm.tenant.service.MasterAddressService.AddressMasterService;
+import com.atomicnorth.hrm.tenant.service.dto.MasterAddressDTO.AddressRequestDTO;
+import com.atomicnorth.hrm.tenant.service.dto.MasterAddressDTO.AddressResponseDTO;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.persistence.EntityNotFoundException;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping(&quot;/api/addresses&quot;)
+<span class="nc" id="L22">public class AddressMasterController {</span>
+
+    @Autowired
+    private AddressMasterService addressMasterService;
+
+    @GetMapping
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getAddressList(
+            @RequestParam(defaultValue = &quot;1&quot;) int page,  // Starts from 1
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;creationDate&quot;, required = false) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;, required = false) String sortDir,
+            @RequestParam(required = false) String searchField,
+            @RequestParam(required = false) String searchKeyword
+    ) {
+        try {
+<span class="nc bnc" id="L37" title="All 2 branches missed.">            if (page &lt; 1) {</span>
+<span class="nc" id="L38">                throw new IllegalArgumentException(&quot;Page index must be 1 or greater.&quot;);</span>
+            }
+
+<span class="nc" id="L41">            Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc" id="L42">            Map&lt;String, Object&gt; addressList = addressMasterService.getPaginatedAddresses(pageable, searchField, searchKeyword);</span>
+
+<span class="nc" id="L44">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    addressList,
+                    true,
+                    &quot;ADDRESS-LIST-SUCCESS&quot;,
+                    &quot;Success&quot;
+            );
+<span class="nc" id="L50">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+
+<span class="nc" id="L52">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L53">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;ADDRESS-LIST-FAILURE&quot;,
+                    &quot;Warning&quot;,
+<span class="nc" id="L58">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L60">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+<span class="nc" id="L61">        } catch (Exception ex) {</span>
+<span class="nc" id="L62">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;ADDRESS-LIST-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L67">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L69">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+
+    @GetMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;AddressResponseDTO&gt;&gt; getAddressById(@PathVariable Integer id) {
+        try {
+<span class="nc" id="L77">            AddressResponseDTO address = addressMasterService.getAddressById(id);</span>
+
+<span class="nc" id="L79">            ApiResponse&lt;AddressResponseDTO&gt; response = new ApiResponse&lt;&gt;(</span>
+                    address,
+                    true,
+                    &quot;ADDRESS-DETAILS-SUCCESS&quot;,
+                    &quot;Success&quot;
+            );
+<span class="nc" id="L85">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+
+<span class="nc" id="L87">        } catch (EntityNotFoundException ex) {</span>
+<span class="nc" id="L88">            ApiResponse&lt;AddressResponseDTO&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;ADDRESS-NOT-FOUND&quot;,
+                    &quot;Warning&quot;,
+<span class="nc" id="L93">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L95">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+<span class="nc" id="L96">        } catch (Exception ex) {</span>
+<span class="nc" id="L97">            ApiResponse&lt;AddressResponseDTO&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;ADDRESS-DETAILS-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L102">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L104">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @PostMapping(&quot;/saveOrUpdate&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;AddressResponseDTO&gt;&gt; saveOrUpdateAddress(
+            @RequestBody AddressRequestDTO request
+    ) {
+        try {
+<span class="nc" id="L113">            AddressResponseDTO savedAddress = addressMasterService.saveOrUpdateAddress(request);</span>
+
+<span class="nc" id="L115">            ApiResponse&lt;AddressResponseDTO&gt; response = new ApiResponse&lt;&gt;(</span>
+                    savedAddress,
+                    true,
+                    &quot;ADDRESS-SAVED&quot;,
+                    &quot;Success&quot;
+            );
+<span class="nc" id="L121">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L122">        } catch (EntityNotFoundException ex) {</span>
+<span class="nc" id="L123">            ApiResponse&lt;AddressResponseDTO&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;ADDRESS-NOT-FOUND&quot;,
+                    &quot;Warning&quot;,
+<span class="nc" id="L128">                    List.of(ex.getMessage())</span>
+            );
+<span class="nc" id="L130">            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);</span>
+<span class="nc" id="L131">        } catch (Exception ex) {</span>
+<span class="nc" id="L132">            ApiResponse&lt;AddressResponseDTO&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;ADDRESS-SAVE-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L137">                    List.of(ex.getMessage())</span>
+            );
+<span class="nc" id="L139">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/addressDropdownList&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; getAddressDropdownList() {
+        try {
+<span class="nc" id="L146">            List&lt;Map&lt;String, Object&gt;&gt; addressDropdownList = addressMasterService.getAddressDropdownList();</span>
+<span class="nc" id="L147">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(addressDropdownList, true, &quot;ADDRESS_LIST_FETCHED_SUCCESS&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L148">        } catch (Exception e) {</span>
+<span class="nc" id="L149">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ADDRESS_LIST_FETCHED_ERROR&quot;, &quot;ERROR&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

@@ -1,0 +1,493 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TrackSeparationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.employeeExit</a> &gt; <span class="el_source">TrackSeparationService.java</span></div><h1>TrackSeparationService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.employeeExit;
+
+import com.atomicnorth.hrm.tenant.domain.Employee;
+import com.atomicnorth.hrm.tenant.domain.employeeExit.*;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.repository.DepartmentRepository;
+import com.atomicnorth.hrm.tenant.repository.EmployeeExit.EmpExitAdminClearanceRepository;
+import com.atomicnorth.hrm.tenant.repository.EmployeeExit.EmpExitKtHandoverRepository;
+import com.atomicnorth.hrm.tenant.repository.EmployeeExit.EmpExitRequestRepository;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.service.dto.employeeExit.*;
+import lombok.AllArgsConstructor;
+import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.persistence.EntityNotFoundException;
+import java.lang.reflect.Field;
+import java.time.LocalDate;
+import java.time.Period;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L26">@AllArgsConstructor</span>
+public class TrackSeparationService {
+
+    private final EmployeeRepository employeeRepository;
+    private final EmpExitRequestRepository requestRepository;
+    private final ModelMapper modelMapper;
+    private final EmpExitAdminClearanceRepository adminClearanceRepository;
+    private final EmpExitKtHandoverRepository  ktHandoverRepo;
+
+    private final DepartmentRepository deptRepo;
+
+    @Transactional
+    public TrackSeparationDTO track(Integer employeeId) {
+<span class="nc bnc" id="L39" title="All 2 branches missed.">        if (employeeId == null) employeeId = SessionHolder.getUserLoginDetail().getEmpId();</span>
+
+<span class="nc" id="L41">        Employee employee = employeeRepository.findByEmployeeId(employeeId).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Employee not found&quot;));</span>
+<span class="nc" id="L42">        Map&lt;Integer, Employee&gt; employeeMap = employeeRepository.findAll().stream().collect(Collectors.toMap(Employee::getEmployeeId, emp -&gt; emp));</span>
+<span class="nc" id="L43">        List&lt;EmpExitRequest&gt; requestList = requestRepository.findByEmployeeId(employeeId);</span>
+<span class="nc bnc" id="L44" title="All 2 branches missed.">        EmpExitRequest empExitRequest = requestList.isEmpty() ? null : requestList.get(requestList.size() - 1);</span>
+<span class="nc bnc" id="L45" title="All 2 branches missed.">        if (empExitRequest == null) throw new IllegalArgumentException(&quot;No Exit Request found for this employee.&quot;);</span>
+
+<span class="nc" id="L47">        TrackSeparationDTO dto = new TrackSeparationDTO();</span>
+<span class="nc" id="L48">        LocalDate joiningDate = employee.getEffectiveStartDate();</span>
+<span class="nc" id="L49">        dto.setEmployeeId(employeeId);</span>
+<span class="nc" id="L50">        dto.setEmployeeName(employee.getFullName() + &quot; (&quot; + employee.getEmployeeNumber() + &quot;)&quot;);</span>
+<span class="nc" id="L51">        dto.setDepartmentId(employee.getDepartmentId());</span>
+<span class="nc" id="L52">        dto.setDepartmentName(employee.getDepartment().getDname());</span>
+<span class="nc" id="L53">        dto.setJoiningDate(joiningDate);</span>
+<span class="nc" id="L54">        dto.setExitRequestNumber(empExitRequest.getExitRequestNumber());</span>
+<span class="nc" id="L55">        dto.setExitDate(empExitRequest.getEffectiveFrom());</span>
+<span class="nc" id="L56">        dto.setLastWorkingDate(empExitRequest.getLastWorkingDate());</span>
+<span class="nc" id="L57">        dto.setNoticePeriod(employee.getNoticeDays());</span>
+
+<span class="nc bnc" id="L59" title="All 2 branches missed.">        if (joiningDate != null) {</span>
+<span class="nc" id="L60">            Period tenure = Period.between(joiningDate, LocalDate.now());</span>
+<span class="nc" id="L61">            String tenureStr = String.format(&quot;%d years %d months&quot;, tenure.getYears(), tenure.getMonths());</span>
+<span class="nc" id="L62">            dto.setTenure(tenureStr);</span>
+<span class="nc" id="L63">        } else {</span>
+<span class="nc" id="L64">            dto.setTenure(&quot;N/A&quot;);</span>
+        }
+<span class="nc" id="L66">        Optional&lt;EmpExitApproval&gt; exitApproval = empExitRequest.getApprovals().stream().findFirst();</span>
+<span class="nc bnc" id="L67" title="All 2 branches missed.">        if (exitApproval.isPresent()) {</span>
+<span class="nc" id="L68">            Employee exitEmployee = employeeMap.get(exitApproval.get().getApproverId());</span>
+<span class="nc bnc" id="L69" title="All 2 branches missed.">            dto.setApprovalPerson(exitEmployee != null ? exitEmployee.getFullName() : null);</span>
+<span class="nc" id="L70">            dto.setApprovalStatus(exitApproval.get().getApprovalStatus());</span>
+<span class="nc" id="L71">            dto.setApprovalDate(exitApproval.get().getApprovalDate());</span>
+<span class="nc" id="L72">            dto.setApprovalRemarks(exitApproval.get().getRemarks());</span>
+        }
+<span class="nc" id="L74">        dto.setAssetPerson(&quot;IT Department&quot;);</span>
+<span class="nc" id="L75">        dto.setAssetStatus(empExitRequest.getAssetClearanceStatus());</span>
+<span class="nc" id="L76">        Optional&lt;EmpExitFinanceClearance&gt; financeClearance = empExitRequest.getFinanceClearances().stream().findFirst();</span>
+<span class="nc bnc" id="L77" title="All 2 branches missed.">        if (financeClearance.isPresent()) {</span>
+<span class="nc" id="L78">            dto.setFinancePerson(&quot;Finance Department&quot;);</span>
+<span class="nc" id="L79">            dto.setFinanceDate(financeClearance.get().getClearedDate());</span>
+<span class="nc" id="L80">            dto.setFinanceRemarks(financeClearance.get().getRemarks());</span>
+<span class="nc" id="L81">            dto.setFinanceStatus(financeClearance.get().getClearanceStatus());</span>
+        }
+<span class="nc" id="L83">        Optional&lt;EmpExitAdminClearance&gt; exitAdminClearance = empExitRequest.getAdminClearances().stream().findFirst();</span>
+<span class="nc bnc" id="L84" title="All 2 branches missed.">        if (exitAdminClearance.isPresent()) {</span>
+<span class="nc" id="L85">            dto.setAdminPerson(&quot;Admin Department&quot;);</span>
+<span class="nc" id="L86">            dto.setAdminDate(exitAdminClearance.get().getClearedDate());</span>
+<span class="nc" id="L87">            dto.setAdminStatus(exitAdminClearance.get().getClearanceStatus());</span>
+<span class="nc" id="L88">            dto.setAdminRemarks(exitAdminClearance.get().getRemarks());</span>
+        }
+<span class="nc" id="L90">        Optional&lt;EmpExitKtHandover&gt; exitKtHandover = empExitRequest.getKtHandovers().stream().findFirst();</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">        if (exitKtHandover.isPresent()) {</span>
+<span class="nc bnc" id="L92" title="All 2 branches missed.">            String reportingManager = employee.getReportingManager() != null ? employee.getReportingManager().getFirstName() + &quot; &quot; + employee.getReportingManager().getLastName() : &quot;Reporting Manager&quot;;</span>
+<span class="nc" id="L93">            dto.setKtPerson(reportingManager);</span>
+<span class="nc" id="L94">            dto.setKtStatus(exitKtHandover.get().getStatus());</span>
+<span class="nc" id="L95">            dto.setKtDate(exitKtHandover.get().getHandoverEndDate());</span>
+<span class="nc" id="L96">            dto.setKtRemarks(exitKtHandover.get().getRemarks());</span>
+        }
+<span class="nc" id="L98">        dto.setInterviewDate(empExitRequest.getInterview().getInterviewDate());</span>
+<span class="nc" id="L99">        dto.setInterviewStatus(empExitRequest.getInterview().getStatus());</span>
+<span class="nc" id="L100">        dto.setInterviewRemarks(empExitRequest.getInterview().getFeedback());</span>
+<span class="nc" id="L101">        String interviewerNames = empExitRequest.getInterview().getEmpExitInterviewers().stream().map(EmpExitInterviewers::getEmployeeId)</span>
+<span class="nc" id="L102">                .map(employeeMap::get)</span>
+<span class="nc" id="L103">                .filter(Objects::nonNull)</span>
+<span class="nc" id="L104">                .map(Employee::getFullName)</span>
+<span class="nc" id="L105">                .collect(Collectors.joining(&quot;, &quot;));</span>
+<span class="nc bnc" id="L106" title="All 2 branches missed.">        dto.setInterviewPerson(interviewerNames.isEmpty() ? &quot;HR Department&quot; : interviewerNames);</span>
+
+<span class="nc" id="L108">        return dto;</span>
+    }
+
+    @Transactional
+    public Map&lt;String, Object&gt; separationList(String sortBy, String sortDir, String searchField, String searchKeyword, Pageable pageable) {
+<span class="nc" id="L113">        List&lt;EmpExitRequest&gt; exitRequests = requestRepository.findAll();</span>
+<span class="nc" id="L114">        Map&lt;Integer, Employee&gt; employeeMap = employeeRepository.findAll().stream().collect(Collectors.toMap(Employee::getEmployeeId, emp -&gt; emp));</span>
+<span class="nc" id="L115">        List&lt;SeparationListDTO&gt; dtoList = exitRequests.stream().map(x -&gt; mapTOSeparationDTO(x, employeeMap)).collect(Collectors.toList());</span>
+
+<span class="nc bnc" id="L117" title="All 8 branches missed.">        if (searchField != null &amp;&amp; searchKeyword != null &amp;&amp; !searchField.isBlank() &amp;&amp; !searchKeyword.isBlank()) {</span>
+<span class="nc" id="L118">            dtoList = dtoList.stream().filter(dto -&gt; {</span>
+                try {
+<span class="nc" id="L120">                    Field field = SeparationListDTO.class.getDeclaredField(searchField);</span>
+<span class="nc" id="L121">                    field.setAccessible(true);</span>
+<span class="nc" id="L122">                    Object fieldValue = field.get(dto);</span>
+<span class="nc bnc" id="L123" title="All 4 branches missed.">                    return fieldValue != null &amp;&amp; fieldValue.toString().toLowerCase().contains(searchKeyword.toLowerCase());</span>
+<span class="nc" id="L124">                } catch (NoSuchFieldException | IllegalAccessException e) {</span>
+<span class="nc" id="L125">                    return false;</span>
+                }
+<span class="nc" id="L127">            }).collect(Collectors.toList());</span>
+        }
+
+<span class="nc bnc" id="L130" title="All 4 branches missed.">        if (sortBy != null &amp;&amp; !sortBy.isBlank()) {</span>
+            try {
+<span class="nc" id="L132">                Field sortField = SeparationListDTO.class.getDeclaredField(sortBy);</span>
+<span class="nc" id="L133">                sortField.setAccessible(true);</span>
+
+<span class="nc" id="L135">                Comparator&lt;SeparationListDTO&gt; comparator = Comparator.comparing(dto -&gt; {</span>
+                    try {
+<span class="nc" id="L137">                        Object val = sortField.get(dto);</span>
+<span class="nc" id="L138">                        return (Comparable&lt;Object&gt;) val;</span>
+<span class="nc" id="L139">                    } catch (IllegalAccessException e) {</span>
+<span class="nc" id="L140">                        return null;</span>
+                    }
+<span class="nc" id="L142">                }, Comparator.nullsLast(Comparator.naturalOrder()));</span>
+
+<span class="nc bnc" id="L144" title="All 2 branches missed.">                if (&quot;desc&quot;.equalsIgnoreCase(sortDir)) {</span>
+<span class="nc" id="L145">                    comparator = comparator.reversed();</span>
+                }
+
+<span class="nc" id="L148">                dtoList.sort(comparator);</span>
+
+<span class="nc" id="L150">            } catch (NoSuchFieldException e) {</span>
+<span class="nc" id="L151">                System.out.println(&quot;Invalid sort field: {&quot; + sortBy + &quot;}&quot;);</span>
+<span class="nc" id="L152">            }</span>
+        }
+
+<span class="nc" id="L155">        int totalItems = dtoList.size();</span>
+<span class="nc" id="L156">        int currentPage = pageable.getPageNumber();</span>
+<span class="nc" id="L157">        int pageSize = pageable.getPageSize();</span>
+<span class="nc" id="L158">        int totalPages = (int) Math.ceil((double) totalItems / pageSize);</span>
+
+<span class="nc" id="L160">        int startIndex = currentPage * pageSize;</span>
+<span class="nc" id="L161">        int endIndex = Math.min(startIndex + pageSize, totalItems);</span>
+
+        List&lt;SeparationListDTO&gt; paginatedResult =
+<span class="nc bnc" id="L164" title="All 2 branches missed.">                (startIndex &lt; totalItems) ? dtoList.subList(startIndex, endIndex) : Collections.emptyList();</span>
+
+<span class="nc" id="L166">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L167">        response.put(&quot;result&quot;, paginatedResult);</span>
+<span class="nc" id="L168">        response.put(&quot;currentPage&quot;, currentPage + 1);</span>
+<span class="nc" id="L169">        response.put(&quot;pageSize&quot;, pageSize);</span>
+<span class="nc" id="L170">        response.put(&quot;totalItems&quot;, totalItems);</span>
+<span class="nc" id="L171">        response.put(&quot;totalPages&quot;, totalPages);</span>
+
+<span class="nc" id="L173">        return response;</span>
+    }
+
+    private SeparationListDTO mapTOSeparationDTO(EmpExitRequest request, Map&lt;Integer, Employee&gt; employeeMap) {
+<span class="nc" id="L177">        SeparationListDTO listDTO = modelMapper.map(request, SeparationListDTO.class);</span>
+<span class="nc" id="L178">        Employee employee = employeeMap.get(request.getEmployeeId());</span>
+<span class="nc bnc" id="L179" title="All 2 branches missed.">        listDTO.setEmployeeName(employee != null ? employee.getFullName() + &quot; (&quot; + employee.getEmployeeNumber() + &quot;)&quot; : &quot;Unknown&quot;);</span>
+<span class="nc bnc" id="L180" title="All 2 branches missed.">        listDTO.setDepartment(employee != null ? employee.getDepartment().getDname() : &quot;Unknown&quot;);</span>
+<span class="nc" id="L181">        return listDTO;</span>
+    }
+
+    @Transactional
+    public Map&lt;String, Object&gt; getAllAssetClearanceList(String sortBy, String sortDir, String searchField, String searchKeyword, Pageable pageable) {
+<span class="nc" id="L186">        List&lt;EmpExitRequest&gt; empRequest = requestRepository.findAll();</span>
+
+<span class="nc" id="L188">        List&lt;EmployeeAssetClearance&gt; dtoList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L189" title="All 2 branches missed.">        for (EmpExitRequest row : empRequest) {</span>
+<span class="nc" id="L190">            EmployeeAssetClearance assetClearance = new EmployeeAssetClearance();</span>
+<span class="nc" id="L191">            assetClearance.setExitRequestId(row.getId());</span>
+<span class="nc" id="L192">            assetClearance.setEmployeeId(row.getEmployeeId());</span>
+<span class="nc" id="L193">            Employee employee = employeeRepository.findByEmployeeId(row.getEmployeeId()).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Employee not found.&quot;));</span>
+<span class="nc" id="L194">            assetClearance.setExitRequestNumber(row.getExitRequestNumber());</span>
+<span class="nc" id="L195">            assetClearance.setStatus(row.getAssetClearanceStatus());</span>
+<span class="nc" id="L196">            assetClearance.setLastWorkingDay(row.getLastWorkingDate());</span>
+<span class="nc" id="L197">            assetClearance.setEmployeeName(employee.getFullName()  + &quot; (&quot; + employee.getEmployeeNumber() + &quot;)&quot; );</span>
+<span class="nc" id="L198">            assetClearance.setDepartmentId(employee.getDepartmentId());</span>
+<span class="nc" id="L199">            assetClearance.setDepartmentName(employee.getDepartment().getDname());</span>
+<span class="nc" id="L200">            dtoList.add(assetClearance);</span>
+<span class="nc" id="L201">        }</span>
+
+<span class="nc bnc" id="L203" title="All 8 branches missed.">        if (searchField != null &amp;&amp; searchKeyword != null &amp;&amp; !searchField.isBlank() &amp;&amp; !searchKeyword.isBlank()) {</span>
+<span class="nc" id="L204">            dtoList = dtoList.stream().filter(dto -&gt; {</span>
+                try {
+<span class="nc" id="L206">                    Field field = EmployeeAssetClearance.class.getDeclaredField(searchField);</span>
+<span class="nc" id="L207">                    field.setAccessible(true);</span>
+<span class="nc" id="L208">                    Object fieldValue = field.get(dto);</span>
+<span class="nc bnc" id="L209" title="All 4 branches missed.">                    return fieldValue != null &amp;&amp; fieldValue.toString().toLowerCase().contains(searchKeyword.toLowerCase());</span>
+<span class="nc" id="L210">                } catch (NoSuchFieldException | IllegalAccessException e) {</span>
+<span class="nc" id="L211">                    return false;</span>
+                }
+<span class="nc" id="L213">            }).collect(Collectors.toList());</span>
+        }
+
+<span class="nc bnc" id="L216" title="All 4 branches missed.">        if (sortBy != null &amp;&amp; !sortBy.isBlank()) {</span>
+            try {
+<span class="nc" id="L218">                Field sortField = EmployeeAssetClearance.class.getDeclaredField(sortBy);</span>
+<span class="nc" id="L219">                sortField.setAccessible(true);</span>
+
+<span class="nc" id="L221">                Comparator&lt;EmployeeAssetClearance&gt; comparator = Comparator.comparing(dto -&gt; {</span>
+                    try {
+<span class="nc" id="L223">                        Object val = sortField.get(dto);</span>
+<span class="nc" id="L224">                        return (Comparable&lt;Object&gt;) val;</span>
+<span class="nc" id="L225">                    } catch (IllegalAccessException e) {</span>
+<span class="nc" id="L226">                        return null;</span>
+                    }
+<span class="nc" id="L228">                }, Comparator.nullsLast(Comparator.naturalOrder()));</span>
+
+<span class="nc bnc" id="L230" title="All 2 branches missed.">                if (&quot;desc&quot;.equalsIgnoreCase(sortDir)) {</span>
+<span class="nc" id="L231">                    comparator = comparator.reversed();</span>
+                }
+
+<span class="nc" id="L234">                dtoList.sort(comparator);</span>
+
+<span class="nc" id="L236">            } catch (NoSuchFieldException e) {</span>
+<span class="nc" id="L237">                System.out.println(&quot;Invalid sort field: {&quot; + sortBy + &quot;}&quot;);</span>
+<span class="nc" id="L238">            }</span>
+        }
+
+<span class="nc" id="L241">        int totalItems = dtoList.size();</span>
+<span class="nc" id="L242">        int currentPage = pageable.getPageNumber();</span>
+<span class="nc" id="L243">        int pageSize = pageable.getPageSize();</span>
+<span class="nc" id="L244">        int totalPages = (int) Math.ceil((double) totalItems / pageSize);</span>
+
+<span class="nc" id="L246">        int startIndex = currentPage * pageSize;</span>
+<span class="nc" id="L247">        int endIndex = Math.min(startIndex + pageSize, totalItems);</span>
+
+        List&lt;EmployeeAssetClearance&gt; paginatedResult =
+<span class="nc bnc" id="L250" title="All 2 branches missed.">                (startIndex &lt; totalItems) ? dtoList.subList(startIndex, endIndex) : Collections.emptyList();</span>
+
+<span class="nc" id="L252">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L253">        response.put(&quot;result&quot;, paginatedResult);</span>
+<span class="nc" id="L254">        response.put(&quot;currentPage&quot;, currentPage + 1);</span>
+<span class="nc" id="L255">        response.put(&quot;pageSize&quot;, pageSize);</span>
+<span class="nc" id="L256">        response.put(&quot;totalItems&quot;, totalItems);</span>
+<span class="nc" id="L257">        response.put(&quot;totalPages&quot;, totalPages);</span>
+<span class="nc" id="L258">        return response;</span>
+    }
+
+    @Transactional
+    public Map&lt;String, Object&gt; getAllFinanceClearanceList(String sortBy, String sortDir, String searchField, String searchKeyword, Pageable pageable) {
+<span class="nc" id="L263">        List&lt;EmpExitRequest&gt; empExitRequest = requestRepository.findAll();</span>
+
+<span class="nc" id="L265">        List&lt;FinanceClearanceDTO&gt; financeList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L266" title="All 2 branches missed.">        for (EmpExitRequest row : empExitRequest) {</span>
+<span class="nc" id="L267">            FinanceClearanceDTO FinanceClearance = new FinanceClearanceDTO();</span>
+<span class="nc" id="L268">            FinanceClearance.setExitRequestId(row.getId());</span>
+<span class="nc" id="L269">            FinanceClearance.setId(row.getId());</span>
+<span class="nc" id="L270">            FinanceClearance.setEmployeeId(row.getEmployeeId());</span>
+<span class="nc" id="L271">            Employee employee = employeeRepository.findByEmployeeId(row.getEmployeeId()).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Employee not found.&quot;));</span>
+<span class="nc" id="L272">            FinanceClearance.setExitRequestNumber(row.getExitRequestNumber());</span>
+<span class="nc" id="L273">            FinanceClearance.setStatus(row.getFinanceClearanceStatus());</span>
+<span class="nc" id="L274">            FinanceClearance.setLastWorkingDay(row.getLastWorkingDate());</span>
+<span class="nc bnc" id="L275" title="All 2 branches missed.">            FinanceClearance.setDepartmentName(employee.getDepartment() != null ? employee.getDepartment().getDname() : null);</span>
+<span class="nc" id="L276">            FinanceClearance.setEmployeeName(employee.getFullName() + &quot; (&quot; + employee.getEmployeeNumber() + &quot;)&quot;);</span>
+<span class="nc" id="L277">            financeList.add(FinanceClearance);</span>
+<span class="nc" id="L278">        }</span>
+<span class="nc bnc" id="L279" title="All 8 branches missed.">        if (searchField != null &amp;&amp; searchKeyword != null &amp;&amp; !searchField.isBlank() &amp;&amp; !searchKeyword.isBlank()) {</span>
+<span class="nc" id="L280">            financeList = financeList.stream().filter(dto -&gt; {</span>
+                try {
+<span class="nc" id="L282">                    Field field = FinanceClearanceDTO.class.getDeclaredField(searchField);</span>
+<span class="nc" id="L283">                    field.setAccessible(true);</span>
+<span class="nc" id="L284">                    Object fieldValue = field.get(dto);</span>
+<span class="nc bnc" id="L285" title="All 4 branches missed.">                    return fieldValue != null &amp;&amp; fieldValue.toString().toLowerCase().contains(searchKeyword.toLowerCase());</span>
+<span class="nc" id="L286">                } catch (NoSuchFieldException | IllegalAccessException e) {</span>
+<span class="nc" id="L287">                    return false;</span>
+                }
+<span class="nc" id="L289">            }).collect(Collectors.toList());</span>
+        }
+
+<span class="nc bnc" id="L292" title="All 4 branches missed.">        if (sortBy != null &amp;&amp; !sortBy.isBlank()) {</span>
+            try {
+<span class="nc" id="L294">                Field sortField = FinanceClearanceDTO.class.getDeclaredField(sortBy);</span>
+<span class="nc" id="L295">                sortField.setAccessible(true);</span>
+
+<span class="nc" id="L297">                Comparator&lt;FinanceClearanceDTO&gt; comparator = Comparator.comparing(dto -&gt; {</span>
+                    try {
+<span class="nc" id="L299">                        Object val = sortField.get(dto);</span>
+<span class="nc" id="L300">                        return (Comparable&lt;Object&gt;) val;</span>
+<span class="nc" id="L301">                    } catch (IllegalAccessException e) {</span>
+<span class="nc" id="L302">                        return null;</span>
+                    }
+<span class="nc" id="L304">                }, Comparator.nullsLast(Comparator.naturalOrder()));</span>
+
+<span class="nc bnc" id="L306" title="All 2 branches missed.">                if (&quot;desc&quot;.equalsIgnoreCase(sortDir)) {</span>
+<span class="nc" id="L307">                    comparator = comparator.reversed();</span>
+                }
+
+<span class="nc" id="L310">                financeList.sort(comparator);</span>
+
+<span class="nc" id="L312">            } catch (NoSuchFieldException e) {</span>
+<span class="nc" id="L313">                System.out.println(&quot;Invalid sort field: {&quot; + sortBy + &quot;}&quot;);</span>
+<span class="nc" id="L314">            }</span>
+        }
+
+<span class="nc" id="L317">        int totalItems = financeList.size();</span>
+<span class="nc" id="L318">        int currentPage = pageable.getPageNumber();</span>
+<span class="nc" id="L319">        int pageSize = pageable.getPageSize();</span>
+<span class="nc" id="L320">        int totalPages = (int) Math.ceil((double) totalItems / pageSize);</span>
+
+<span class="nc" id="L322">        int startIndex = currentPage * pageSize;</span>
+<span class="nc" id="L323">        int endIndex = Math.min(startIndex + pageSize, totalItems);</span>
+
+        List&lt;FinanceClearanceDTO&gt; paginatedResult =
+<span class="nc bnc" id="L326" title="All 2 branches missed.">                (startIndex &lt; totalItems) ? financeList.subList(startIndex, endIndex) : Collections.emptyList();</span>
+
+<span class="nc" id="L328">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L329">        response.put(&quot;result&quot;, paginatedResult);</span>
+<span class="nc" id="L330">        response.put(&quot;currentPage&quot;, currentPage + 1);</span>
+<span class="nc" id="L331">        response.put(&quot;pageSize&quot;, pageSize);</span>
+<span class="nc" id="L332">        response.put(&quot;totalItems&quot;, totalItems);</span>
+<span class="nc" id="L333">        response.put(&quot;totalPages&quot;, totalPages);</span>
+<span class="nc" id="L334">        return response;</span>
+    }
+
+    @Transactional
+    public Map&lt;String, Object&gt; getAllAdminClearanceList(String sortBy, String sortDir, String searchField, String searchKeyword, Pageable pageable) {
+<span class="nc" id="L339">        List&lt;EmpExitAdminClearance&gt; adminclearanceRequest = adminClearanceRepository.findAll();</span>
+
+<span class="nc" id="L341">        List&lt;AdminClearanceDto&gt; adminClearanceList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L342" title="All 2 branches missed.">        for (EmpExitAdminClearance row : adminclearanceRequest) {</span>
+<span class="nc" id="L343">            AdminClearanceDto adminClearance = new AdminClearanceDto();</span>
+<span class="nc" id="L344">            adminClearance.setExitRequestId(row.getExitRequestId());</span>
+<span class="nc" id="L345">            adminClearance.setStatus(row.getClearanceStatus());  // status</span>
+<span class="nc" id="L346">            EmpExitRequest emprequest = requestRepository.findById(row.getExitRequestId()).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Employee not found.&quot;));</span>
+<span class="nc" id="L347">            adminClearance.setExitRequestNumber(emprequest.getExitRequestNumber());</span>
+<span class="nc" id="L348">            adminClearance.setLastWorkingDay(emprequest.getLastWorkingDate());</span>
+<span class="nc" id="L349">            adminClearance.setEmployeeId(emprequest.getEmployeeId());</span>
+<span class="nc" id="L350">            Employee employee = employeeRepository.findByEmployeeId(emprequest.getEmployeeId()).orElseThrow(() -&gt; new EntityNotFoundException(&quot;id not found.&quot;));</span>
+<span class="nc" id="L351">            adminClearance.setEmployeeName(employee.getFullName() + &quot; (&quot; + employee.getEmployeeNumber() + &quot;)&quot;);</span>
+<span class="nc bnc" id="L352" title="All 2 branches missed.">            adminClearance.setDepartmentName(employee.getDepartment() != null ? employee.getDepartment().getDname() : null);</span>
+<span class="nc" id="L353">            adminClearance.setDesignation(employee.getDesignation().getDesignationName());</span>
+
+<span class="nc" id="L355">            adminClearanceList.add(adminClearance);</span>
+<span class="nc" id="L356">        }</span>
+<span class="nc bnc" id="L357" title="All 8 branches missed.">        if (searchField != null &amp;&amp; searchKeyword != null &amp;&amp; !searchField.isBlank() &amp;&amp; !searchKeyword.isBlank()) {;</span>
+<span class="nc" id="L358">            adminClearanceList = adminClearanceList.stream().filter(dto -&gt; {</span>
+                try {
+<span class="nc" id="L360">                    Field field = AdminClearanceDto.class.getDeclaredField(searchField);</span>
+<span class="nc" id="L361">                    field.setAccessible(true);</span>
+<span class="nc" id="L362">                    Object fieldValue = field.get(dto);</span>
+<span class="nc bnc" id="L363" title="All 4 branches missed.">                    return fieldValue != null &amp;&amp; fieldValue.toString().toLowerCase().contains(searchKeyword.toLowerCase());</span>
+<span class="nc" id="L364">                } catch (NoSuchFieldException | IllegalAccessException e) {</span>
+<span class="nc" id="L365">                    return false;</span>
+                }
+<span class="nc" id="L367">            }).collect(Collectors.toList());</span>
+        }
+
+<span class="nc bnc" id="L370" title="All 4 branches missed.">        if (sortBy != null &amp;&amp; !sortBy.isBlank()) {</span>
+            try {
+<span class="nc" id="L372">                Field sortField = AdminClearanceDto.class.getDeclaredField(sortBy);</span>
+<span class="nc" id="L373">                sortField.setAccessible(true);</span>
+
+<span class="nc" id="L375">                Comparator&lt;AdminClearanceDto&gt; comparator = Comparator.comparing(dto -&gt; {</span>
+                    try {
+<span class="nc" id="L377">                        Object val = sortField.get(dto);</span>
+<span class="nc" id="L378">                        return (Comparable&lt;Object&gt;) val;</span>
+<span class="nc" id="L379">                    } catch (IllegalAccessException e) {</span>
+<span class="nc" id="L380">                        return null;</span>
+                    }
+<span class="nc" id="L382">                }, Comparator.nullsLast(Comparator.naturalOrder()));</span>
+
+<span class="nc bnc" id="L384" title="All 2 branches missed.">                if (&quot;desc&quot;.equalsIgnoreCase(sortDir)) {</span>
+<span class="nc" id="L385">                    comparator = comparator.reversed();</span>
+                }
+
+<span class="nc" id="L388">                adminClearanceList.sort(comparator);</span>
+
+<span class="nc" id="L390">            } catch (NoSuchFieldException e) {</span>
+<span class="nc" id="L391">                System.out.println(&quot;Invalid sort field: {&quot; + sortBy + &quot;}&quot;);</span>
+<span class="nc" id="L392">            }</span>
+        }
+
+<span class="nc" id="L395">        int totalItems = adminClearanceList.size();</span>
+<span class="nc" id="L396">        int currentPage = pageable.getPageNumber();</span>
+<span class="nc" id="L397">        int pageSize = pageable.getPageSize();</span>
+<span class="nc" id="L398">        int totalPages = (int) Math.ceil((double) totalItems / pageSize);</span>
+
+<span class="nc" id="L400">        int startIndex = currentPage * pageSize;</span>
+<span class="nc" id="L401">        int endIndex = Math.min(startIndex + pageSize, totalItems);</span>
+
+        List&lt;AdminClearanceDto&gt; paginatedResult =
+<span class="nc bnc" id="L404" title="All 2 branches missed.">                (startIndex &lt; totalItems) ? adminClearanceList.subList(startIndex, endIndex) : Collections.emptyList();</span>
+
+<span class="nc" id="L406">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L407">        response.put(&quot;result&quot;, paginatedResult);</span>
+<span class="nc" id="L408">        response.put(&quot;currentPage&quot;, currentPage + 1);</span>
+<span class="nc" id="L409">        response.put(&quot;pageSize&quot;, pageSize);</span>
+<span class="nc" id="L410">        response.put(&quot;totalItems&quot;, totalItems);</span>
+<span class="nc" id="L411">        response.put(&quot;totalPages&quot;, totalPages);</span>
+<span class="nc" id="L412">        return response;</span>
+    }
+
+    @Transactional
+    public Map&lt;String, Object&gt; getallKtHandoverList(String sortBy, String sortDir, String searchField, String searchKeyword, Pageable pageable) {
+<span class="nc" id="L417">        List&lt;EmpExitKtHandover&gt; KtHandoverRequest = ktHandoverRepo.findAll();</span>
+
+<span class="nc" id="L419">      List&lt;KtHandOverDto&gt; KtDtoList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L420" title="All 2 branches missed.">      for(EmpExitKtHandover row :KtHandoverRequest ){</span>
+<span class="nc" id="L421">          KtHandOverDto ktHandover = new KtHandOverDto();</span>
+<span class="nc" id="L422">          ktHandover.setStatus(row.getStatus());   //status set</span>
+
+<span class="nc" id="L424">          ktHandover.setEmployeeId(row.getId());</span>
+<span class="nc" id="L425">          EmpExitRequest empRequest = requestRepository.findById(row.getExitRequestId()).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Employee not found.&quot;));</span>
+<span class="nc" id="L426">          ktHandover.setExitRequestNumber(empRequest.getExitRequestNumber());</span>
+<span class="nc" id="L427">          ktHandover.setExitRequestId(empRequest.getId());// exit req no set</span>
+<span class="nc" id="L428">          ktHandover.setLastWorkingDay(empRequest.getLastWorkingDate());  // Last Working day set</span>
+<span class="nc" id="L429">          Employee emp = employeeRepository.findByEmployeeId(empRequest.getEmployeeId()).orElseThrow(() -&gt; new EntityNotFoundException(&quot;id not found.&quot;));</span>
+<span class="nc" id="L430">          ktHandover.setEmployeeName(emp.getFullName()+ &quot; (&quot; + emp.getEmployeeNumber() + &quot;)&quot;);</span>
+<span class="nc bnc" id="L431" title="All 2 branches missed.">          ktHandover.setDepartmentName(emp.getDepartment() != null ? emp.getDepartment().getDname() : null);</span>
+
+<span class="nc" id="L433">          KtDtoList.add(ktHandover);</span>
+<span class="nc" id="L434">      }</span>
+<span class="nc bnc" id="L435" title="All 8 branches missed.">        if (searchField != null &amp;&amp; searchKeyword != null &amp;&amp; !searchField.isBlank() &amp;&amp; !searchKeyword.isBlank()) {;</span>
+<span class="nc" id="L436">            KtDtoList = KtDtoList.stream().filter(dto -&gt; {</span>
+                try {
+<span class="nc" id="L438">                    Field field = KtHandOverDto.class.getDeclaredField(searchField);</span>
+<span class="nc" id="L439">                    field.setAccessible(true);</span>
+<span class="nc" id="L440">                    Object fieldValue = field.get(dto);</span>
+<span class="nc bnc" id="L441" title="All 4 branches missed.">                    return fieldValue != null &amp;&amp; fieldValue.toString().toLowerCase().contains(searchKeyword.toLowerCase());</span>
+<span class="nc" id="L442">                } catch (NoSuchFieldException | IllegalAccessException e) {</span>
+<span class="nc" id="L443">                    return false;</span>
+                }
+<span class="nc" id="L445">            }).collect(Collectors.toList());</span>
+        }
+
+<span class="nc bnc" id="L448" title="All 4 branches missed.">        if (sortBy != null &amp;&amp; !sortBy.isBlank()) {</span>
+            try {
+<span class="nc" id="L450">                Field sortField = KtHandOverDto.class.getDeclaredField(sortBy);</span>
+<span class="nc" id="L451">                sortField.setAccessible(true);</span>
+
+<span class="nc" id="L453">                Comparator&lt;KtHandOverDto&gt; comparator = Comparator.comparing(dto -&gt; {</span>
+                    try {
+<span class="nc" id="L455">                        Object val = sortField.get(dto);</span>
+<span class="nc" id="L456">                        return (Comparable&lt;Object&gt;) val;</span>
+<span class="nc" id="L457">                    } catch (IllegalAccessException e) {</span>
+<span class="nc" id="L458">                        return null;</span>
+                    }
+<span class="nc" id="L460">                }, Comparator.nullsLast(Comparator.naturalOrder()));</span>
+
+<span class="nc bnc" id="L462" title="All 2 branches missed.">                if (&quot;desc&quot;.equalsIgnoreCase(sortDir)) {</span>
+<span class="nc" id="L463">                    comparator = comparator.reversed();</span>
+                }
+
+<span class="nc" id="L466">                KtDtoList.sort(comparator);</span>
+
+<span class="nc" id="L468">            } catch (NoSuchFieldException e) {</span>
+<span class="nc" id="L469">                System.out.println(&quot;Invalid sort field: {&quot; + sortBy + &quot;}&quot;);</span>
+<span class="nc" id="L470">            }</span>
+        }
+
+<span class="nc" id="L473">        int totalItems = KtDtoList.size();</span>
+<span class="nc" id="L474">        int currentPage = pageable.getPageNumber();</span>
+<span class="nc" id="L475">        int pageSize = pageable.getPageSize();</span>
+<span class="nc" id="L476">        int totalPages = (int) Math.ceil((double) totalItems / pageSize);</span>
+
+<span class="nc" id="L478">        int startIndex = currentPage * pageSize;</span>
+<span class="nc" id="L479">        int endIndex = Math.min(startIndex + pageSize, totalItems);</span>
+
+        List&lt;KtHandOverDto&gt; paginatedResult =
+<span class="nc bnc" id="L482" title="All 2 branches missed.">                (startIndex &lt; totalItems) ? KtDtoList.subList(startIndex, endIndex) : Collections.emptyList();</span>
+
+<span class="nc" id="L484">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L485">        response.put(&quot;result&quot;, paginatedResult);</span>
+<span class="nc" id="L486">        response.put(&quot;currentPage&quot;, currentPage + 1);</span>
+<span class="nc" id="L487">        response.put(&quot;pageSize&quot;, pageSize);</span>
+<span class="nc" id="L488">        response.put(&quot;totalItems&quot;, totalItems);</span>
+<span class="nc" id="L489">        response.put(&quot;totalPages&quot;, totalPages);</span>
+<span class="nc" id="L490">        return response;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

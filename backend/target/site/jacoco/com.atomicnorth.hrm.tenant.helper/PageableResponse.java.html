@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PageableResponse.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.helper</a> &gt; <span class="el_source">PageableResponse.java</span></div><h1>PageableResponse.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.helper;
+
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.List;
+
+
+<span class="nc" id="L10">@Setter</span>
+@Getter
+<span class="nc" id="L12">@Builder</span>
+public class PageableResponse&lt;T&gt; {
+
+<span class="nc" id="L15">    private List&lt;T&gt; content;</span>
+<span class="nc" id="L16">    private int pageNumber;</span>
+<span class="nc" id="L17">    private int pageSize;</span>
+<span class="nc" id="L18">    private long totalElements;</span>
+<span class="nc" id="L19">    private int totalPages;</span>
+<span class="nc" id="L20">    private boolean lastPage;</span>
+
+<span class="nc" id="L22">    public PageableResponse() {</span>
+<span class="nc" id="L23">    }</span>
+
+<span class="nc" id="L25">    public PageableResponse(List&lt;T&gt; content, int pageNumber, int pageSize, long totalElements, int totalPages, boolean lastPage) {</span>
+<span class="nc" id="L26">        this.content = content;</span>
+<span class="nc" id="L27">        this.pageNumber = pageNumber;</span>
+<span class="nc" id="L28">        this.pageSize = pageSize;</span>
+<span class="nc" id="L29">        this.totalElements = totalElements;</span>
+<span class="nc" id="L30">        this.totalPages = totalPages;</span>
+<span class="nc" id="L31">        this.lastPage = lastPage;</span>
+<span class="nc" id="L32">    }</span>
+
+    @Override
+    public String toString() {
+<span class="nc" id="L36">        return &quot;PageableResponse{&quot; +</span>
+                &quot;content=&quot; + content +
+                &quot;, pageNumber=&quot; + pageNumber +
+                &quot;, pageSize=&quot; + pageSize +
+                &quot;, totalElements=&quot; + totalElements +
+                &quot;, totalPages=&quot; + totalPages +
+                &quot;, lastPage=&quot; + lastPage +
+                '}';
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

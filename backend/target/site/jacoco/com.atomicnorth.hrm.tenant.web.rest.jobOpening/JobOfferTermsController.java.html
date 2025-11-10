@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JobOfferTermsController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.jobOpening</a> &gt; <span class="el_source">JobOfferTermsController.java</span></div><h1>JobOfferTermsController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.jobOpening;
+
+import com.atomicnorth.hrm.tenant.domain.jobOpening.JobOfferTermsTemplate;
+import com.atomicnorth.hrm.tenant.domain.jobOpening.TermsCondition;
+import com.atomicnorth.hrm.tenant.service.dto.jobOpening.JobOfferTermsTemplateDto;
+import com.atomicnorth.hrm.tenant.service.dto.jobOpening.TermsConditionDto;
+import com.atomicnorth.hrm.tenant.service.jobOpening.JobOfferTermsService;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import com.atomicnorth.hrm.util.commonClass.PaginatedResponse;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import javax.validation.ValidationException;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping(&quot;api/job-terms&quot;)
+
+public class JobOfferTermsController {
+
+    private final JobOfferTermsService jobOfferTermsService;
+<span class="nc" id="L34">    private final Logger log = LoggerFactory.getLogger(JobOfferTermsController.class);</span>
+    @Autowired
+    private ObjectMapper objectMapper;
+
+<span class="nc" id="L38">    public JobOfferTermsController(JobOfferTermsService jobOfferTermsService) {</span>
+<span class="nc" id="L39">        this.jobOfferTermsService = jobOfferTermsService;</span>
+<span class="nc" id="L40">    }</span>
+
+    @PostMapping(&quot;/create&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;JobOfferTermsTemplate&gt;&gt;&gt; saveOrUpdateJobOfferTermsTemplate(
+            @RequestBody @Valid JobOfferTermsTemplateDto jobOfferTermsTemplateDto) {
+        try {
+<span class="nc bnc" id="L46" title="All 4 branches missed.">            if (jobOfferTermsTemplateDto.getJobTerms() == null || jobOfferTermsTemplateDto.getJobTerms().isEmpty()) {</span>
+<span class="nc" id="L47">                ApiResponse&lt;List&lt;JobOfferTermsTemplate&gt;&gt; response = new ApiResponse&lt;&gt;();</span>
+<span class="nc" id="L48">                response.setData(null);</span>
+<span class="nc" id="L49">                response.setSuccess(false);</span>
+<span class="nc" id="L50">                response.setResponseCode(&quot;JOB-OFFER-TERMS-VALIDATION-FAILURE&quot;);</span>
+<span class="nc" id="L51">                response.setResponseType(&quot;Error&quot;);</span>
+<span class="nc" id="L52">                response.setErrors(Collections.singletonList(&quot;Job Offer Terms cannot be null or empty&quot;));</span>
+
+<span class="nc" id="L54">                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);</span>
+            }
+
+<span class="nc" id="L57">            List&lt;JobOfferTermsTemplate&gt; jobOfferTermTemplates = jobOfferTermsService.saveOrUpdateJobOfferTermsTemplate(jobOfferTermsTemplateDto);</span>
+<span class="nc bnc" id="L58" title="All 4 branches missed.">            String message = (jobOfferTermsTemplateDto.getJobOfferTemplateId() != null &amp;&amp; jobOfferTermsTemplateDto.getJobOfferTemplateId() &gt; 0)</span>
+<span class="nc" id="L59">                    ? &quot;JOB-OFFER-TERMS-UPDATED-SUCCESS&quot;</span>
+<span class="nc" id="L60">                    : &quot;JOB-OFFER-TERMS-CREATED-SUCCESS&quot;;</span>
+
+<span class="nc" id="L62">            ApiResponse&lt;List&lt;JobOfferTermsTemplate&gt;&gt; response = new ApiResponse&lt;&gt;();</span>
+<span class="nc" id="L63">            response.setData(jobOfferTermTemplates);</span>
+<span class="nc" id="L64">            response.setSuccess(true);</span>
+<span class="nc" id="L65">            response.setResponseCode(message);</span>
+<span class="nc" id="L66">            response.setResponseType(&quot;Information&quot;);</span>
+<span class="nc" id="L67">            response.setErrors(null); // No errors for success response</span>
+
+<span class="nc" id="L69">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+
+<span class="nc" id="L71">        } catch (ValidationException e) {</span>
+<span class="nc" id="L72">            ApiResponse&lt;List&lt;JobOfferTermsTemplate&gt;&gt; validationErrorResponse = new ApiResponse&lt;&gt;();</span>
+<span class="nc" id="L73">            validationErrorResponse.setData(null);</span>
+<span class="nc" id="L74">            validationErrorResponse.setSuccess(false);</span>
+<span class="nc" id="L75">            validationErrorResponse.setResponseCode(&quot;JOB-OFFER-TERMS-VALIDATION-FAILURE&quot;);</span>
+<span class="nc" id="L76">            validationErrorResponse.setResponseType(&quot;Error&quot;);</span>
+<span class="nc" id="L77">            validationErrorResponse.setErrors(Collections.singletonList(e.getMessage()));</span>
+
+<span class="nc" id="L79">            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(validationErrorResponse);</span>
+<span class="nc" id="L80">        } catch (Exception e) {</span>
+<span class="nc" id="L81">            ApiResponse&lt;List&lt;JobOfferTermsTemplate&gt;&gt; errorResponse = new ApiResponse&lt;&gt;();</span>
+<span class="nc" id="L82">            errorResponse.setData(null);</span>
+<span class="nc" id="L83">            errorResponse.setSuccess(false);</span>
+<span class="nc" id="L84">            errorResponse.setResponseCode(&quot;JOB-OFFER-TERMS-CREATION-FAILURE&quot;);</span>
+<span class="nc" id="L85">            errorResponse.setResponseType(&quot;Error&quot;);</span>
+<span class="nc" id="L86">            errorResponse.setErrors(Collections.singletonList(e.getMessage()));</span>
+
+<span class="nc" id="L88">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);</span>
+        }
+    }
+
+
+    @GetMapping(&quot;/job-offer-term-mapping&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;PaginatedResponse&lt;JobOfferTermsTemplateDto&gt;&gt;&gt; getJobOfferTermMapping(
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(required = false) String searchField,
+            @RequestParam(required = false) String searchKeyword,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(defaultValue = &quot;desc&quot;) String sortDir) {
+        try {
+<span class="nc" id="L102">            PaginatedResponse&lt;JobOfferTermsTemplateDto&gt; paginatedResponse =</span>
+<span class="nc" id="L103">                    jobOfferTermsService.getJobOfferTermMapping(page, size, searchField, searchKeyword, sortBy, sortDir);</span>
+
+<span class="nc" id="L105">            ApiResponse&lt;PaginatedResponse&lt;JobOfferTermsTemplateDto&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    paginatedResponse, true, &quot;JOB-OFFER-TERMS-SUCCESS&quot;, &quot;Information&quot;
+            );
+
+<span class="nc" id="L109">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L110">        } catch (Exception ex) {</span>
+<span class="nc" id="L111">            ApiResponse&lt;PaginatedResponse&lt;JobOfferTermsTemplateDto&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+<span class="nc" id="L112">                    null, false, &quot;JOB-OFFER-TERMS-FAILURE&quot;, &quot;Error&quot;, List.of(ex.getMessage())</span>
+            );
+<span class="nc" id="L114">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+
+    @PostMapping(&quot;/create-terms-condition&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;TermsCondition&gt;&gt; saveOrUpdateTermsCondition(
+            @RequestBody @Valid TermsConditionDto termsConditionDto) {
+        try {
+<span class="nc" id="L123">            TermsCondition termsCondition = jobOfferTermsService.saveOrUpdateTermsCondition(termsConditionDto);</span>
+<span class="nc bnc" id="L124" title="All 4 branches missed.">            String message = (termsConditionDto.getTermsConditionId() != null &amp;&amp; termsConditionDto.getTermsConditionId() &gt; 0)</span>
+<span class="nc" id="L125">                    ? &quot;TERMS-UPDATED-SUCCESS&quot;</span>
+<span class="nc" id="L126">                    : &quot;TERMS-CREATED-SUCCESS&quot;;</span>
+<span class="nc" id="L127">            ApiResponse&lt;TermsCondition&gt; response = new ApiResponse&lt;&gt;(</span>
+                    termsCondition,
+                    true,
+                    message,
+                    &quot;Information&quot;
+            );
+<span class="nc" id="L133">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L134">        } catch (IllegalArgumentException e) {</span>
+<span class="nc" id="L135">            ApiResponse&lt;TermsCondition&gt; validationErrorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;TERMS-VALIDATION-FAILURE&quot;,
+                    &quot;Validation Error&quot;,
+<span class="nc" id="L140">                    Collections.singletonList(e.getMessage())</span>
+            );
+<span class="nc" id="L142">            return ResponseEntity.badRequest().body(validationErrorResponse);</span>
+
+<span class="nc" id="L144">        } catch (Exception e) {</span>
+<span class="nc" id="L145">            ApiResponse&lt;TermsCondition&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;TERMS-CREATION-FAILURE&quot;,
+                    &quot;Server Error&quot;,
+<span class="nc" id="L150">                    Collections.singletonList(&quot;An unexpected error occurred. Please try again later.&quot;)</span>
+            );
+<span class="nc" id="L152">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/term-condition&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;ObjectNode&gt;&gt; getAllTermsConditions(
+            @RequestParam(value = &quot;page&quot;, defaultValue = &quot;1&quot;) int page,
+            @RequestParam(value = &quot;size&quot;, defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;termsConditionId&quot;, required = false) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;) String sortDir,
+            @RequestParam(value = &quot;searchField&quot;, required = false) String searchField,
+            @RequestParam(value = &quot;searchKeyword&quot;, required = false) String searchKeyword) {
+
+<span class="nc" id="L165">        log.debug(&quot;REST request to get paginated Terms and Conditions records&quot;);</span>
+        try {
+<span class="nc" id="L167">            List&lt;TermsConditionDto&gt; termsConditionList = jobOfferTermsService.getTermsConditions();</span>
+<span class="nc" id="L168">            List&lt;Map&lt;String, Object&gt;&gt; fullData = termsConditionList.stream()</span>
+<span class="nc" id="L169">                    .map(dto -&gt; objectMapper.convertValue(dto, new TypeReference&lt;Map&lt;String, Object&gt;&gt;() {</span>
+                    }))
+<span class="nc" id="L171">                    .collect(Collectors.toList());</span>
+<span class="nc bnc" id="L172" title="All 8 branches missed.">            if (searchField != null &amp;&amp; !searchField.isEmpty() &amp;&amp; searchKeyword != null &amp;&amp; !searchKeyword.isEmpty()) {</span>
+<span class="nc" id="L173">                fullData = fullData.stream()</span>
+<span class="nc bnc" id="L174" title="All 2 branches missed.">                        .filter(data -&gt; data.containsKey(searchField) &amp;&amp;</span>
+<span class="nc bnc" id="L175" title="All 2 branches missed.">                                data.get(searchField) != null &amp;&amp;</span>
+<span class="nc bnc" id="L176" title="All 2 branches missed.">                                data.get(searchField).toString().toLowerCase().contains(searchKeyword.toLowerCase()))</span>
+<span class="nc" id="L177">                        .collect(Collectors.toList());</span>
+            }
+<span class="nc bnc" id="L179" title="All 4 branches missed.">            if (sortBy != null &amp;&amp; !sortBy.isEmpty()) {</span>
+<span class="nc" id="L180">                Comparator&lt;Map&lt;String, Object&gt;&gt; comparator = (data1, data2) -&gt; {</span>
+<span class="nc" id="L181">                    Object obj1 = data1.getOrDefault(sortBy, &quot;&quot;);</span>
+<span class="nc" id="L182">                    Object obj2 = data2.getOrDefault(sortBy, &quot;&quot;);</span>
+<span class="nc bnc" id="L183" title="All 2 branches missed.">                    if (obj1 == null) obj1 = &quot;&quot;;</span>
+<span class="nc bnc" id="L184" title="All 2 branches missed.">                    if (obj2 == null) obj2 = &quot;&quot;;</span>
+<span class="nc bnc" id="L185" title="All 4 branches missed.">                    if (obj1 instanceof Number &amp;&amp; obj2 instanceof Number) {</span>
+<span class="nc" id="L186">                        return Double.compare(((Number) obj1).doubleValue(), ((Number) obj2).doubleValue());</span>
+                    }
+<span class="nc" id="L188">                    return obj1.toString().compareToIgnoreCase(obj2.toString());</span>
+                };
+<span class="nc bnc" id="L190" title="All 2 branches missed.">                if (&quot;desc&quot;.equalsIgnoreCase(sortDir)) {</span>
+<span class="nc" id="L191">                    comparator = comparator.reversed();</span>
+                }
+<span class="nc" id="L193">                fullData = fullData.stream().sorted(comparator).collect(Collectors.toList());</span>
+            }
+
+            // Apply Pagination
+<span class="nc" id="L197">            int totalItems = fullData.size();</span>
+<span class="nc" id="L198">            int totalPages = (int) Math.ceil((double) totalItems / size);</span>
+<span class="nc" id="L199">            int startIndex = Math.max(0, Math.min((page - 1) * size, totalItems));</span>
+<span class="nc" id="L200">            int endIndex = Math.min(startIndex + size, totalItems);</span>
+<span class="nc" id="L201">            List&lt;Map&lt;String, Object&gt;&gt; currentPageData = fullData.subList(startIndex, endIndex);</span>
+
+            // Pagination Info
+<span class="nc" id="L204">            ObjectNode paginationInfo = objectMapper.createObjectNode();</span>
+<span class="nc" id="L205">            paginationInfo.put(&quot;totalElements&quot;, totalItems);</span>
+<span class="nc" id="L206">            paginationInfo.put(&quot;totalPages&quot;, totalPages);</span>
+<span class="nc" id="L207">            paginationInfo.put(&quot;pageSize&quot;, size);</span>
+<span class="nc" id="L208">            paginationInfo.put(&quot;currentPage&quot;, page);</span>
+
+            // Response Data
+<span class="nc" id="L211">            ObjectNode responseData = objectMapper.createObjectNode();</span>
+<span class="nc" id="L212">            responseData.set(&quot;termsConditions&quot;, objectMapper.valueToTree(currentPageData));</span>
+<span class="nc" id="L213">            responseData.set(&quot;paginationData&quot;, paginationInfo);</span>
+
+<span class="nc" id="L215">            ApiResponse&lt;ObjectNode&gt; apiResponse = new ApiResponse&lt;&gt;(</span>
+                    responseData, true, &quot;TERMS_CONDITION_FETCHED&quot;, &quot;SUCCESS&quot;);
+<span class="nc" id="L217">            return ResponseEntity.ok(apiResponse);</span>
+<span class="nc" id="L218">        } catch (Exception e) {</span>
+<span class="nc" id="L219">            log.error(&quot;Error occurred while fetching Terms and Conditions&quot;, e);</span>
+<span class="nc" id="L220">            ApiResponse&lt;ObjectNode&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null, false, &quot;TERMS_CONDITION_FETCH_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L222">                    Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L223">            return new ResponseEntity&lt;&gt;(errorResponse, HttpStatus.OK);</span>
+        }
+    }
+
+    @GetMapping(&quot;/offerTermsDropdownList&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; offerTermsDropdownList() {
+        try {
+<span class="nc" id="L230">            List&lt;Map&lt;String, Object&gt;&gt; offerTermsDropdownList = jobOfferTermsService.offerTermsDropdownList();</span>
+<span class="nc" id="L231">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(offerTermsDropdownList, true, &quot;JOB_OFFER_TERMS_LIST_FETCHED_SUCCESS&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L232">        } catch (Exception e) {</span>
+<span class="nc" id="L233">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;JOB_OFFER_TERMS_LIST_FETCHED_ERROR&quot;, &quot;ERROR&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+
+    @GetMapping(&quot;/termsConditionDropdownList&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; termsConditionDropdownList() {
+        try {
+<span class="nc" id="L240">            List&lt;Map&lt;String, Object&gt;&gt; termsConditionDropdownList = jobOfferTermsService.termsConditionDropdownList();</span>
+<span class="nc" id="L241">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(termsConditionDropdownList, true, &quot;TERMS_CONDITION_LIST_FETCHED_SUCCESS&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L242">        } catch (Exception e) {</span>
+<span class="nc" id="L243">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;TERMS_CONDITION_LIST_FETCHED_ERROR&quot;, &quot;ERROR&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

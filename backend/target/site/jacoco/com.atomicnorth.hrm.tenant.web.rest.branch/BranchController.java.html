@@ -1,0 +1,643 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BranchController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.branch</a> &gt; <span class="el_source">BranchController.java</span></div><h1>BranchController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.branch;
+
+import com.atomicnorth.hrm.exception.ResourceNotFoundException;
+import com.atomicnorth.hrm.tenant.domain.branch.Branch;
+import com.atomicnorth.hrm.tenant.domain.branch.EmployeeAdvance;
+import com.atomicnorth.hrm.tenant.domain.branch.HRSettings;
+import com.atomicnorth.hrm.tenant.domain.branch.LeaveTypes;
+import com.atomicnorth.hrm.tenant.repository.LeaveTypeRepository;
+import com.atomicnorth.hrm.tenant.repository.branch.BranchRepository;
+import com.atomicnorth.hrm.tenant.repository.branch.HRSettingsRepository;
+import com.atomicnorth.hrm.tenant.service.branch.BranchService;
+import com.atomicnorth.hrm.tenant.service.dto.EmployeeAdvanceDto;
+import com.atomicnorth.hrm.tenant.service.dto.branch.BranchDto;
+import com.atomicnorth.hrm.tenant.service.dto.branch.BranchWithAddressDto;
+import com.atomicnorth.hrm.tenant.service.dto.branch.HRSettingDto;
+import com.atomicnorth.hrm.tenant.service.dto.branch.LeaveTypeDto;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import javax.validation.ValidationException;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping(&quot;/api/branches&quot;)
+public class BranchController {
+<span class="nc" id="L39">    private final Logger log = LoggerFactory.getLogger(BranchController.class);</span>
+    private final BranchService branchService;
+    private final BranchRepository branchRepository;
+    private final HRSettingsRepository hrSettingsRepository;
+    private final LeaveTypeRepository leaveTypeRepository;
+    @Autowired
+    private ObjectMapper objectMapper;
+
+<span class="nc" id="L47">    public BranchController(BranchService branchService, BranchRepository branchRepository, HRSettingsRepository hrSettingsRepository, LeaveTypeRepository leaveTypeRepository) {</span>
+<span class="nc" id="L48">        this.branchService = branchService;</span>
+<span class="nc" id="L49">        this.branchRepository = branchRepository;</span>
+<span class="nc" id="L50">        this.hrSettingsRepository = hrSettingsRepository;</span>
+<span class="nc" id="L51">        this.leaveTypeRepository = leaveTypeRepository;</span>
+<span class="nc" id="L52">    }</span>
+
+    @PostMapping(&quot;/createOrUpdate&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Branch&gt;&gt; createBranch(@Valid @RequestBody BranchDto branchDto) {
+        try {
+<span class="nc" id="L57">            Optional&lt;Branch&gt; existingBranch = branchRepository.findByCode(branchDto.getCode());</span>
+<span class="nc bnc" id="L58" title="All 2 branches missed.">            if (existingBranch.isPresent()) {</span>
+<span class="nc" id="L59">                ApiResponse&lt;Branch&gt; existingBranchResponse = new ApiResponse&lt;&gt;(</span>
+<span class="nc" id="L60">                        existingBranch.get(),</span>
+                        false,
+                        &quot;BRANCH-ALREADY-EXISTS&quot;,
+                        &quot;Warning&quot;,
+<span class="nc" id="L64">                        Collections.singletonList(</span>
+<span class="nc" id="L65">                                &quot;Branch with code &quot; + branchDto.getCode() + &quot; already exists.&quot;)</span>
+                );
+<span class="nc" id="L67">                return ResponseEntity.status(HttpStatus.OK).body(existingBranchResponse); // 409 Conflict</span>
+            }
+<span class="nc" id="L69">            Branch createdBranchMessage = branchService.createBranch(branchDto);</span>
+<span class="nc" id="L70">            ApiResponse&lt;Branch&gt; response = new ApiResponse&lt;&gt;(</span>
+                    createdBranchMessage,
+                    true,
+                    &quot;BRANCH-CREATED-SUCCESS&quot;,
+                    &quot;Information&quot;
+            );
+<span class="nc" id="L76">            return ResponseEntity.status(HttpStatus.CREATED).body(response);</span>
+<span class="nc" id="L77">        } catch (Exception ex) {</span>
+<span class="nc" id="L78">            ApiResponse&lt;Branch&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;BRANCH-CREATED-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L83">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L85">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);</span>
+        }
+    }
+
+    @PostMapping(&quot;/save-hrms-settings&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;HRSettings&gt;&gt; createHrmsSettings(@Valid @RequestBody HRSettingDto hrSettingDto) {
+        try {
+<span class="nc" id="L92">            branchService.validateBirthdays(hrSettingDto.getBirthdays());</span>
+<span class="nc" id="L93">            Optional&lt;HRSettings&gt; existingHrSettings = hrSettingsRepository.findByEmployeeId(hrSettingDto.getEmployeeId());</span>
+<span class="nc bnc" id="L94" title="All 2 branches missed.">            if (existingHrSettings.isPresent()) {</span>
+<span class="nc" id="L95">                ApiResponse&lt;HRSettings&gt; existingBranchResponse = new ApiResponse&lt;&gt;(</span>
+<span class="nc" id="L96">                        existingHrSettings.get(),</span>
+                        false,
+                        &quot;HR-SETTINGS-ALREADY-EXISTS&quot;,
+                        &quot;Warning&quot;,
+<span class="nc" id="L100">                        Collections.singletonList(&quot;Employee Name &quot; + hrSettingDto.getEmployeeName() + &quot; already exists.&quot;)</span>
+                );
+<span class="nc" id="L102">                return ResponseEntity.status(HttpStatus.OK).body(existingBranchResponse);</span>
+            }
+<span class="nc" id="L104">            HRSettings hrSettings = branchService.createHrmsSettings(hrSettingDto);</span>
+<span class="nc" id="L105">            ApiResponse&lt;HRSettings&gt; response = new ApiResponse&lt;&gt;(</span>
+                    hrSettings,
+                    true,
+                    &quot;HR-SETTINGS-CREATED-SUCCESS&quot;,
+                    &quot;Information&quot;
+            );
+<span class="nc" id="L111">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+
+<span class="nc" id="L113">        } catch (ValidationException ex) {</span>
+<span class="nc" id="L114">            ApiResponse&lt;HRSettings&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;HR-SETTINGS-VALIDATION-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L119">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L121">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+<span class="nc" id="L122">        } catch (Exception ex) {</span>
+<span class="nc" id="L123">            ApiResponse&lt;HRSettings&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;HR-SETTINGS-CREATION-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L128">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L130">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping
+    public ResponseEntity&lt;ApiResponse&lt;ObjectNode&gt;&gt; getHrmsSettingsList(
+            @RequestParam(defaultValue = &quot;0&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;id&quot;, required = false) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;, required = false) String sortDir,
+            @RequestParam(value = &quot;searchField&quot;, required = false) String searchField,
+            @RequestParam(value = &quot;searchKeyword&quot;, required = false) String searchKeyword
+    ) {
+<span class="nc" id="L143">        log.debug(&quot;REST request to get paginated HRMS settings records&quot;);</span>
+
+        try {
+            //    Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.fromString(sortDir), sortBy);
+<span class="nc" id="L147">            Map&lt;String, Object&gt; hrmsSettingsData = branchService.getHrmsSettingsList();</span>
+
+<span class="nc" id="L149">            List&lt;Map&lt;String, Object&gt;&gt; fullData = ((List&lt;?&gt;) hrmsSettingsData.get(&quot;result&quot;)).stream()</span>
+<span class="nc" id="L150">                    .map(obj -&gt; objectMapper.convertValue(obj, new TypeReference&lt;Map&lt;String, Object&gt;&gt;() {</span>
+                    }))
+<span class="nc" id="L152">                    .collect(Collectors.toList());</span>
+
+            // Apply Searching
+<span class="nc bnc" id="L155" title="All 8 branches missed.">            if (searchField != null &amp;&amp; !searchField.isEmpty() &amp;&amp; searchKeyword != null &amp;&amp; !searchKeyword.isEmpty()) {</span>
+<span class="nc" id="L156">                fullData = fullData.stream()</span>
+<span class="nc bnc" id="L157" title="All 2 branches missed.">                        .filter(data -&gt; data.containsKey(searchField) &amp;&amp;</span>
+<span class="nc bnc" id="L158" title="All 2 branches missed.">                                data.get(searchField) != null &amp;&amp;</span>
+<span class="nc bnc" id="L159" title="All 2 branches missed.">                                data.get(searchField).toString().toLowerCase().contains(searchKeyword.toLowerCase()))</span>
+<span class="nc" id="L160">                        .collect(Collectors.toList());</span>
+            }
+
+            // Apply Sorting
+<span class="nc bnc" id="L164" title="All 4 branches missed.">            if (sortBy != null &amp;&amp; !sortBy.isEmpty()) {</span>
+<span class="nc" id="L165">                Comparator&lt;Map&lt;String, Object&gt;&gt; comparator = (data1, data2) -&gt; {</span>
+<span class="nc" id="L166">                    Object obj1 = data1.getOrDefault(sortBy, &quot;&quot;);</span>
+<span class="nc" id="L167">                    Object obj2 = data2.getOrDefault(sortBy, &quot;&quot;);</span>
+<span class="nc bnc" id="L168" title="All 2 branches missed.">                    if (obj1 == null) obj1 = &quot;&quot;;</span>
+<span class="nc bnc" id="L169" title="All 2 branches missed.">                    if (obj2 == null) obj2 = &quot;&quot;;</span>
+<span class="nc bnc" id="L170" title="All 4 branches missed.">                    if (obj1 instanceof Number &amp;&amp; obj2 instanceof Number) {</span>
+<span class="nc" id="L171">                        return Double.compare(((Number) obj1).doubleValue(), ((Number) obj2).doubleValue());</span>
+                    }
+<span class="nc" id="L173">                    return obj1.toString().compareToIgnoreCase(obj2.toString());</span>
+                };
+<span class="nc bnc" id="L175" title="All 2 branches missed.">                if (&quot;desc&quot;.equalsIgnoreCase(sortDir)) {</span>
+<span class="nc" id="L176">                    comparator = comparator.reversed();</span>
+                }
+<span class="nc" id="L178">                fullData = fullData.stream().sorted(comparator).collect(Collectors.toList());</span>
+            }
+
+            // Apply Pagination
+<span class="nc" id="L182">            int totalItems = fullData.size();</span>
+<span class="nc" id="L183">            int totalPages = (int) Math.ceil((double) totalItems / size);</span>
+<span class="nc" id="L184">            int startIndex = Math.max(0, Math.min((page - 1) * size, totalItems));</span>
+<span class="nc" id="L185">            int endIndex = Math.min(startIndex + size, totalItems);</span>
+<span class="nc" id="L186">            List&lt;Map&lt;String, Object&gt;&gt; currentPageData = fullData.subList(startIndex, endIndex);</span>
+
+            // Pagination Info
+<span class="nc" id="L189">            ObjectNode paginationInfo = objectMapper.createObjectNode();</span>
+<span class="nc" id="L190">            paginationInfo.put(&quot;totalElements&quot;, totalItems);</span>
+<span class="nc" id="L191">            paginationInfo.put(&quot;totalPages&quot;, totalPages);</span>
+<span class="nc" id="L192">            paginationInfo.put(&quot;pageSize&quot;, size);</span>
+<span class="nc" id="L193">            paginationInfo.put(&quot;currentPage&quot;, page);</span>
+
+            // Response Data
+<span class="nc" id="L196">            ObjectNode responseData = objectMapper.createObjectNode();</span>
+<span class="nc" id="L197">            responseData.set(&quot;result&quot;, objectMapper.valueToTree(currentPageData));</span>
+<span class="nc" id="L198">            responseData.set(&quot;paginationData&quot;, paginationInfo);</span>
+
+<span class="nc" id="L200">            ApiResponse&lt;ObjectNode&gt; apiResponse = new ApiResponse&lt;&gt;(</span>
+                    responseData, true, &quot;HR-SETTINGS-LIST-SUCCESS&quot;, &quot;SUCCESS&quot;);
+<span class="nc" id="L202">            return ResponseEntity.ok(apiResponse);</span>
+
+<span class="nc" id="L204">        } catch (IllegalArgumentException e) {</span>
+<span class="nc" id="L205">            log.error(&quot;Invalid input for HRMS settings list&quot;, e);</span>
+<span class="nc" id="L206">            ApiResponse&lt;ObjectNode&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null, false, &quot;HR-SETTINGS-LIST-FAILURE&quot;, &quot;WARNING&quot;,
+<span class="nc" id="L208">                    Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L209">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+<span class="nc" id="L210">        } catch (Exception e) {</span>
+<span class="nc" id="L211">            log.error(&quot;Error occurred while fetching HRMS settings&quot;, e);</span>
+<span class="nc" id="L212">            ApiResponse&lt;ObjectNode&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null, false, &quot;HR-SETTINGS-LIST-FAILURE&quot;, &quot;ERROR&quot;,
+<span class="nc" id="L214">                    Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L215">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @PatchMapping(&quot;{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;HRSettingDto&gt;&gt; updateHRSetting(
+            @PathVariable Integer id,
+            @RequestBody HRSettingDto dto
+    ) {
+        try {
+<span class="nc" id="L225">            HRSettingDto updatedHRSettingDto = branchService.updateHRSetting(id, dto);</span>
+<span class="nc" id="L226">            ApiResponse&lt;HRSettingDto&gt; response = new ApiResponse&lt;&gt;(</span>
+                    updatedHRSettingDto,
+                    true,
+                    &quot;HR-SETTINGS-UPDATE-SUCCESS&quot;,
+                    &quot;Success&quot;
+            );
+<span class="nc" id="L232">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L233">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L234">            ApiResponse&lt;HRSettingDto&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;HR-SETTINGS-UPDATE-FAILURE&quot;,
+                    &quot;Warning&quot;,
+<span class="nc" id="L239">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L241">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse); // 409 Conflict for invalid argument</span>
+<span class="nc" id="L242">        } catch (ResourceNotFoundException ex) {</span>
+<span class="nc" id="L243">            ApiResponse&lt;HRSettingDto&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;HR-SETTINGS-NOT-FOUND&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L248">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L250">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse); // 404 Not Found</span>
+<span class="nc" id="L251">        } catch (Exception ex) {</span>
+<span class="nc" id="L252">            ApiResponse&lt;HRSettingDto&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;HR-SETTINGS-UPDATE-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L257">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L259">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse); // 500 Internal Server Error</span>
+        }
+    }
+
+    @GetMapping(&quot;/branch-list&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getBranchList(
+            @RequestParam(defaultValue = &quot;0&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;createdDate&quot;, required = false) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;, required = false) String sortDir,
+            @RequestParam(value = &quot;searchField&quot;, required = false) String searchField,
+            @RequestParam(value = &quot;searchKeyword&quot;, required = false) String searchKeyword
+    ) {
+        try {
+<span class="nc" id="L273">            Pageable pageable = PageRequest.of(Math.max(page - 1, 0), size, Sort.Direction.fromString(sortDir), sortBy);</span>
+
+<span class="nc" id="L275">            Map&lt;String, Object&gt; branchDTOList = branchService.getPaginatedBranchList(searchField, searchKeyword, pageable);</span>
+
+<span class="nc" id="L277">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    branchDTOList, true, &quot;BRANCH-LIST-SUCCESS&quot;, &quot;Success&quot;);
+<span class="nc" id="L279">            return ResponseEntity.ok(response);</span>
+
+<span class="nc" id="L281">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L282">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+<span class="nc" id="L283">                    null, false, &quot;BRANCH-LIST-FAILURE&quot;, &quot;Warning&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L284">            return ResponseEntity.ok(errorResponse);</span>
+<span class="nc" id="L285">        } catch (Exception ex) {</span>
+<span class="nc" id="L286">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+<span class="nc" id="L287">                    null, false, &quot;BRANCH-LIST-FAILURE&quot;, &quot;Error&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L288">            return ResponseEntity.ok(errorResponse);</span>
+        }
+    }
+
+    @PatchMapping(&quot;update-branch/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;BranchDto&gt;&gt; updateBranch(
+            @PathVariable Integer id,
+            @RequestBody BranchDto dto
+    ) {
+        try {
+<span class="nc" id="L298">            BranchDto updatedHRSettingDto = branchService.updateBranch(id, dto);</span>
+<span class="nc" id="L299">            ApiResponse&lt;BranchDto&gt; response = new ApiResponse&lt;&gt;(</span>
+                    updatedHRSettingDto,
+                    true,
+                    &quot;HR-SETTINGS-UPDATE-SUCCESS&quot;,
+                    &quot;Success&quot;
+            );
+<span class="nc" id="L305">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L306">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L307">            ApiResponse&lt;BranchDto&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;HR-SETTINGS-UPDATE-FAILURE&quot;,
+                    &quot;Warning&quot;,
+<span class="nc" id="L312">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L314">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse); // 409 Conflict for invalid argument</span>
+<span class="nc" id="L315">        } catch (ResourceNotFoundException ex) {</span>
+<span class="nc" id="L316">            ApiResponse&lt;BranchDto&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;HR-SETTINGS-NOT-FOUND&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L321">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L323">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse); // 404 Not Found</span>
+<span class="nc" id="L324">        } catch (Exception ex) {</span>
+<span class="nc" id="L325">            ApiResponse&lt;BranchDto&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;HR-SETTINGS-UPDATE-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L330">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L332">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse); // 500 Internal Server Error</span>
+        }
+    }
+
+    @PostMapping(&quot;/save-employee-advance&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;EmployeeAdvance&gt;&gt; saveOrUpdateEmployeeAdvance(
+            @RequestBody @Valid EmployeeAdvanceDto employeeAdvanceDto) {
+        try {
+<span class="nc" id="L340">            EmployeeAdvance employeeAdvance = branchService.saveOrUpdateEmployeeAdvance(employeeAdvanceDto);</span>
+<span class="nc bnc" id="L341" title="All 2 branches missed.">            String message = (employeeAdvanceDto.getId() != null)</span>
+<span class="nc" id="L342">                    ? &quot;EMPLOYEE-ADVANCE-UPDATED-SUCCESS&quot;</span>
+<span class="nc" id="L343">                    : &quot;EMPLOYEE-ADVANCE-CREATED-SUCCESS&quot;;</span>
+<span class="nc" id="L344">            ApiResponse&lt;EmployeeAdvance&gt; response = new ApiResponse&lt;&gt;(</span>
+                    employeeAdvance,
+                    true,
+                    message,
+                    &quot;Information&quot;
+            );
+<span class="nc" id="L350">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L351">        } catch (ValidationException e) {</span>
+<span class="nc" id="L352">            ApiResponse&lt;EmployeeAdvance&gt; validationErrorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;EMPLOYEE-ADVANCE-VALIDATION-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L357">                    Collections.singletonList(e.getMessage())</span>
+            );
+<span class="nc" id="L359">            return ResponseEntity.status(HttpStatus.OK).body(validationErrorResponse);</span>
+<span class="nc" id="L360">        } catch (Exception e) {</span>
+<span class="nc" id="L361">            ApiResponse&lt;EmployeeAdvance&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;EMPLOYEE-ADVANCE-CREATION-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L366">                    Collections.singletonList(e.getMessage())</span>
+            );
+<span class="nc" id="L368">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @PostMapping(&quot;/save-leave-type&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;LeaveTypes&gt;&gt; saveOrUpdateLeaveType(
+            @RequestBody @Valid LeaveTypeDto leaveTypeDto) {
+        try {
+<span class="nc" id="L376">            Optional&lt;LeaveTypes&gt; existingLeave = leaveTypeRepository.findByLeaveCode(leaveTypeDto.getLeaveCode());</span>
+
+<span class="nc bnc" id="L378" title="All 6 branches missed.">            if (existingLeave.isPresent() &amp;&amp; (leaveTypeDto.getId() == null || !existingLeave.get().getId().equals(leaveTypeDto.getId()))) {</span>
+<span class="nc" id="L379">                ApiResponse&lt;LeaveTypes&gt; duplicateErrorResponse = new ApiResponse&lt;&gt;(</span>
+                        null,
+                        false,
+                        &quot;LEAVE-TYPE-ALREADY-EXISTS&quot;,
+                        &quot;Error&quot;,
+<span class="nc" id="L384">                        Collections.singletonList(&quot;A leave type with the same code already exists.&quot;)</span>
+                );
+<span class="nc" id="L386">                return ResponseEntity.status(HttpStatus.OK).body(duplicateErrorResponse);</span>
+            }
+<span class="nc" id="L388">            LeaveTypes leaveType = branchService.saveOrUpdateLeaveType(leaveTypeDto);</span>
+<span class="nc bnc" id="L389" title="All 2 branches missed.">            String message = (leaveTypeDto.getId() != null)</span>
+<span class="nc" id="L390">                    ? &quot;LEAVE-TYPE-UPDATED-SUCCESS&quot;</span>
+<span class="nc" id="L391">                    : &quot;LEAVE-TYPE-CREATED-SUCCESS&quot;;</span>
+
+<span class="nc" id="L393">            ApiResponse&lt;LeaveTypes&gt; response = new ApiResponse&lt;&gt;(</span>
+                    leaveType,
+                    true,
+                    message,
+                    &quot;Information&quot;
+            );
+<span class="nc" id="L399">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L400">        } catch (ValidationException e) {</span>
+<span class="nc" id="L401">            ApiResponse&lt;LeaveTypes&gt; validationErrorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;LEAVE-TYPE-VALIDATION-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L406">                    Collections.singletonList(e.getMessage())</span>
+            );
+<span class="nc" id="L408">            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(validationErrorResponse);</span>
+<span class="nc" id="L409">        } catch (Exception e) {</span>
+<span class="nc" id="L410">            ApiResponse&lt;LeaveTypes&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;LEAVE-TYPE-CREATION-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L415">                    Collections.singletonList(e.getMessage())</span>
+            );
+<span class="nc" id="L417">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/hr-settings-by-id/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;HRSettingDto&gt;&gt; getHRSettingById(@PathVariable(&quot;id&quot;) Integer id) {
+        try {
+<span class="nc" id="L424">            Optional&lt;HRSettingDto&gt; hrSettingDto = branchService.getHRSettingById(id);</span>
+<span class="nc" id="L425">            return hrSettingDto</span>
+<span class="nc" id="L426">                    .map(dto -&gt; ResponseEntity.ok(new ApiResponse&lt;&gt;(</span>
+                            dto,
+                            true,
+                            &quot;HR-SETTINGS-BY-ID&quot;,
+                            &quot;SUCCESS&quot;,
+                            null
+                    )))
+<span class="nc" id="L433">                    .orElseGet(() -&gt; ResponseEntity.status(HttpStatus.NOT_FOUND)</span>
+<span class="nc" id="L434">                            .body(new ApiResponse&lt;&gt;(</span>
+                                    null,
+                                    false,
+                                    &quot;HR-SETTINGS-BY-ID&quot;,
+                                    &quot;HR-SETTINGS-NOT-FOUND&quot;,
+<span class="nc" id="L439">                                    Collections.singletonList(&quot;HR Setting not found&quot;)</span>
+                            )));
+<span class="nc" id="L441">        } catch (Exception e) {</span>
+<span class="nc" id="L442">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L443">                    .body(new ApiResponse&lt;&gt;(</span>
+                            null,
+                            false,
+                            &quot;HR-SETTINGS-BY-ID&quot;,
+                            &quot;ERROR&quot;,
+<span class="nc" id="L448">                            Collections.singletonList(e.getMessage()) // Include exception message</span>
+                    ));
+        }
+    }
+
+    @GetMapping(&quot;leave-type-list&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getLeaveTypeList(
+            @RequestParam(defaultValue = &quot;0&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;createdDate&quot;, required = false) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;, required = false) String sortDir,
+            @RequestParam(value = &quot;searchKeyword&quot;, required = false) String searchKeyword,
+            @RequestParam(value = &quot;searchField&quot;, required = false) String searchField
+    ) {
+        try {
+<span class="nc" id="L463">            Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc" id="L464">            Map&lt;String, Object&gt; leaveTypeDTOList = branchService.getPaginatedLeaveTypeList(searchKeyword, searchField, pageable);</span>
+
+<span class="nc" id="L466">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    leaveTypeDTOList,
+                    true,
+                    &quot;LEAVE-TYPE-LIST-SUCCESS&quot;,
+                    &quot;Success&quot;
+            );
+<span class="nc" id="L472">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+
+<span class="nc" id="L474">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L475">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;LEAVE-TYPE-LIST-FAILURE&quot;,
+                    &quot;Warning&quot;,
+<span class="nc" id="L480">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L482">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+<span class="nc" id="L483">        } catch (Exception ex) {</span>
+<span class="nc" id="L484">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;LEAVE-TYPE-LIST-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L489">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L491">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;employee-advance-list&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getEmployeeAdvanceList(
+            @RequestParam(defaultValue = &quot;0&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;id&quot;, required = false) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;, required = false) String sortDir,
+            @RequestParam(value = &quot;searchKeyword&quot;, required = false) String searchKeyword,
+            @RequestParam(value = &quot;searchField&quot;, required = false) String searchField
+    ) {
+        try {
+<span class="nc bnc" id="L505" title="All 2 branches missed.">            if (sortBy.equalsIgnoreCase(&quot;employeeName&quot;)) sortBy = &quot;employeeId&quot;;</span>
+<span class="nc" id="L506">            Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc" id="L507">            Map&lt;String, Object&gt; employeeAdvanceListDTOList = branchService.getPaginatedEmployeeAdvanceList(searchKeyword, searchField, pageable);</span>
+
+<span class="nc" id="L509">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    employeeAdvanceListDTOList,
+                    true,
+                    &quot;EMPLOYEE-ADVANCE-LIST-SUCCESS&quot;,
+                    &quot;Success&quot;
+            );
+<span class="nc" id="L515">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+
+<span class="nc" id="L517">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L518">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;EMPLOYEE-ADVANCE-LIST-FAILURE&quot;,
+                    &quot;Warning&quot;,
+<span class="nc" id="L523">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L525">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+<span class="nc" id="L526">        } catch (Exception ex) {</span>
+<span class="nc" id="L527">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;EMPLOYEE-ADVANCE-LIST-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L532">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L534">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+/*    @PostMapping(&quot;/createOrUpdate&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Branch&gt;&gt; createOrUpdateBranch(@Valid @RequestBody BranchWithAddressDto branchDto) {
+        try {
+            Branch savedBranch = branchService.createOrUpdateBranch(branchDto);
+
+            ApiResponse&lt;Branch&gt; response = new ApiResponse&lt;&gt;(
+                    savedBranch,
+                    true,
+                    (branchDto.getId() != null) ? &quot;BRANCH-UPDATED-SUCCESS&quot; : &quot;BRANCH-CREATED-SUCCESS&quot;,
+                    &quot;Information&quot;
+            );
+
+            return ResponseEntity.status((branchDto.getId() != null) ? HttpStatus.OK : HttpStatus.CREATED).body(response);
+        } catch (Exception ex) {
+            ApiResponse&lt;Branch&gt; errorResponse = new ApiResponse&lt;&gt;(
+                    null,
+                    false,
+                    &quot;BRANCH-SAVE-FAILURE&quot;,
+                    &quot;Error&quot;,
+                    List.of(ex.getMessage(), &quot;Please contact support.&quot;)
+            );
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }*/
+
+    //    @PostMapping(&quot;/createOrUpdate&quot;)
+    @PostMapping()
+    public ResponseEntity&lt;ApiResponse&lt;Branch&gt;&gt; createOrUpdateBranch(@Valid @RequestBody BranchWithAddressDto branchDto) {
+        try {
+<span class="nc bnc" id="L567" title="All 2 branches missed.">            if (branchDto.getId() == null) {</span>
+<span class="nc" id="L568">                Optional&lt;Branch&gt; existingBranch = branchRepository.findByCode(branchDto.getCode());</span>
+<span class="nc bnc" id="L569" title="All 2 branches missed.">                if (existingBranch.isPresent()) {</span>
+<span class="nc" id="L570">                    ApiResponse&lt;Branch&gt; existingBranchResponse = new ApiResponse&lt;&gt;(</span>
+<span class="nc" id="L571">                            existingBranch.get(),</span>
+                            false,
+                            &quot;BRANCH-ALREADY-EXISTS&quot;,
+                            &quot;Warning&quot;,
+<span class="nc" id="L575">                            Collections.singletonList(</span>
+<span class="nc" id="L576">                                    &quot;Branch with code &quot; + branchDto.getCode() + &quot; already exists.&quot;)</span>
+                    );
+<span class="nc" id="L578">                    return ResponseEntity.status(HttpStatus.OK).body(existingBranchResponse); // 409 Conflict</span>
+                }
+            }
+<span class="nc" id="L581">            Branch savedBranch = branchService.createOrUpdateBranch(branchDto);</span>
+
+<span class="nc" id="L583">            ApiResponse&lt;Branch&gt; response = new ApiResponse&lt;&gt;(</span>
+                    savedBranch,
+                    true,
+<span class="nc bnc" id="L586" title="All 2 branches missed.">                    (branchDto.getId() != null) ? &quot;BRANCH-UPDATED-SUCCESS&quot; : &quot;BRANCH-CREATED-SUCCESS&quot;,</span>
+                    &quot;Information&quot;
+            );
+
+<span class="nc bnc" id="L590" title="All 2 branches missed.">            return ResponseEntity.status((branchDto.getId() != null) ? HttpStatus.OK : HttpStatus.CREATED).body(response);</span>
+<span class="nc" id="L591">        } catch (Exception ex) {</span>
+<span class="nc" id="L592">            ApiResponse&lt;Branch&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;BRANCH-SAVE-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L597">                    List.of(ex.getMessage(), &quot;Please contact support.&quot;)</span>
+            );
+<span class="nc" id="L599">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/findBranchIdAndName&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; getBranchNameAndId() {
+        try {
+<span class="nc" id="L606">            List&lt;Map&lt;String, Object&gt;&gt; employees = this.branchService.findBranchNameAndId();</span>
+<span class="nc bnc" id="L607" title="All 2 branches missed.">            if (employees.isEmpty()) {</span>
+<span class="nc" id="L608">                return new ResponseEntity&lt;&gt;(</span>
+                        new ApiResponse&lt;&gt;(null, false, &quot;BRANCH_DETAILS_NOT_FOUND&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L610">                                Collections.singletonList(&quot;No branch details found.&quot;)),</span>
+                        HttpStatus.OK);
+            }
+<span class="nc" id="L613">            return ResponseEntity.ok(</span>
+                    new ApiResponse&lt;&gt;(employees, true, &quot;BRANCH_DETAILS_FETCHED&quot;, &quot;SUCCESS&quot;));
+<span class="nc" id="L615">        } catch (Exception e) {</span>
+<span class="nc" id="L616">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;BRANCH_DETAILS_FETCH_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L618">                            Collections.singletonList(e.getMessage())),</span>
+                    HttpStatus.OK);
+        }
+    }
+
+    @GetMapping(&quot;nonAssociateHrSettingsEmployees&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; nonAssociateHrSettingsEmployees() {
+        try {
+<span class="nc" id="L626">            List&lt;Map&lt;String, Object&gt;&gt; nonAssociateEmployees = branchService.nonAssociateEmployees();</span>
+<span class="nc" id="L627">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(nonAssociateEmployees, true, &quot;EMPLOYEES_LIST_FETCHED_SUCCESS&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L628">        } catch (Exception ex) {</span>
+<span class="nc" id="L629">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(null, true, &quot;EMPLOYEES_LIST_FETCHED_ERROR&quot;, &quot;SUCCESS&quot;, Collections.singletonList(ex.getMessage())));</span>
+        }
+    }
+
+    @GetMapping(&quot;/leaveTypeDropdownList&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; leaveTypeDropdownList() {
+        try {
+<span class="nc" id="L636">            List&lt;Map&lt;String, Object&gt;&gt; leaveTypeDropdownList = branchService.leaveTypeDropdownList();</span>
+<span class="nc" id="L637">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(leaveTypeDropdownList, true, &quot;LEAVE_TYPE_LIST_FETCHED_SUCCESS&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L638">        } catch (Exception e) {</span>
+<span class="nc" id="L639">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;LEAVE_TYPE_LIST_FETCHED_ERROR&quot;, &quot;ERROR&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

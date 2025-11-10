@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>StaffPlan.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.domain.jobOpening</a> &gt; <span class="el_source">StaffPlan.java</span></div><h1>StaffPlan.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.domain.jobOpening;
+
+import com.atomicnorth.hrm.tenant.domain.AbstractAuditingEntity;
+import com.atomicnorth.hrm.util.Enum.Active;
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+
+import javax.persistence.*;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+@Entity
+<span class="nc" id="L19">@AllArgsConstructor</span>
+<span class="nc" id="L20">@NoArgsConstructor</span>
+<span class="nc bnc" id="L21" title="All 54 branches missed.">@Data</span>
+@Table(name = &quot;ses_m04_staff_plan&quot;)
+@Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
+public class StaffPlan extends AbstractAuditingEntity&lt;Long&gt; implements Serializable {
+
+    @Id
+    @Column(name = &quot;ID&quot;)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<span class="nc" id="L29">    private Long id;</span>
+
+    @Column(name = &quot;STAFF_NAME&quot;, nullable = false, length = 100)
+<span class="nc" id="L32">    private String staffName;</span>
+
+    @Enumerated(EnumType.STRING)
+    @JsonEnumDefaultValue
+    @Column(name = &quot;ISACTIVE&quot;, length = 1)
+<span class="nc" id="L37">    private Active isActive;</span>
+
+    @Column(name = &quot;EFFECTIVE_START_DATE&quot;, nullable = true)
+    @Temporal(TemporalType.DATE)
+<span class="nc" id="L41">    private Date effectiveStartDate;</span>
+
+    @Column(name = &quot;EFFECTIVE_END_DATE&quot;, nullable = true)
+    @Temporal(TemporalType.DATE)
+<span class="nc" id="L45">    private Date effectiveEndDate;</span>
+
+<span class="nc" id="L47">    @OneToMany(mappedBy = &quot;staffPlanId&quot;, cascade = CascadeType.ALL, fetch = FetchType.LAZY)</span>
+    @Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
+<span class="nc" id="L49">    private List&lt;StaffPlanDetails&gt; staffPlanDetails = new ArrayList&lt;&gt;();</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

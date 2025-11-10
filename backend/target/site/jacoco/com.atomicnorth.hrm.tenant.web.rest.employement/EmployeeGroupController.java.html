@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmployeeGroupController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.employement</a> &gt; <span class="el_source">EmployeeGroupController.java</span></div><h1>EmployeeGroupController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.employement;
+
+import com.atomicnorth.hrm.tenant.domain.Group;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.GroupRepo;
+import com.atomicnorth.hrm.tenant.service.SequenceGeneratorService;
+import com.atomicnorth.hrm.tenant.service.dto.employement.EmployeeGroupDTO;
+import com.atomicnorth.hrm.tenant.service.employement.EmployeeGroupService;
+import com.atomicnorth.hrm.util.Enum.SequenceType;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Optional;
+
+@RestController
+@ControllerAdvice
+@RequestMapping(&quot;/api/empGroups&quot;)
+<span class="nc" id="L28">public class EmployeeGroupController {</span>
+
+    @Autowired
+    private EmployeeGroupService employeeGroupService;
+
+    @Autowired
+    private GroupRepo groupRepo;
+
+    @PostMapping
+    public ResponseEntity&lt;ApiResponse&lt;EmployeeGroupDTO&gt;&gt; createEmployeeGroup(@Valid @RequestBody EmployeeGroupDTO empGrpDTO) {
+        try {
+<span class="nc" id="L39">            UserLoginDetail userDetail =SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L40">            Group existingGroupName = groupRepo.findByGroupNameIgnoreCase(empGrpDTO.getGroupName());</span>
+<span class="nc bnc" id="L41" title="All 2 branches missed.">            if (existingGroupName != null) {</span>
+<span class="nc" id="L42">                ApiResponse&lt;EmployeeGroupDTO&gt; existingEmployeeGrpRes = new ApiResponse&lt;&gt;(</span>
+                        null,
+                        false,
+                        &quot;EMP-GROUP-ALREADY-EXISTS&quot;,
+                        &quot;Warning&quot;,
+<span class="nc" id="L47">                        Collections.singletonList(</span>
+<span class="nc" id="L48">                                &quot;Employee Group name &quot; + empGrpDTO.getGroupName() + &quot; already exists.&quot;)</span>
+                );
+<span class="nc" id="L50">                return ResponseEntity.status(HttpStatus.OK).body(existingEmployeeGrpRes);</span>
+            }
+<span class="nc" id="L52">            EmployeeGroupDTO createEmpGrp = employeeGroupService.createEmpGrp(empGrpDTO);</span>
+
+<span class="nc" id="L54">            ApiResponse&lt;EmployeeGroupDTO&gt; response = new ApiResponse&lt;&gt;(</span>
+                    createEmpGrp,
+                    true,
+                    &quot;EMP-GROUP-CREATED-SUCCESS&quot;,
+                    &quot;Information&quot;
+            );
+<span class="nc" id="L60">            return ResponseEntity.status(HttpStatus.CREATED).body(response);</span>
+<span class="nc" id="L61">        } catch (Exception ex) {</span>
+<span class="nc" id="L62">            ApiResponse&lt;EmployeeGroupDTO&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;EMP-GROUP-CREATED-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L67">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L69">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);</span>
+        }
+    }
+
+    @PutMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;EmployeeGroupDTO&gt;&gt; updateEmployeeGroup(@PathVariable Long id, @RequestBody EmployeeGroupDTO empGrpDTO) {
+        try {
+<span class="nc" id="L76">            EmployeeGroupDTO updateEmpGrp = employeeGroupService.updateEmpGrp(empGrpDTO, id);</span>
+
+<span class="nc" id="L78">            ApiResponse&lt;EmployeeGroupDTO&gt; response = new ApiResponse&lt;&gt;(</span>
+                    updateEmpGrp,
+                    true,
+                    &quot;EMP-GROUP-CREATED-SUCCESS&quot;,
+                    &quot;Information&quot;
+            );
+<span class="nc" id="L84">            return ResponseEntity.status(HttpStatus.CREATED).body(response);</span>
+<span class="nc" id="L85">        } catch (Exception ex) {</span>
+<span class="nc" id="L86">            ApiResponse&lt;EmployeeGroupDTO&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;EMP-GROUP-CREATED-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L91">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L93">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getGroupList(
+            @RequestParam(defaultValue = &quot;0&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;createdDate&quot;, required = false) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;, required = false) String sortDir,
+            @RequestParam(value = &quot;searchColumn&quot;, required = false) String searchColumn,
+            @RequestParam(value = &quot;searchValue&quot;, required = false) String searchValue
+    ) {
+        try {
+<span class="nc" id="L107">            Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc" id="L108">            Map&lt;String, Object&gt; GROUPDTOList = employeeGroupService.getPaginatedEmployeeGroups(pageable, searchColumn, searchValue);</span>
+
+<span class="nc" id="L110">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    GROUPDTOList,
+                    true,
+                    &quot;GROUP-LIST-SUCCESS&quot;,
+                    &quot;Success&quot;
+            );
+<span class="nc" id="L116">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+
+<span class="nc" id="L118">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L119">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;GROUP-LIST-FAILURE&quot;,
+                    &quot;Warning&quot;,
+<span class="nc" id="L124">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L126">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+<span class="nc" id="L127">        } catch (Exception ex) {</span>
+<span class="nc" id="L128">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;GROUP-LIST-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L133">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L135">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/get&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getEmployeeGroupList(@RequestParam String groupId) {
+        try {
+<span class="nc" id="L142">            Map&lt;String, Object&gt; GROUPDTOList = employeeGroupService.getEmployeeIdsByGroupId(Long.parseLong(groupId));</span>
+<span class="nc" id="L143">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    GROUPDTOList,
+                    true,
+                    &quot;EMPLOYEE-GROUP-LIST-SUCCESS&quot;,
+                    &quot;Success&quot;
+            );
+<span class="nc" id="L149">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+
+<span class="nc" id="L151">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L152">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;EMPLOYEE-GROUP-LIST-FAILURE&quot;,
+                    &quot;Warning&quot;,
+<span class="nc" id="L157">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L159">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+<span class="nc" id="L160">        } catch (Exception ex) {</span>
+<span class="nc" id="L161">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;EMPLOYEE-GROUP-LIST-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L166">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L168">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

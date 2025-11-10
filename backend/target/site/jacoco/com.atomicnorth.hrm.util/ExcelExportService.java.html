@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ExcelExportService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.util</a> &gt; <span class="el_source">ExcelExportService.java</span></div><h1>ExcelExportService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.util;
+
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L20">public class ExcelExportService {</span>
+    /**
+     * Export list of objects into Excel.
+     * Uses reflection to read field names for headers.
+     */
+    public &lt;T&gt; ResponseEntity&lt;InputStreamResource&gt; exportToExcel(List&lt;T&gt; data, String fileName) throws Exception {
+<span class="nc bnc" id="L26" title="All 4 branches missed.">        if (data == null || data.isEmpty()) {</span>
+<span class="nc" id="L27">            throw new IllegalArgumentException(&quot;No data to export&quot;);</span>
+        }
+
+<span class="nc" id="L30">        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {</span>
+<span class="nc" id="L31">            Sheet sheet = workbook.createSheet(&quot;Data&quot;);</span>
+
+            // Create header row
+<span class="nc" id="L34">            Row headerRow = sheet.createRow(0);</span>
+<span class="nc" id="L35">            Field[] fields = data.get(0).getClass().getDeclaredFields();</span>
+<span class="nc bnc" id="L36" title="All 2 branches missed.">            for (int i = 0; i &lt; fields.length; i++) {</span>
+<span class="nc" id="L37">                fields[i].setAccessible(true);</span>
+<span class="nc" id="L38">                Cell cell = headerRow.createCell(i);</span>
+<span class="nc" id="L39">                cell.setCellValue(fields[i].getName());</span>
+<span class="nc" id="L40">                cell.setCellStyle(getHeaderStyle(workbook));</span>
+            }
+
+            // Populate rows
+<span class="nc" id="L44">            int rowIdx = 1;</span>
+<span class="nc bnc" id="L45" title="All 2 branches missed.">            for (T item : data) {</span>
+<span class="nc" id="L46">                Row row = sheet.createRow(rowIdx++);</span>
+<span class="nc bnc" id="L47" title="All 2 branches missed.">                for (int i = 0; i &lt; fields.length; i++) {</span>
+<span class="nc" id="L48">                    fields[i].setAccessible(true);</span>
+<span class="nc" id="L49">                    Object value = fields[i].get(item);</span>
+<span class="nc bnc" id="L50" title="All 2 branches missed.">                    row.createCell(i).setCellValue(value != null ? value.toString() : &quot;&quot;);</span>
+                }
+<span class="nc" id="L52">            }</span>
+
+<span class="nc" id="L54">            workbook.write(out);</span>
+<span class="nc" id="L55">            ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());</span>
+
+<span class="nc" id="L57">            return ResponseEntity.ok()</span>
+<span class="nc" id="L58">                    .header(HttpHeaders.CONTENT_DISPOSITION, &quot;attachment; filename=&quot; + fileName + &quot;.xlsx&quot;)</span>
+<span class="nc" id="L59">                    .contentType(MediaType.parseMediaType(&quot;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet&quot;))</span>
+<span class="nc" id="L60">                    .body(new InputStreamResource(in));</span>
+        }
+    }
+
+    /**
+     * Export from list of maps (if dynamic columns).
+     */
+    public ResponseEntity&lt;InputStreamResource&gt; exportToExcelFromMap(List&lt;Map&lt;String, Object&gt;&gt; data, String fileName) throws Exception {
+<span class="nc bnc" id="L68" title="All 4 branches missed.">        if (data == null || data.isEmpty()) {</span>
+<span class="nc" id="L69">            throw new IllegalArgumentException(&quot;No data to export&quot;);</span>
+        }
+
+<span class="nc" id="L72">        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {</span>
+<span class="nc" id="L73">            Sheet sheet = workbook.createSheet(&quot;Data&quot;);</span>
+
+            // Create header row from map keys
+<span class="nc" id="L76">            Row headerRow = sheet.createRow(0);</span>
+<span class="nc" id="L77">            List&lt;String&gt; headers = new ArrayList&lt;&gt;(data.get(0).keySet());</span>
+<span class="nc bnc" id="L78" title="All 2 branches missed.">            for (int i = 0; i &lt; headers.size(); i++) {</span>
+<span class="nc" id="L79">                Cell cell = headerRow.createCell(i);</span>
+<span class="nc" id="L80">                cell.setCellValue(headers.get(i));</span>
+<span class="nc" id="L81">                cell.setCellStyle(getHeaderStyle(workbook));</span>
+            }
+
+            // Populate rows
+<span class="nc" id="L85">            int rowIdx = 1;</span>
+<span class="nc bnc" id="L86" title="All 2 branches missed.">            for (Map&lt;String, Object&gt; rowMap : data) {</span>
+<span class="nc" id="L87">                Row row = sheet.createRow(rowIdx++);</span>
+<span class="nc bnc" id="L88" title="All 2 branches missed.">                for (int i = 0; i &lt; headers.size(); i++) {</span>
+<span class="nc" id="L89">                    Object value = rowMap.get(headers.get(i));</span>
+<span class="nc bnc" id="L90" title="All 2 branches missed.">                    row.createCell(i).setCellValue(value != null ? value.toString() : &quot;&quot;);</span>
+                }
+<span class="nc" id="L92">            }</span>
+
+<span class="nc" id="L94">            workbook.write(out);</span>
+<span class="nc" id="L95">            ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());</span>
+
+<span class="nc" id="L97">            return ResponseEntity.ok()</span>
+<span class="nc" id="L98">                    .header(HttpHeaders.CONTENT_DISPOSITION, &quot;attachment; filename=&quot; + fileName + &quot;.xlsx&quot;)</span>
+<span class="nc" id="L99">                    .contentType(MediaType.parseMediaType(&quot;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet&quot;))</span>
+<span class="nc" id="L100">                    .body(new InputStreamResource(in));</span>
+        }
+    }
+
+    private CellStyle getHeaderStyle(Workbook workbook) {
+<span class="nc" id="L105">        CellStyle style = workbook.createCellStyle();</span>
+<span class="nc" id="L106">        Font font = workbook.createFont();</span>
+<span class="nc" id="L107">        font.setBold(true);</span>
+<span class="nc" id="L108">        style.setFont(font);</span>
+<span class="nc" id="L109">        return style;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

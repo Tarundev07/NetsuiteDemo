@@ -1,0 +1,317 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LeaveAllocationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service</a> &gt; <span class="el_source">LeaveAllocationService.java</span></div><h1>LeaveAllocationService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service;
+
+import com.atomicnorth.hrm.tenant.domain.LeaveAllocation;
+import com.atomicnorth.hrm.tenant.domain.LeaveAllocationDetails;
+import com.atomicnorth.hrm.tenant.domain.branch.LeaveTypes;
+import com.atomicnorth.hrm.tenant.domain.leave.LeaveLedgerEntity;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.repository.LeaveAllocationRepository;
+import com.atomicnorth.hrm.tenant.repository.LeaveTypeRepository;
+import com.atomicnorth.hrm.tenant.repository.leave.LeaveLedgerRepository;
+import com.atomicnorth.hrm.tenant.service.dto.LeaveAllocationDTO;
+import com.atomicnorth.hrm.tenant.service.dto.LeaveAllocationDetailsDTO;
+import com.atomicnorth.hrm.tenant.service.dto.LeaveAllocationRequestDTO;
+import org.apache.commons.beanutils.BeanUtils;
+import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+
+import javax.persistence.EntityNotFoundException;
+import javax.transaction.Transactional;
+import java.time.Instant;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+@Transactional
+<span class="nc" id="L32">public class LeaveAllocationService {</span>
+
+<span class="nc" id="L34">    private final Logger log = LoggerFactory.getLogger(LeaveAllocationService.class);</span>
+    @Autowired
+    private LeaveAllocationRepository leaveAllocationRepository;
+    @Autowired
+    private ModelMapper modelMapper;
+    @Autowired
+    private EmployeeRepository employeeRepository;
+    @Autowired
+    private LeaveTypeRepository leaveTypeRepository;
+    @Autowired
+    private LeaveLedgerRepository ledgerRepository;
+
+    public List&lt;LeaveAllocationDTO&gt; getAllLeaveAllocations() {
+<span class="nc" id="L47">        List&lt;LeaveAllocation&gt; allocations = leaveAllocationRepository.findAll();</span>
+<span class="nc" id="L48">        return allocations.stream()</span>
+<span class="nc" id="L49">                .map(this::convertToDTOWithDetails)</span>
+<span class="nc" id="L50">                .collect(Collectors.toList());</span>
+    }
+
+    public Map&lt;String, Object&gt; getPaginatedLeaveAllocations(Pageable pageable, String searchColumn, String searchValue, String sortBy, String sortDir) {
+
+        // 1. Fetch all records from DB
+<span class="nc" id="L56">        List&lt;LeaveAllocation&gt; allAllocations = leaveAllocationRepository.findAll();</span>
+
+        // 2. Map to DTOs
+<span class="nc" id="L59">        List&lt;LeaveAllocationDTO&gt; dtoList = allAllocations.stream()</span>
+<span class="nc" id="L60">                .map(leaveAllocation -&gt; {</span>
+<span class="nc" id="L61">                    LeaveAllocationDTO dto = modelMapper.map(leaveAllocation, LeaveAllocationDTO.class);</span>
+
+                    // Set empName
+<span class="nc bnc" id="L64" title="All 2 branches missed.">                    if (dto.getEmpId() != null) {</span>
+<span class="nc" id="L65">                        String empName = employeeRepository.findEmployeeFullNameById(Long.valueOf(dto.getEmpId()))</span>
+<span class="nc" id="L66">                                .orElse(&quot;Unknown Employee&quot;);</span>
+<span class="nc" id="L67">                        dto.setEmpName(empName);</span>
+                    }
+
+                    // Set leave details
+<span class="nc bnc" id="L71" title="All 2 branches missed.">                    if (leaveAllocation.getLeaveAllocationDetails() != null) {</span>
+<span class="nc" id="L72">                        List&lt;LeaveAllocationDetailsDTO&gt; detailsDTOs = leaveAllocation.getLeaveAllocationDetails().stream()</span>
+<span class="nc" id="L73">                                .filter(detail -&gt; &quot;A&quot;.equalsIgnoreCase(detail.getIsActive()))</span>
+<span class="nc" id="L74">                                .map(detail -&gt; {</span>
+<span class="nc" id="L75">                                    LeaveAllocationDetailsDTO detailDTO = modelMapper.map(detail, LeaveAllocationDetailsDTO.class);</span>
+<span class="nc bnc" id="L76" title="All 2 branches missed.">                                    if (detail.getLeaveCode() != null) {</span>
+<span class="nc" id="L77">                                        String leaveName = leaveTypeRepository.findByLeaveCode(detail.getLeaveCode()).map(LeaveTypes::getLeaveName)</span>
+<span class="nc" id="L78">                                                .orElse(&quot;Unknown Leave Type&quot;);</span>
+<span class="nc" id="L79">                                        detailDTO.setLeaveName(leaveName);</span>
+                                    }
+<span class="nc" id="L81">                                    return detailDTO;</span>
+<span class="nc" id="L82">                                }).collect(Collectors.toList());</span>
+<span class="nc" id="L83">                        dto.setLeaveDetails(detailsDTOs);</span>
+<span class="nc" id="L84">                        double totalLeave = detailsDTOs.stream()</span>
+<span class="nc bnc" id="L85" title="All 2 branches missed.">                                .mapToDouble(detail -&gt; detail.getLeaveBalance() != null ? detail.getLeaveBalance() : 0.0)</span>
+<span class="nc" id="L86">                                .sum();</span>
+<span class="nc" id="L87">                        dto.setTotalLeave(totalLeave);</span>
+<span class="nc" id="L88">                    } else {</span>
+<span class="nc" id="L89">                        dto.setTotalLeave(0.0);</span>
+                    }
+
+<span class="nc" id="L92">                    return dto;</span>
+                })
+<span class="nc" id="L94">                .collect(Collectors.toList());</span>
+
+        // 3. Search filter
+<span class="nc bnc" id="L97" title="All 6 branches missed.">        if (searchColumn != null &amp;&amp; searchValue != null &amp;&amp; !searchValue.isEmpty()) {</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">            if (&quot;isActive&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc bnc" id="L99" title="All 2 branches missed.">                if (&quot;active&quot;.contains(searchValue )) {</span>
+<span class="nc" id="L100">                    searchValue = &quot;A&quot;;</span>
+<span class="nc bnc" id="L101" title="All 2 branches missed.">                } else if (&quot;inactive&quot;.contains(searchValue )) {</span>
+<span class="nc" id="L102">                    searchValue = &quot;I&quot;;</span>
+                }
+            }
+<span class="nc" id="L105">            String finalSearchValue = searchValue;</span>
+<span class="nc" id="L106">            dtoList = dtoList.stream()</span>
+<span class="nc" id="L107">                    .filter(dto -&gt; {</span>
+                        try {
+<span class="nc" id="L109">                            String fieldValue = Optional.ofNullable(BeanUtils.getProperty(dto, searchColumn)).orElse(&quot;&quot;);</span>
+<span class="nc" id="L110">                            return fieldValue.toLowerCase().contains(finalSearchValue.toLowerCase());</span>
+<span class="nc" id="L111">                        } catch (Exception e) {</span>
+<span class="nc" id="L112">                            return false;</span>
+                        }
+                    })
+<span class="nc" id="L115">                    .collect(Collectors.toList());</span>
+        }
+
+        // 4. Sort logic
+        Comparator&lt;LeaveAllocationDTO&gt; comparator;
+<span class="nc bnc" id="L120" title="All 4 branches missed.">        switch (sortBy) {</span>
+            case &quot;id&quot;:
+<span class="nc" id="L122">                comparator = Comparator.comparing(LeaveAllocationDTO::getId);</span>
+<span class="nc" id="L123">                break;</span>
+            case &quot;totalLeave&quot;:
+<span class="nc" id="L125">                comparator = Comparator.comparing(LeaveAllocationDTO::getTotalLeave);</span>
+<span class="nc" id="L126">                break;</span>
+            case &quot;empName&quot;:
+<span class="nc" id="L128">                comparator = Comparator.comparing(LeaveAllocationDTO::getEmpName, Comparator.nullsLast(String::compareToIgnoreCase));</span>
+<span class="nc" id="L129">                break;</span>
+            default:
+<span class="nc" id="L131">                comparator = Comparator.comparing(dto -&gt; {</span>
+                    try {
+<span class="nc" id="L133">                        return Optional.ofNullable(BeanUtils.getProperty(dto, sortBy)).orElse(&quot;&quot;);</span>
+<span class="nc" id="L134">                    } catch (Exception e) {</span>
+<span class="nc" id="L135">                        return &quot;&quot;;</span>
+                    }
+<span class="nc" id="L137">                }, Comparator.nullsLast(String::compareToIgnoreCase));</span>
+        }
+
+<span class="nc bnc" id="L140" title="All 2 branches missed.">        if (&quot;desc&quot;.equalsIgnoreCase(sortDir)) {</span>
+<span class="nc" id="L141">            comparator = comparator.reversed();</span>
+        }
+
+<span class="nc" id="L144">        dtoList = dtoList.stream().sorted(comparator).collect(Collectors.toList());</span>
+
+        // 5. Manual Pagination
+<span class="nc" id="L147">        int totalItems = dtoList.size();</span>
+<span class="nc" id="L148">        int start = Math.min(pageable.getPageNumber() * pageable.getPageSize(), totalItems);</span>
+<span class="nc" id="L149">        int end = Math.min(start + pageable.getPageSize(), totalItems);</span>
+<span class="nc" id="L150">        List&lt;LeaveAllocationDTO&gt; paginatedList = dtoList.subList(start, end);</span>
+
+        // 6. Build response
+<span class="nc" id="L153">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L154">        response.put(&quot;result&quot;, paginatedList);</span>
+<span class="nc" id="L155">        response.put(&quot;currentPage&quot;, pageable.getPageNumber() + 1);</span>
+<span class="nc" id="L156">        response.put(&quot;totalItems&quot;, totalItems);</span>
+<span class="nc" id="L157">        response.put(&quot;totalPages&quot;, (int) Math.ceil((double) totalItems / pageable.getPageSize()));</span>
+
+<span class="nc" id="L159">        return response;</span>
+    }
+
+
+    public Optional&lt;LeaveAllocationDTO&gt; getLeaveAllocationById(Long id) {
+<span class="nc" id="L164">        LeaveAllocation leaveAllocation = leaveAllocationRepository.findById(id)</span>
+<span class="nc" id="L165">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Leave Allocation with ID &quot; + id + &quot; not found.&quot;));</span>
+<span class="nc" id="L166">        log.info(&quot;Leave Allocation with ID {} retrieved&quot;, leaveAllocation.getId());</span>
+<span class="nc" id="L167">        return Optional.of(convertToDTOWithDetails(leaveAllocation));</span>
+    }
+
+
+    private LeaveAllocationDTO convertToDTOWithDetails(LeaveAllocation allocation) {
+<span class="nc" id="L172">        LeaveAllocationDTO dto = modelMapper.map(allocation, LeaveAllocationDTO.class);</span>
+
+<span class="nc bnc" id="L174" title="All 2 branches missed.">        if (dto.getEmpId() != null) {</span>
+<span class="nc" id="L175">            String empName = employeeRepository.findEmployeeFullNameById(Long.valueOf(dto.getEmpId()))</span>
+<span class="nc" id="L176">                    .orElse(&quot;Unknown Employee&quot;);</span>
+<span class="nc" id="L177">            dto.setEmpName(empName);</span>
+        }
+
+<span class="nc" id="L180">        List&lt;LeaveAllocationDetailsDTO&gt; detailsDTOs = allocation.getLeaveAllocationDetails().stream()</span>
+<span class="nc" id="L181">                .map(detail -&gt; {</span>
+<span class="nc" id="L182">                    LeaveAllocationDetailsDTO detailDTO = modelMapper.map(detail, LeaveAllocationDetailsDTO.class);</span>
+
+<span class="nc bnc" id="L184" title="All 2 branches missed.">                    if (detail.getLeaveCode() != null) {</span>
+<span class="nc" id="L185">                        String leaveName = leaveTypeRepository.findByLeaveCode(detail.getLeaveCode()).map(LeaveTypes::getLeaveName)</span>
+<span class="nc" id="L186">                                .orElse(&quot;Unknown Leave Type&quot;);</span>
+<span class="nc" id="L187">                        detailDTO.setLeaveName(leaveName);</span>
+                    }
+
+<span class="nc" id="L190">                    return detailDTO;</span>
+<span class="nc" id="L191">                }).collect(Collectors.toList());</span>
+
+<span class="nc" id="L193">        dto.setLeaveDetails(detailsDTOs);</span>
+
+<span class="nc" id="L195">        return dto;</span>
+    }
+
+    @Transactional
+    public LeaveAllocationDTO createOrUpdateLeaveAllocation(LeaveAllocationRequestDTO dto) {
+<span class="nc" id="L200">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+
+        LeaveAllocation leaveAllocation;
+
+<span class="nc bnc" id="L204" title="All 2 branches missed.">        if (dto.getId() != null) {</span>
+<span class="nc" id="L205">            leaveAllocation = leaveAllocationRepository.findById(dto.getId())</span>
+<span class="nc" id="L206">                    .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Leave Allocation not found&quot;));</span>
+<span class="nc" id="L207">            modelMapper.map(dto, leaveAllocation);</span>
+<span class="nc" id="L208">            leaveAllocation.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L209">            leaveAllocation.setLastUpdatedDate(Instant.now());</span>
+        } else {
+<span class="nc" id="L211">            leaveAllocation = modelMapper.map(dto, LeaveAllocation.class);</span>
+<span class="nc" id="L212">            leaveAllocation.setCreatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L213">            leaveAllocation.setCreatedDate(Instant.now());</span>
+<span class="nc" id="L214">            leaveAllocation.setLeaveAllocationDetails(new ArrayList&lt;&gt;());</span>
+        }
+
+<span class="nc" id="L217">        leaveAllocation.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L218">        leaveAllocation.setLastUpdatedDate(Instant.now());</span>
+
+<span class="nc" id="L220">        LeaveAllocationDetailsDTO detailDTO = dto.getLeaveDetails();</span>
+<span class="nc bnc" id="L221" title="All 2 branches missed.">        if (detailDTO != null) {</span>
+<span class="nc bnc" id="L222" title="All 2 branches missed.">            if (leaveAllocation.getLeaveAllocationDetails() == null) {</span>
+<span class="nc" id="L223">                leaveAllocation.setLeaveAllocationDetails(new ArrayList&lt;&gt;());</span>
+            }
+
+<span class="nc" id="L226">            LeaveAllocationDetails existingDetail = leaveAllocation.getLeaveAllocationDetails().stream()</span>
+<span class="nc" id="L227">                    .filter(d -&gt; d.getLeaveCode().equals(detailDTO.getLeaveCode()))</span>
+<span class="nc" id="L228">                    .findFirst()</span>
+<span class="nc" id="L229">                    .orElse(null);</span>
+
+<span class="nc bnc" id="L231" title="All 2 branches missed.">            if (existingDetail != null) {</span>
+<span class="nc" id="L232">                Double leaveBalance = existingDetail.getLeaveBalance();</span>
+<span class="nc" id="L233">                modelMapper.map(detailDTO, existingDetail);</span>
+<span class="nc bnc" id="L234" title="All 2 branches missed.">                if (detailDTO.getAllocationType().equalsIgnoreCase(&quot;CREDIT&quot;)) {</span>
+<span class="nc" id="L235">                    existingDetail.setLeaveBalance(leaveBalance + detailDTO.getLeaveAllocationNumber());</span>
+<span class="nc bnc" id="L236" title="All 2 branches missed.">                } else if (detailDTO.getAllocationType().equalsIgnoreCase(&quot;DEBIT&quot;)){</span>
+<span class="nc bnc" id="L237" title="All 2 branches missed.">                    if (leaveBalance &lt; detailDTO.getLeaveAllocationNumber()) {</span>
+<span class="nc" id="L238">                        throw new IllegalArgumentException(&quot;Insufficient leave balance to debit. Current balance: &quot; + leaveBalance);</span>
+                    }
+<span class="nc" id="L240">                    existingDetail.setLeaveBalance(leaveBalance - detailDTO.getLeaveAllocationNumber());</span>
+                }
+<span class="nc" id="L242">                existingDetail.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L243">                existingDetail.setLastUpdatedDate(Instant.now());</span>
+<span class="nc" id="L244">            } else {</span>
+<span class="nc bnc" id="L245" title="All 2 branches missed.">                if (detailDTO.getAllocationType().equalsIgnoreCase(&quot;DEBIT&quot;)) {</span>
+<span class="nc" id="L246">                    throw new IllegalArgumentException(&quot;Cannot debit leave type '&quot; + detailDTO.getLeaveCode() + &quot;' as no existing allocation found.&quot;);</span>
+                }
+<span class="nc" id="L248">                LeaveAllocationDetails newDetail = modelMapper.map(detailDTO, LeaveAllocationDetails.class);</span>
+<span class="nc" id="L249">                newDetail.setLeaveAllocation(leaveAllocation);</span>
+<span class="nc" id="L250">                newDetail.setCreatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L251">                newDetail.setCreatedDate(Instant.now());</span>
+<span class="nc" id="L252">                newDetail.setLeaveBalance(detailDTO.getLeaveAllocationNumber());</span>
+<span class="nc" id="L253">                leaveAllocation.getLeaveAllocationDetails().add(newDetail);</span>
+            }
+        }
+
+<span class="nc" id="L257">        LeaveAllocation saved = leaveAllocationRepository.save(leaveAllocation);</span>
+<span class="nc" id="L258">        insertIntoLedgerTbl(dto);</span>
+<span class="nc" id="L259">        return convertToDTOWithDetails(saved);</span>
+    }
+
+    public Optional&lt;LeaveAllocationDTO&gt; getLeaveAllocationByEmpId(Integer empId) {
+<span class="nc" id="L263">        LeaveAllocation allocation = leaveAllocationRepository.findByEmpId(empId)</span>
+<span class="nc" id="L264">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Leave Allocation not found for EMP_ID: &quot; + empId));</span>
+<span class="nc" id="L265">        return Optional.of(convertToDTOWithDetails(allocation));</span>
+    }
+
+    private void insertIntoLedgerTbl(LeaveAllocationRequestDTO dto) {
+<span class="nc" id="L269">        LeaveAllocationDetailsDTO leave = dto.getLeaveDetails();</span>
+<span class="nc bnc" id="L270" title="All 2 branches missed.">        if (leave != null) {</span>
+<span class="nc" id="L271">            LeaveLedgerEntity ledgerEntity = new LeaveLedgerEntity();</span>
+<span class="nc" id="L272">            ledgerEntity.setEmpId(dto.getEmpId());</span>
+<span class="nc" id="L273">            ledgerEntity.setLeaveCode(leave.getLeaveCode());</span>
+<span class="nc" id="L274">            ledgerEntity.setRemark(leave.getRemarks());</span>
+<span class="nc" id="L275">            ledgerEntity.setTransactionType(leave.getAllocationType());</span>
+<span class="nc" id="L276">            ledgerEntity.setTransactionBalance(leave.getLeaveAllocationNumber());</span>
+<span class="nc" id="L277">            ledgerEntity.setCreatedBy(String.valueOf(SessionHolder.getUserLoginDetail().getEmpId()));</span>
+<span class="nc" id="L278">            ledgerEntity.setCreatedDate(Instant.now());</span>
+<span class="nc" id="L279">            ledgerEntity.setLastUpdatedBy(String.valueOf(SessionHolder.getUserLoginDetail().getEmpId()));</span>
+<span class="nc" id="L280">            ledgerEntity.setLastUpdatedDate(Instant.now());</span>
+<span class="nc" id="L281">            ledgerRepository.save(ledgerEntity);</span>
+        }
+<span class="nc" id="L283">    }</span>
+
+    @Transactional
+    public LeaveAllocation saveLeaveAllocation(LeaveAllocationRequestDTO requestDTO) {
+<span class="nc" id="L287">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+
+        LeaveAllocation leaveAllocation;
+
+<span class="nc bnc" id="L291" title="All 2 branches missed.">        if (requestDTO.getId() != null) {</span>
+<span class="nc" id="L292">            leaveAllocation = leaveAllocationRepository.findById(requestDTO.getId())</span>
+<span class="nc" id="L293">                    .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Leave Allocation not found&quot;));</span>
+<span class="nc" id="L294">            modelMapper.map(requestDTO, leaveAllocation);</span>
+<span class="nc" id="L295">            leaveAllocation.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L296">            leaveAllocation.setLastUpdatedDate(Instant.now());</span>
+        } else {
+<span class="nc" id="L298">            leaveAllocation = modelMapper.map(requestDTO, LeaveAllocation.class);</span>
+<span class="nc" id="L299">            leaveAllocation.setCreatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L300">            leaveAllocation.setCreatedDate(Instant.now());</span>
+<span class="nc" id="L301">            leaveAllocation.setLeaveAllocationDetails(new ArrayList&lt;&gt;());</span>
+        }
+<span class="nc" id="L303">        return leaveAllocationRepository.save(leaveAllocation);</span>
+    }
+
+    public LeaveAllocation deleteById(Long id, String status) {
+<span class="nc" id="L307">        LeaveAllocation leaveAllocation = leaveAllocationRepository.findById(id).orElseThrow(() -&gt; new EntityNotFoundException(&quot;No leave allocation found for this employee&quot;));</span>
+<span class="nc bnc" id="L308" title="All 2 branches missed.">        if (status.equalsIgnoreCase(&quot;A&quot;)) leaveAllocation.setIsActive(&quot;I&quot;);</span>
+<span class="nc bnc" id="L309" title="All 2 branches missed.">        else if (status.equalsIgnoreCase(&quot;I&quot;)) leaveAllocation.setIsActive(&quot;A&quot;);</span>
+<span class="nc" id="L310">        else throw new IllegalArgumentException(&quot;Invalid status value found.&quot;);</span>
+<span class="nc" id="L311">        leaveAllocation.setLastUpdatedDate(Instant.now());</span>
+<span class="nc" id="L312">        leaveAllocation.setLastUpdatedBy(String.valueOf(SessionHolder.getUserLoginDetail().getUsername()));</span>
+<span class="nc" id="L313">        return leaveAllocationRepository.save(leaveAllocation);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>HolidaysCalendarController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.holiday</a> &gt; <span class="el_source">HolidaysCalendarController.java</span></div><h1>HolidaysCalendarController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.holiday;
+
+import com.atomicnorth.hrm.tenant.domain.holiday.HolidaysCalendar;
+import com.atomicnorth.hrm.tenant.repository.holiday.HolidaysCalendarRepository;
+import com.atomicnorth.hrm.tenant.service.dto.holiday.HolidaysCalendarSaveRequest;
+import com.atomicnorth.hrm.tenant.service.dto.holiday.HolidaysCalendarSaveResponse;
+import com.atomicnorth.hrm.tenant.service.holiday.HolidaysCalendarService;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import com.atomicnorth.hrm.util.commonClass.PaginatedResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.persistence.EntityNotFoundException;
+import javax.validation.ConstraintViolationException;
+import javax.validation.Valid;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+@RestController
+@RequestMapping(&quot;/api/holiday-calendars&quot;)
+@Tag(name = &quot;Holiday Calendar&quot;, description = &quot;Operations related to Holiday Calendar&quot;)
+public class HolidaysCalendarController {
+
+    private final HolidaysCalendarService holidaysCalendarService;
+
+    private final HolidaysCalendarRepository holidaysCalendarRepository;
+
+<span class="nc" id="L35">    public HolidaysCalendarController(HolidaysCalendarService holidaysCalendarService, HolidaysCalendarRepository holidaysCalendarRepository) {</span>
+<span class="nc" id="L36">        this.holidaysCalendarService = holidaysCalendarService;</span>
+<span class="nc" id="L37">        this.holidaysCalendarRepository = holidaysCalendarRepository;</span>
+<span class="nc" id="L38">    }</span>
+
+    @PostMapping(&quot;/save&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;HolidaysCalendarSaveResponse&gt;&gt; saveHolidaysCalendar(@Valid @RequestBody HolidaysCalendarSaveRequest request) {
+        try {
+<span class="nc" id="L43">            HolidaysCalendarSaveResponse responseHolidayCalendar = holidaysCalendarService.saveHolidaysCalendar(request);</span>
+<span class="nc" id="L44">            ApiResponse&lt;HolidaysCalendarSaveResponse&gt; response = new ApiResponse&lt;&gt;(</span>
+                    responseHolidayCalendar,
+                    true,
+                    &quot;HOLIDAY-CREATED-SUCCESS&quot;,
+                    &quot;Information&quot;
+            );
+<span class="nc" id="L50">            return ResponseEntity.status(HttpStatus.CREATED).body(response);</span>
+<span class="nc" id="L51">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L52">            ApiResponse&lt;HolidaysCalendarSaveResponse&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;HOLIDAY-CREATED-FAILURE&quot;,
+                    &quot;Warning&quot;,
+<span class="nc" id="L57">                    List.of(ex.getMessage())</span>
+            );
+<span class="nc" id="L59">            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);</span>
+<span class="nc" id="L60">        } catch (ConstraintViolationException ex) {</span>
+            // Specific handling for constraint violations, like duplicate entries
+<span class="nc" id="L62">            ApiResponse&lt;HolidaysCalendarSaveResponse&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;HOLIDAY-CREATED-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L67">                    List.of(&quot;Duplicate entry detected: &quot; + ex.getMessage())</span>
+            );
+<span class="nc" id="L69">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);</span>
+<span class="nc" id="L70">        } catch (Exception ex) {</span>
+            // Generic exception handler
+<span class="nc" id="L72">            ApiResponse&lt;HolidaysCalendarSaveResponse&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;HOLIDAY-CREATED-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L77">                    List.of(ex.getMessage(), &quot;Please contact support.&quot;)</span>
+            );
+<span class="nc" id="L79">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getHolidayCalendarById&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;HolidaysCalendarSaveResponse&gt;&gt; getHolidayCalendarById(
+            @RequestParam(name = &quot;holidayId&quot;) Integer holidayId) {
+        // Fetch the holiday calendar by name
+<span class="nc" id="L87">        HolidaysCalendarSaveResponse responseDataAllHoliday = holidaysCalendarService.getHolidayCalendarByHolidayId(holidayId);</span>
+        try {
+            // BranchDto createdBranchMessage = branchService.createBranch(branchDto);
+<span class="nc" id="L90">            ApiResponse&lt;HolidaysCalendarSaveResponse&gt; response = new ApiResponse&lt;&gt;(</span>
+                    responseDataAllHoliday,
+                    true,
+                    &quot;HOLIDAY-CREATED-SUCESS&quot;,
+                    &quot;Information&quot;
+            );
+<span class="nc" id="L96">            return ResponseEntity.status(HttpStatus.CREATED).body(response);</span>
+<span class="nc" id="L97">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L98">            ApiResponse&lt;HolidaysCalendarSaveResponse&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    responseDataAllHoliday,
+                    false,
+                    &quot;HOLIDAY-CREATED-FAILURE&quot;,
+                    &quot;Warning&quot;,
+<span class="nc" id="L103">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L105">            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);</span>
+<span class="nc" id="L106">        } catch (Exception ex) {</span>
+<span class="nc" id="L107">            ApiResponse&lt;HolidaysCalendarSaveResponse&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    responseDataAllHoliday,
+                    false,
+                    &quot;HOLIDAY-CREATED-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L112">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L114">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);</span>
+        }
+    }
+
+
+    /*UPDATE API*/
+    @PatchMapping(&quot;/update&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;HolidaysCalendarSaveResponse&gt;&gt; updateHolidaysCalendar(
+            @RequestParam String name,
+            @RequestBody HolidaysCalendarSaveRequest request) {
+        try {
+<span class="nc" id="L125">            HolidaysCalendarSaveResponse response = holidaysCalendarService.updateHolidaysCalendar(name, request);</span>
+<span class="nc" id="L126">            ApiResponse&lt;HolidaysCalendarSaveResponse&gt; apiResponse = new ApiResponse&lt;&gt;(response, true, &quot;HOLIDAY-UPDATED-SUCCESS&quot;, &quot;Information&quot;);</span>
+<span class="nc" id="L127">            return ResponseEntity.ok(apiResponse);</span>
+<span class="nc" id="L128">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L129">            ApiResponse&lt;HolidaysCalendarSaveResponse&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;HOLIDAY-UPDATE-FAILURE&quot;, &quot;Warning&quot;, List.of(ex.getMessage()));</span>
+<span class="nc" id="L130">            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);</span>
+<span class="nc" id="L131">        } catch (Exception ex) {</span>
+<span class="nc" id="L132">            ApiResponse&lt;HolidaysCalendarSaveResponse&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;HOLIDAY-UPDATE-FAILURE&quot;, &quot;Error&quot;, List.of(ex.getMessage()));</span>
+<span class="nc" id="L133">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getAllHolidayCalendars&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;PaginatedResponse&lt;HolidaysCalendarSaveResponse&gt;&gt;&gt; getAllHolidayCalendars(
+            @RequestParam(defaultValue = &quot;1&quot;) int pageNumber,
+            @RequestParam(defaultValue = &quot;10&quot;) int pageSize,
+            @RequestParam(required = false) String searchColumn,
+            @RequestParam(required = false) String searchValue,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(defaultValue = &quot;desc&quot;) String sortDir) {
+        try {
+            // Fetch paginated response from service
+<span class="nc" id="L147">            PaginatedResponse&lt;HolidaysCalendarSaveResponse&gt; paginatedResponse =</span>
+<span class="nc" id="L148">                    holidaysCalendarService.getHolidayCalendarData(pageNumber, pageSize, searchColumn, searchValue, sortBy, sortDir);</span>
+
+            // Prepare API response
+<span class="nc" id="L151">            ApiResponse&lt;PaginatedResponse&lt;HolidaysCalendarSaveResponse&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    paginatedResponse, true, &quot;HOLIDAY-FETCHED-SUCCESS&quot;, &quot;Information&quot;
+            );
+
+<span class="nc" id="L155">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L156">        } catch (Exception ex) {</span>
+<span class="nc" id="L157">            ApiResponse&lt;PaginatedResponse&lt;HolidaysCalendarSaveResponse&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+<span class="nc" id="L158">                    null, false, &quot;HOLIDAY-FETCH-FAILURE&quot;, &quot;Error&quot;, List.of(ex.getMessage())</span>
+            );
+<span class="nc" id="L160">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @PostMapping(&quot;/saveOrUpdate&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;HolidaysCalendarSaveResponse&gt;&gt; saveOrUpdateHolidaysCalendarNew(@Valid @RequestBody HolidaysCalendarSaveRequest request) {
+        try {
+<span class="nc bnc" id="L167" title="All 2 branches missed.">            if (request.getHolidayCalendarId() == null) {</span>
+<span class="nc" id="L168">                Optional&lt;HolidaysCalendar&gt; existingCalendarName = holidaysCalendarRepository.findByName(request.getName().trim());</span>
+<span class="nc bnc" id="L169" title="All 2 branches missed.">                if (existingCalendarName.isPresent()) {</span>
+<span class="nc" id="L170">                    ApiResponse&lt;HolidaysCalendarSaveResponse&gt; existingBranchResponse = new ApiResponse&lt;&gt;(</span>
+                            null,
+                            false,
+                            &quot;CALENDAR-ALREADY-EXISTS&quot;,
+                            &quot;Warning&quot;,
+<span class="nc" id="L175">                            Collections.singletonList(</span>
+<span class="nc" id="L176">                                    &quot;Calendar with name &quot; + request.getName() + &quot; already exists.&quot;)</span>
+                    );
+<span class="nc" id="L178">                    return ResponseEntity.status(HttpStatus.OK).body(existingBranchResponse); // 409 Conflict</span>
+                }
+            }
+<span class="nc" id="L181">            HolidaysCalendarSaveResponse responseHolidayCalendar = holidaysCalendarService.saveOrUpdateHolidaysCalendarNew(request);</span>
+
+<span class="nc" id="L183">            ApiResponse&lt;HolidaysCalendarSaveResponse&gt; response = new ApiResponse&lt;&gt;(</span>
+                    responseHolidayCalendar,
+                    true,
+                    &quot;HOLIDAY-SAVE-OR-UPDATE-SUCCESS&quot;,
+                    &quot;Information&quot;
+            );
+<span class="nc" id="L189">            return ResponseEntity.status(HttpStatus.CREATED).body(response);</span>
+<span class="nc" id="L190">        } catch (EntityNotFoundException ex) {</span>
+<span class="nc" id="L191">            ApiResponse&lt;HolidaysCalendarSaveResponse&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;HOLIDAY-SAVE-OR-UPDATE-FAILURE&quot;,
+                    &quot;Warning&quot;,
+<span class="nc" id="L196">                    List.of(ex.getMessage())</span>
+            );
+<span class="nc" id="L198">            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/findHolidayIdAndName&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; getHolidayNameAndId() {
+        try {
+<span class="nc" id="L205">            List&lt;Map&lt;String, Object&gt;&gt; employees = this.holidaysCalendarService.findHolidayNameAndId();</span>
+<span class="nc bnc" id="L206" title="All 2 branches missed.">            if (employees.isEmpty()) {</span>
+<span class="nc" id="L207">                return new ResponseEntity&lt;&gt;(</span>
+                        new ApiResponse&lt;&gt;(null, false, &quot;HOLIDAY_DETAILS_NOT_FOUND&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L209">                                Collections.singletonList(&quot;No Holiday details found.&quot;)),</span>
+                        HttpStatus.OK);
+            }
+<span class="nc" id="L212">            return ResponseEntity.ok(</span>
+                    new ApiResponse&lt;&gt;(employees, true, &quot;HOLIDAY_DETAILS_FETCHED&quot;, &quot;SUCCESS&quot;));
+<span class="nc" id="L214">        } catch (Exception e) {</span>
+<span class="nc" id="L215">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;HOLIDAY_DETAILS_FETCH_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L217">                            Collections.singletonList(e.getMessage())),</span>
+                    HttpStatus.OK);
+        }
+    }
+
+    @GetMapping(&quot;/getCalendarById&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getHolidayCalendarDateById(
+            @RequestParam(value = &quot;calendarId&quot;) Integer calendarId,
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(required = false) String searchColumn,
+            @RequestParam(required = false) String searchValue,
+            @RequestParam(required = false, defaultValue = &quot;holidayDate&quot;) String sortBy,
+            @RequestParam(defaultValue = &quot;asc&quot;) String sortDir) {
+        try {
+<span class="nc" id="L232">            Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc" id="L233">            Map&lt;String, Object&gt; responseData =</span>
+<span class="nc" id="L234">                    holidaysCalendarService.getHolidayCalendarDateById(calendarId, pageable, searchColumn, searchValue);</span>
+
+<span class="nc" id="L236">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    responseData, true, &quot;CALENDAR-FETCHED-SUCCESS&quot;, &quot;Information&quot;);
+
+<span class="nc" id="L239">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+
+<span class="nc" id="L241">        } catch (Exception ex) {</span>
+<span class="nc" id="L242">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+<span class="nc" id="L243">                    null, false, &quot;ONBOARDING-FETCH-FAILURE&quot;, &quot;Error&quot;, List.of(ex.getMessage()));</span>
+
+<span class="nc" id="L245">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

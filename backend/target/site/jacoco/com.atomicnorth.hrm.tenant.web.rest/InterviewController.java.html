@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>InterviewController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest</a> &gt; <span class="el_source">InterviewController.java</span></div><h1>InterviewController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest;
+
+import com.atomicnorth.hrm.tenant.domain.Interview;
+import com.atomicnorth.hrm.tenant.repository.InterviewRepository;
+import com.atomicnorth.hrm.tenant.repository.InterviewRoundRepository;
+import com.atomicnorth.hrm.tenant.repository.employement.EmployeeSkillSetRepo;
+import com.atomicnorth.hrm.tenant.service.InterviewService;
+import com.atomicnorth.hrm.tenant.service.dto.InterviewDTO;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.validation.Valid;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping(&quot;/api/interview&quot;)
+@EnableTransactionManagement
+<span class="nc" id="L45">public class InterviewController {</span>
+
+<span class="nc" id="L47">    private final Logger log = LoggerFactory.getLogger(InterviewController.class);</span>
+
+    @Autowired
+    private InterviewService interviewService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Autowired
+    private InterviewRepository interviewRepository;
+
+    @Autowired
+    private InterviewRoundRepository interviewRoundRepository;
+
+    @Autowired
+    private EmployeeSkillSetRepo employeeSkillSetRepo;
+
+    private ResponseEntity&lt;ApiResponse&lt;?&gt;&gt; handleValidationErrors(BindingResult bindingResult) {
+<span class="nc" id="L65">        Map&lt;String, String&gt; errors = bindingResult.getFieldErrors().stream()</span>
+<span class="nc" id="L66">                .collect(Collectors.toMap(</span>
+                        FieldError::getField,
+<span class="nc" id="L68">                        fieldError -&gt; fieldError.getDefaultMessage()</span>
+                ));
+<span class="nc" id="L70">        return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_VALIDATION_ERROR&quot;, &quot;FAILURE&quot;,</span>
+<span class="nc" id="L71">                new ArrayList&lt;&gt;(errors.values())), HttpStatus.OK);</span>
+    }
+
+    @PostMapping(value = &quot;/create&quot;, consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    public ResponseEntity&lt;ApiResponse&lt;?&gt;&gt; createInterviews(
+            @RequestPart(&quot;interview&quot;) @Valid List&lt;InterviewDTO&gt; interviewDTOs,
+            BindingResult bindingResult,
+            @RequestPart(value = &quot;resume&quot;, required = false) MultipartFile resumeFile) throws IOException {
+
+<span class="nc bnc" id="L80" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L81">            return handleValidationErrors(bindingResult);</span>
+        }
+
+<span class="nc" id="L84">        List&lt;String&gt; errors = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L85">        List&lt;InterviewDTO&gt; processedInterviews = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L87" title="All 2 branches missed.">        for (InterviewDTO interviewDTO : interviewDTOs) {</span>
+            try {
+<span class="nc" id="L89">                Long id = interviewDTO.getInterviewId();</span>
+                InterviewDTO savedOrUpdated;
+<span class="nc bnc" id="L91" title="All 2 branches missed.">                if (id == null) {</span>
+<span class="nc" id="L92">                    savedOrUpdated = interviewService.saveInterview(interviewDTO, resumeFile);</span>
+                } else {
+<span class="nc" id="L94">                    savedOrUpdated = interviewService.updateInterview(id, interviewDTO, resumeFile);</span>
+                }
+<span class="nc" id="L96">                processedInterviews.add(savedOrUpdated);</span>
+
+<span class="nc" id="L98">            } catch (Exception e) {</span>
+<span class="nc" id="L99">                log.error(&quot;Error processing interview for applicantId: &quot; + interviewDTO.getJobApplicantId(), e);</span>
+<span class="nc" id="L100">                errors.add(&quot;Failed for Applicant ID &quot; + interviewDTO.getJobApplicantId() + &quot;: &quot; + e.getMessage());</span>
+<span class="nc" id="L101">            }</span>
+<span class="nc" id="L102">        }</span>
+
+<span class="nc bnc" id="L104" title="All 2 branches missed.">        if (!errors.isEmpty()) {</span>
+<span class="nc" id="L105">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(processedInterviews, false,</span>
+                    &quot;ATMCMN_PARTIAL_SUCCESS&quot;, &quot;PARTIAL_SUCCESS&quot;, errors));
+        }
+
+<span class="nc" id="L109">        return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(processedInterviews, true,</span>
+                &quot;ATMCMN_INTERVIEW_PROCESSED&quot;, &quot;SUCCESS&quot;), HttpStatus.CREATED);
+    }
+
+    @GetMapping(&quot;/findAll&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;ObjectNode&gt;&gt; getAllInterviews(
+            @RequestParam(value = &quot;page&quot;, defaultValue = &quot;1&quot;) int page,
+            @RequestParam(value = &quot;size&quot;, defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;interviewId&quot;) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;) String sortDir,
+            @RequestParam(value = &quot;searchKeyword&quot;, required = false) String searchKeyword,
+            @RequestParam(value = &quot;searchField&quot;, required = false) String searchField) {
+
+        try {
+<span class="nc" id="L123">            List&lt;InterviewDTO&gt; interviews = interviewService.getAllInterviews();</span>
+            // Convert DTO List to List of Maps
+<span class="nc" id="L125">            List&lt;Map&lt;String, Object&gt;&gt; fullData = interviews.stream()</span>
+<span class="nc" id="L126">                    .map(dto -&gt; objectMapper.convertValue(dto, new TypeReference&lt;Map&lt;String, Object&gt;&gt;() {</span>
+                    }))
+<span class="nc" id="L128">                    .collect(Collectors.toList());</span>
+            // Apply Searching
+<span class="nc bnc" id="L130" title="All 8 branches missed.">            if (searchField != null &amp;&amp; !searchField.isEmpty() &amp;&amp; searchKeyword != null &amp;&amp; !searchKeyword.isEmpty()) {</span>
+<span class="nc" id="L131">                fullData = fullData.stream()</span>
+<span class="nc bnc" id="L132" title="All 2 branches missed.">                        .filter(data -&gt; data.containsKey(searchField) &amp;&amp;</span>
+<span class="nc bnc" id="L133" title="All 2 branches missed.">                                data.get(searchField) != null &amp;&amp;</span>
+<span class="nc bnc" id="L134" title="All 2 branches missed.">                                data.get(searchField).toString().toLowerCase().contains(searchKeyword.toLowerCase()))</span>
+<span class="nc" id="L135">                        .collect(Collectors.toList());</span>
+            }
+            // Apply Sorting
+<span class="nc bnc" id="L138" title="All 4 branches missed.">            if (sortBy != null &amp;&amp; !sortBy.isEmpty()) {</span>
+<span class="nc" id="L139">                Comparator&lt;Map&lt;String, Object&gt;&gt; comparator = (data1, data2) -&gt; {</span>
+<span class="nc" id="L140">                    Object obj1 = data1.getOrDefault(sortBy, &quot;&quot;);</span>
+<span class="nc" id="L141">                    Object obj2 = data2.getOrDefault(sortBy, &quot;&quot;);</span>
+<span class="nc bnc" id="L142" title="All 2 branches missed.">                    if (obj1 == null) obj1 = &quot;&quot;;</span>
+<span class="nc bnc" id="L143" title="All 2 branches missed.">                    if (obj2 == null) obj2 = &quot;&quot;;</span>
+                    // Handle numeric comparisons
+<span class="nc bnc" id="L145" title="All 4 branches missed.">                    if (obj1 instanceof Number &amp;&amp; obj2 instanceof Number) {</span>
+<span class="nc" id="L146">                        return Double.compare(((Number) obj1).doubleValue(), ((Number) obj2).doubleValue());</span>
+                    }
+<span class="nc" id="L148">                    return obj1.toString().compareToIgnoreCase(obj2.toString());</span>
+                };
+                // Apply descending order if required
+<span class="nc bnc" id="L151" title="All 2 branches missed.">                if (&quot;desc&quot;.equalsIgnoreCase(sortDir)) {</span>
+<span class="nc" id="L152">                    comparator = comparator.reversed();</span>
+                }
+<span class="nc" id="L154">                fullData = fullData.stream().sorted(comparator).collect(Collectors.toList());</span>
+            }
+            // Apply Pagination
+<span class="nc" id="L157">            int totalItems = fullData.size();</span>
+<span class="nc" id="L158">            int totalPages = (int) Math.ceil((double) totalItems / size);</span>
+<span class="nc" id="L159">            int startIndex = Math.max(0, Math.min((page - 1) * size, totalItems));</span>
+<span class="nc" id="L160">            int endIndex = Math.min(startIndex + size, totalItems);</span>
+<span class="nc" id="L161">            List&lt;Map&lt;String, Object&gt;&gt; currentPageData = fullData.subList(startIndex, endIndex);</span>
+            // Response Data
+<span class="nc" id="L163">            ObjectNode responseData = objectMapper.createObjectNode();</span>
+<span class="nc" id="L164">            responseData.set(&quot;result&quot;, objectMapper.valueToTree(currentPageData));</span>
+<span class="nc" id="L165">            responseData.put(&quot;totalElements&quot;, totalItems);</span>
+<span class="nc" id="L166">            responseData.put(&quot;totalPages&quot;, totalPages);</span>
+<span class="nc" id="L167">            responseData.put(&quot;pageSize&quot;, size);</span>
+<span class="nc" id="L168">            responseData.put(&quot;currentPage&quot;, page);</span>
+<span class="nc" id="L169">            ApiResponse&lt;ObjectNode&gt; apiResponse = new ApiResponse&lt;&gt;(</span>
+                    responseData, true, &quot;ATMCMN_INTERVIEWS_FETCHED&quot;, &quot;SUCCESS&quot;);
+<span class="nc" id="L171">            return ResponseEntity.ok(apiResponse);</span>
+<span class="nc" id="L172">        } catch (Exception e) {</span>
+<span class="nc" id="L173">            log.error(&quot;Error occurred while fetching Interviews&quot;, e);</span>
+<span class="nc" id="L174">            ApiResponse&lt;ObjectNode&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null, false, &quot;ATMCMN_INTERVIEWS_FETCH_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L176">                    Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L177">            return new ResponseEntity&lt;&gt;(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);</span>
+        }
+    }
+
+    @GetMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;InterviewDTO&gt;&gt; getInterviewById(@PathVariable Long id) {
+        try {
+<span class="nc" id="L184">            return interviewService.getInterviewById(id)</span>
+<span class="nc" id="L185">                    .map(interview -&gt; ResponseEntity.ok(new ApiResponse&lt;&gt;(</span>
+                            interview, true, &quot;ATMCMN_INTERVIEW_FETCHED&quot;, &quot;SUCCESS&quot;)))
+<span class="nc" id="L187">                    .orElse(new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(</span>
+                            null, false, &quot;ATMCMN_INTERVIEW_NOT_FOUND&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L189">                            Collections.singletonList(&quot;Interview not found with ID: &quot; + id)),</span>
+                            HttpStatus.NOT_FOUND));
+<span class="nc" id="L191">        } catch (Exception e) {</span>
+<span class="nc" id="L192">            log.error(&quot;Error occurred while fetching Interview by ID&quot;, e);</span>
+<span class="nc" id="L193">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(</span>
+                    null, false, &quot;ATMCMN_INTERVIEW_FETCH_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L195">                    Collections.singletonList(e.getMessage())),</span>
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping(&quot;jobApplicant/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;InterviewDTO&gt;&gt;&gt; getInterviewByApplicantId(@PathVariable Integer id) {
+        try {
+<span class="nc" id="L203">            List&lt;InterviewDTO&gt; interviewList = interviewService.getInterviewByApplicantId(id);</span>
+
+<span class="nc bnc" id="L205" title="All 2 branches missed.">            if (interviewList.isEmpty()) {</span>
+<span class="nc" id="L206">                return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(</span>
+                        null, false, &quot;ATMCMN_INTERVIEW_NOT_FOUND&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L208">                        Collections.singletonList(&quot;No interviews found for Applicant ID: &quot; + id)),</span>
+                        HttpStatus.NOT_FOUND);
+            }
+
+<span class="nc" id="L212">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(</span>
+                    interviewList, true, &quot;ATMCMN_INTERVIEW_FETCHED&quot;, &quot;SUCCESS&quot;));
+
+<span class="nc" id="L215">        } catch (Exception e) {</span>
+<span class="nc" id="L216">            log.error(&quot;Error occurred while fetching Interview by Applicant ID&quot;, e);</span>
+<span class="nc" id="L217">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(</span>
+                    null, false, &quot;ATMCMN_INTERVIEW_FETCH_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L219">                    Collections.singletonList(e.getMessage())),</span>
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+    @GetMapping(&quot;/{id}/downloadResume&quot;)
+    public ResponseEntity&lt;byte[]&gt; downloadResume(@PathVariable Long id) {
+<span class="nc" id="L227">        byte[] resume = interviewService.downloadResume(id);</span>
+<span class="nc bnc" id="L228" title="All 2 branches missed.">        if (resume != null) {</span>
+<span class="nc" id="L229">            return ResponseEntity.ok()</span>
+<span class="nc" id="L230">                    .header(HttpHeaders.CONTENT_DISPOSITION, &quot;inline; filename=resume.pdf&quot;)</span>
+<span class="nc" id="L231">                    .contentType(MediaType.APPLICATION_PDF)</span>
+<span class="nc" id="L232">                    .body(resume);</span>
+        } else {
+<span class="nc" id="L234">            return ResponseEntity.notFound().build();</span>
+        }
+    }
+
+    @GetMapping(&quot;/{interviewId}/skills&quot;)
+    public ResponseEntity&lt;List&lt;String&gt;&gt; getSkillsByInterviewId(@PathVariable Long interviewId) {
+<span class="nc" id="L240">        Optional&lt;Interview&gt; interviewOpt = interviewRepository.findById(interviewId);</span>
+<span class="nc bnc" id="L241" title="All 2 branches missed.">        if (interviewOpt.isEmpty()) {</span>
+<span class="nc" id="L242">            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.emptyList());</span>
+        }
+<span class="nc" id="L244">        Long interviewRoundId = interviewOpt.get().getInterviewRoundId();</span>
+<span class="nc" id="L245">        List&lt;Long&gt; skillsId = interviewRoundRepository.findSkillsIdByInterviewRoundId(interviewRoundId);</span>
+<span class="nc bnc" id="L246" title="All 2 branches missed.">        if (skillsId.isEmpty()) {</span>
+<span class="nc" id="L247">            return ResponseEntity.ok(Collections.emptyList());</span>
+        }
+<span class="nc" id="L249">        List&lt;String&gt; skillsName = skillsId.stream()</span>
+<span class="nc" id="L250">                .map(employeeSkillSetRepo::getSkillName)</span>
+<span class="nc" id="L251">                .filter(Optional::isPresent)</span>
+<span class="nc" id="L252">                .map(Optional::get)</span>
+<span class="nc" id="L253">                .collect(Collectors.toList());</span>
+<span class="nc" id="L254">        return ResponseEntity.ok(skillsName);</span>
+    }
+
+    @GetMapping(&quot;interviewDropdownList&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; interviewDropdownList() {
+        try {
+<span class="nc" id="L260">            List&lt;Map&lt;String, Object&gt;&gt; interviewDropdownList = interviewService.interviewDropdownList();</span>
+<span class="nc" id="L261">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(interviewDropdownList, true, &quot;INTERVIEW_LIST_FETCHED_SUCCESS&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L262">        } catch (Exception e) {</span>
+<span class="nc" id="L263">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;INTERVIEW_LIST_FETCHED_ERROR&quot;, &quot;ERROR&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

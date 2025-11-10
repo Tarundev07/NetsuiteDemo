@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProjectPriceAllocation.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.domain.project</a> &gt; <span class="el_source">ProjectPriceAllocation.java</span></div><h1>ProjectPriceAllocation.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.domain.project;
+
+import lombok.Data;
+
+import javax.persistence.*;
+import java.time.LocalDateTime;
+import java.util.Date;
+
+<span class="nc bnc" id="L9" title="All 430 branches missed.">@Data</span>
+@Entity
+@Table(name = &quot;ses_m02_project_resource_price_allocation&quot;)
+public class ProjectPriceAllocation {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = &quot;PROJECT_RESOURCE_PRICE_ALLOCATION_ID&quot;)
+<span class="nc" id="L17">    private Integer projectResourcePriceAllocation;</span>
+
+    @Column(name = &quot;PROJECT_ALLOCATION_ID&quot;)
+<span class="nc" id="L20">    private Integer projectAllocationId;</span>
+
+    @Column(name = &quot;PROJECT_RF_NUM&quot;)
+<span class="nc" id="L23">    private Integer projectRfNum;</span>
+    @Column(name = &quot;USER_NAME&quot;)
+<span class="nc" id="L25">    private Integer username;</span>
+    @Column(name = &quot;START_DATE&quot;)
+<span class="nc" id="L27">    private Date startDate;</span>
+    @Column(name = &quot;END_DATE&quot;)
+<span class="nc" id="L29">    private Date endDate;</span>
+    @Column(name = &quot;TOTAL_DAYS&quot;)
+<span class="nc" id="L31">    private Integer totalDays;</span>
+    @Column(name = &quot;TOTAL_WORKING_DAYS&quot;)
+<span class="nc" id="L33">    private Double totalWorkingDays;</span>
+    @Column(name = &quot;USER_WORKING_DAYS&quot;)
+<span class="nc" id="L35">    private Double userWorkingDays;</span>
+    @Column(name = &quot;ON_LEAVE&quot;)
+<span class="nc" id="L37">    private Double onLeave;</span>
+    @Column(name = &quot;ADJUSTMENT_DAYS&quot;)
+<span class="nc" id="L39">    private Double adjustmentDays;</span>
+    @Column(name = &quot;BILLABLE_DAYS&quot;)
+<span class="nc" id="L41">    private Double billableDays;</span>
+    @Column(name = &quot;IS_LOCKED&quot;)
+<span class="nc" id="L43">    private String isLocked;</span>
+    @Column(name = &quot;USER_REMARK&quot;)
+<span class="nc" id="L45">    private String userRemark;</span>
+    @Column(name = &quot;CLIENT_ID&quot;)
+<span class="nc" id="L47">    private Integer clientId;</span>
+    @Column(name = &quot;LAST_UPDATE_SESSION_ID&quot;)
+<span class="nc" id="L49">    private Integer lastUpdateSessionId;</span>
+    @Column(name = &quot;C_ATTRIBUTE1&quot;, length = 240)
+<span class="nc" id="L51">    private String cAttribute1;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE2&quot;, length = 240)
+<span class="nc" id="L54">    private String cAttribute2;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE3&quot;, length = 240)
+<span class="nc" id="L57">    private String cAttribute3;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE4&quot;, length = 240)
+<span class="nc" id="L60">    private String cAttribute4;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE5&quot;, length = 240)
+<span class="nc" id="L63">    private String cAttribute5;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE6&quot;, length = 240)
+<span class="nc" id="L66">    private String cAttribute6;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE7&quot;, length = 240)
+<span class="nc" id="L69">    private String cAttribute7;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE8&quot;, length = 240)
+<span class="nc" id="L72">    private String cAttribute8;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE9&quot;, length = 240)
+<span class="nc" id="L75">    private String cAttribute9;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE10&quot;, length = 240)
+<span class="nc" id="L78">    private String cAttribute10;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE11&quot;, length = 240)
+<span class="nc" id="L81">    private String cAttribute11;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE12&quot;, length = 240)
+<span class="nc" id="L84">    private String cAttribute12;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE13&quot;, length = 240)
+<span class="nc" id="L87">    private String cAttribute13;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE14&quot;, length = 240)
+<span class="nc" id="L90">    private String cAttribute14;</span>
+
+    @Column(name = &quot;C_ATTRIBUTE15&quot;, length = 240)
+<span class="nc" id="L93">    private String cAttribute15;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE16&quot;)
+<span class="nc" id="L96">    private Integer nAttribute16;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE17&quot;)
+<span class="nc" id="L99">    private Integer nAttribute17;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE18&quot;)
+<span class="nc" id="L102">    private Integer nAttribute18;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE19&quot;)
+<span class="nc" id="L105">    private Integer nAttribute19;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE20&quot;)
+<span class="nc" id="L108">    private Integer nAttribute20;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE21&quot;)
+<span class="nc" id="L111">    private Integer nAttribute21;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE22&quot;)
+<span class="nc" id="L114">    private Integer nAttribute22;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE23&quot;)
+<span class="nc" id="L117">    private Integer nAttribute23;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE24&quot;)
+<span class="nc" id="L120">    private Integer nAttribute24;</span>
+
+    @Column(name = &quot;N_ATTRIBUTE25&quot;)
+<span class="nc" id="L123">    private Integer nAttribute25;</span>
+
+    @Column(name = &quot;D_ATTRIBUTE26&quot;)
+<span class="nc" id="L126">    private LocalDateTime dAttribute26;</span>
+
+    @Column(name = &quot;D_ATTRIBUTE27&quot;)
+<span class="nc" id="L129">    private LocalDateTime dAttribute27;</span>
+
+    @Column(name = &quot;D_ATTRIBUTE28&quot;)
+<span class="nc" id="L132">    private LocalDateTime dAttribute28;</span>
+
+    @Column(name = &quot;D_ATTRIBUTE29&quot;)
+<span class="nc" id="L135">    private LocalDateTime dAttribute29;</span>
+
+    @Column(name = &quot;D_ATTRIBUTE30&quot;)
+<span class="nc" id="L138">    private LocalDateTime dAttribute30;</span>
+
+    @Column(name = &quot;J_ATTRIBUTE31&quot;, columnDefinition = &quot;TEXT&quot;)
+<span class="nc" id="L141">    private String jAttribute31;</span>
+
+    @Column(name = &quot;J_ATTRIBUTE32&quot;, columnDefinition = &quot;TEXT&quot;)
+<span class="nc" id="L144">    private String jAttribute32;</span>
+
+    @Column(name = &quot;CREATION_DATE&quot;)
+<span class="nc" id="L147">    private LocalDateTime creationDate;</span>
+
+    @Column(name = &quot;LAST_UPDATED_BY&quot;, length = 100)
+<span class="nc" id="L150">    private String lastUpdatedBy;</span>
+
+    @Column(name = &quot;LAST_UPDATED_DATE&quot;)
+<span class="nc" id="L153">    private LocalDateTime lastUpdateDate;</span>
+
+    @Column(name = &quot;CREATED_BY&quot;, length = 100)
+<span class="nc" id="L156">    private String createdBy;</span>
+
+    @Column(name = &quot;RECORD_INFO&quot;, columnDefinition = &quot;TEXT&quot;)
+<span class="nc" id="L159">    private String recordInfo;</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LookupTypeConfiguration.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.lookup</a> &gt; <span class="el_source">LookupTypeConfiguration.java</span></div><h1>LookupTypeConfiguration.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.lookup;
+
+import com.atomicnorth.hrm.configuration.multitenant.TenantContextHolder;
+import com.atomicnorth.hrm.tenant.domain.lookup.LookupCode;
+import com.atomicnorth.hrm.tenant.domain.lookup.LookupType;
+import com.atomicnorth.hrm.tenant.repository.translation.LookupTypeProjection;
+import com.atomicnorth.hrm.tenant.service.dto.lookup.LookupCodeTranslationDTO;
+import com.atomicnorth.hrm.tenant.service.dto.lookup.LookupTypeTranslationDTO;
+import com.atomicnorth.hrm.tenant.service.lookup.LookupTypeConfigurationService;
+import com.atomicnorth.hrm.util.OldApiResponseMessage;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.persistence.EntityNotFoundException;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping(&quot;api/configuration&quot;)
+<span class="nc" id="L30">public class LookupTypeConfiguration {</span>
+
+<span class="nc" id="L32">    private final Logger log = LoggerFactory.getLogger(LookupTypeConfiguration.class);</span>
+
+    @Autowired
+    private LookupTypeConfigurationService lookupTypeConfigurationService;
+
+    @GetMapping
+    public List&lt;LookupTypeProjection&gt; get() {
+<span class="nc" id="L39">        return lookupTypeConfigurationService.getAllLookupType();</span>
+    }
+
+    @PutMapping(&quot;{id}&quot;)
+    public ResponseEntity&lt;OldApiResponseMessage&gt; updateLookupType(@PathVariable String id, @RequestBody LookupTypeTranslationDTO lookupTypeTranslationDTO) {
+        try {
+<span class="nc" id="L45">            LookupType lookupType = lookupTypeConfigurationService.updateLookupType(id, lookupTypeTranslationDTO);</span>
+<span class="nc bnc" id="L46" title="All 2 branches missed.">            if (lookupType != null) {</span>
+<span class="nc" id="L47">                OldApiResponseMessage responseMessage = OldApiResponseMessage.builder()</span>
+<span class="nc" id="L48">                        .message(&quot;Lookup updated successfully.&quot;)</span>
+<span class="nc" id="L49">                        .status(HttpStatus.OK)</span>
+<span class="nc" id="L50">                        .success(true)</span>
+<span class="nc" id="L51">                        .build();</span>
+<span class="nc" id="L52">                return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.OK);</span>
+            } else {
+<span class="nc" id="L54">                OldApiResponseMessage responseMessage = OldApiResponseMessage.builder()</span>
+<span class="nc" id="L55">                        .message(&quot;Lookup type &quot; + id + &quot; not found.&quot;)</span>
+<span class="nc" id="L56">                        .status(HttpStatus.NOT_FOUND)</span>
+<span class="nc" id="L57">                        .success(false)</span>
+<span class="nc" id="L58">                        .build();</span>
+<span class="nc" id="L59">                return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.NOT_FOUND);</span>
+            }
+<span class="nc" id="L61">        } catch (EntityNotFoundException e) {</span>
+<span class="nc" id="L62">            OldApiResponseMessage responseMessage = OldApiResponseMessage.builder()</span>
+<span class="nc" id="L63">                    .message(&quot;Lookup type not found.&quot;)</span>
+<span class="nc" id="L64">                    .status(HttpStatus.NOT_FOUND)</span>
+<span class="nc" id="L65">                    .success(false)</span>
+<span class="nc" id="L66">                    .build();</span>
+<span class="nc" id="L67">            return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.NOT_FOUND);</span>
+<span class="nc" id="L68">        } catch (Exception e) {</span>
+<span class="nc" id="L69">            OldApiResponseMessage responseMessage = OldApiResponseMessage.builder()</span>
+<span class="nc" id="L70">                    .message(&quot;An error occurred while updating the Lookup type.&quot;)</span>
+<span class="nc" id="L71">                    .status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L72">                    .success(false)</span>
+<span class="nc" id="L73">                    .build();</span>
+<span class="nc" id="L74">            return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.INTERNAL_SERVER_ERROR);</span>
+        }
+    }
+
+    @GetMapping(&quot;{id}&quot;)
+    public LookupType getLookupTypeById(@PathVariable Integer id) {
+<span class="nc" id="L80">        return lookupTypeConfigurationService.getById(id);</span>
+    }
+
+    @GetMapping(&quot;/lookup&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getLookupCodeById(
+            @RequestParam(value = &quot;id&quot;, required = false) Integer id,
+            @RequestParam(value = &quot;module&quot;, required = false) Long module,
+            @RequestParam(value = &quot;function&quot;, required = false) Long function,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;lookupId&quot;) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;ASC&quot;) String sortDir,
+            @RequestParam(value = &quot;searchColumn&quot;, required = false) String searchColumn,
+            @RequestParam(value = &quot;searchValue&quot;, required = false) String searchValue,
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size) {
+
+        try {
+<span class="nc bnc" id="L96" title="All 2 branches missed.">            Sort sort = sortDir.equalsIgnoreCase(&quot;DESC&quot;) ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();</span>
+<span class="nc" id="L97">            Pageable pageable = PageRequest.of(page - 1, size, sort);</span>
+
+<span class="nc" id="L99">            Map&lt;String, Object&gt; lookupTypes = lookupTypeConfigurationService.getLookupData(id, module, function, searchColumn, searchValue, pageable);</span>
+
+<span class="nc" id="L101">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    lookupTypes, true, &quot;LOOKUP-LIST-SUCCESS&quot;, &quot;Success&quot;
+            );
+
+<span class="nc" id="L105">            return ResponseEntity.ok(response);</span>
+
+<span class="nc" id="L107">        } catch (Exception e) {</span>
+<span class="nc" id="L108">            log.error(&quot;Error occurred while fetching lookupTypes&quot;, e);</span>
+<span class="nc" id="L109">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L110">                    .body(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN-LOOKUPTYPE_FETCH_ERROR&quot;, &quot;FAILURE&quot;,</span>
+<span class="nc" id="L111">                            Collections.singletonList(e.getMessage())));</span>
+        }
+    }
+
+    @PutMapping(&quot;/lookupCode/{id}&quot;)
+    public ResponseEntity&lt;OldApiResponseMessage&gt; updateLookupCode(@PathVariable Integer id, @RequestBody LookupCodeTranslationDTO lookupCodeTranslationDTO) {
+        try {
+<span class="nc" id="L118">            LookupCode lookupType = lookupTypeConfigurationService.updateLookupCode(id, lookupCodeTranslationDTO);</span>
+<span class="nc bnc" id="L119" title="All 2 branches missed.">            if (lookupType != null) {</span>
+<span class="nc" id="L120">                OldApiResponseMessage responseMessage = OldApiResponseMessage.builder()</span>
+<span class="nc" id="L121">                        .message(&quot;Lookup code updated successfully.&quot;)</span>
+<span class="nc" id="L122">                        .status(HttpStatus.OK)</span>
+<span class="nc" id="L123">                        .success(true)</span>
+<span class="nc" id="L124">                        .build();</span>
+<span class="nc" id="L125">                return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.OK);</span>
+            } else {
+<span class="nc" id="L127">                OldApiResponseMessage responseMessage = OldApiResponseMessage.builder()</span>
+<span class="nc" id="L128">                        .message(&quot;Lookup code not found.&quot;)</span>
+<span class="nc" id="L129">                        .status(HttpStatus.NOT_FOUND)</span>
+<span class="nc" id="L130">                        .success(false)</span>
+<span class="nc" id="L131">                        .build();</span>
+<span class="nc" id="L132">                return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.NOT_FOUND);</span>
+            }
+<span class="nc" id="L134">        } catch (EntityNotFoundException e) {</span>
+<span class="nc" id="L135">            OldApiResponseMessage responseMessage = OldApiResponseMessage.builder()</span>
+<span class="nc" id="L136">                    .message(&quot;Lookup code not found.&quot;)</span>
+<span class="nc" id="L137">                    .status(HttpStatus.NOT_FOUND)</span>
+<span class="nc" id="L138">                    .success(false)</span>
+<span class="nc" id="L139">                    .build();</span>
+<span class="nc" id="L140">            return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.NOT_FOUND);</span>
+<span class="nc" id="L141">        } catch (Exception e) {</span>
+<span class="nc" id="L142">            OldApiResponseMessage responseMessage = OldApiResponseMessage.builder()</span>
+<span class="nc" id="L143">                    .message(&quot;An error occurred while updating the Lookup code.&quot;)</span>
+<span class="nc" id="L144">                    .status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L145">                    .success(false)</span>
+<span class="nc" id="L146">                    .build();</span>
+<span class="nc" id="L147">            return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.INTERNAL_SERVER_ERROR);</span>
+        }
+    }
+
+    @DeleteMapping(&quot;lookupCode/{id}/{flag}&quot;)
+    public ResponseEntity&lt;OldApiResponseMessage&gt; deleteLookupCodeById(@PathVariable Integer id, @PathVariable String flag) {
+        try {
+<span class="nc" id="L154">            LookupCode lookupCode = lookupTypeConfigurationService.deleteLookupCodeById(id, flag);</span>
+<span class="nc bnc" id="L155" title="All 2 branches missed.">            if (lookupCode != null) {</span>
+<span class="nc" id="L156">                OldApiResponseMessage responseMessage = OldApiResponseMessage.builder()</span>
+<span class="nc" id="L157">                        .message(&quot;Lookup code deleted successfully.&quot;)</span>
+<span class="nc" id="L158">                        .status(HttpStatus.OK)</span>
+<span class="nc" id="L159">                        .success(true)</span>
+<span class="nc" id="L160">                        .build();</span>
+<span class="nc" id="L161">                return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.OK);</span>
+            } else {
+<span class="nc" id="L163">                OldApiResponseMessage responseMessage = OldApiResponseMessage.builder()</span>
+<span class="nc" id="L164">                        .message(&quot;Lookup code not found.&quot;)</span>
+<span class="nc" id="L165">                        .status(HttpStatus.NOT_FOUND)</span>
+<span class="nc" id="L166">                        .success(false)</span>
+<span class="nc" id="L167">                        .build();</span>
+<span class="nc" id="L168">                return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.NOT_FOUND);</span>
+            }
+<span class="nc" id="L170">        } catch (EntityNotFoundException e) {</span>
+<span class="nc" id="L171">            OldApiResponseMessage responseMessage = OldApiResponseMessage.builder()</span>
+<span class="nc" id="L172">                    .message(&quot;Lookup code not found.&quot;)</span>
+<span class="nc" id="L173">                    .status(HttpStatus.NOT_FOUND)</span>
+<span class="nc" id="L174">                    .success(false)</span>
+<span class="nc" id="L175">                    .build();</span>
+<span class="nc" id="L176">            return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.NOT_FOUND);</span>
+<span class="nc" id="L177">        } catch (Exception e) {</span>
+<span class="nc" id="L178">            OldApiResponseMessage responseMessage = OldApiResponseMessage.builder()</span>
+<span class="nc" id="L179">                    .message(&quot;An error occurred while deleting the Lookup code.&quot;)</span>
+<span class="nc" id="L180">                    .status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L181">                    .success(false)</span>
+<span class="nc" id="L182">                    .build();</span>
+<span class="nc" id="L183">            return new ResponseEntity&lt;&gt;(responseMessage, HttpStatus.INTERNAL_SERVER_ERROR);</span>
+        }
+    }
+
+    /*LookUp Creation Code And type with translation*/
+    @PostMapping(value = &quot;lookupTypeTranslation&quot;, consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity&lt;ApiResponse&lt;LookupTypeTranslationDTO&gt;&gt; addLookupTypeTranslation(@RequestBody LookupTypeTranslationDTO lookupTypeDTO) {
+        try {
+<span class="nc" id="L191">            LookupTypeTranslationDTO lookupType = lookupTypeConfigurationService.addLookTypeTranslation(lookupTypeDTO);</span>
+<span class="nc" id="L192">            ApiResponse&lt;LookupTypeTranslationDTO&gt; response = new ApiResponse&lt;&gt;(</span>
+                    lookupType,
+                    true,
+                    &quot;LOOKUP-CREATED-SUCCESS&quot;,
+                    &quot;Information&quot;
+            );
+<span class="nc" id="L198">            return ResponseEntity.status(HttpStatus.CREATED).body(response);</span>
+<span class="nc" id="L199">        } catch (Exception e) {</span>
+<span class="nc" id="L200">            ApiResponse&lt;LookupTypeTranslationDTO&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;LOOKUP-CREATED-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L205">                    Collections.singletonList(e.getMessage())</span>
+            );
+<span class="nc" id="L207">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);</span>
+        }
+    }
+
+    @PostMapping(value = &quot;lookupCodeTranslation&quot;, consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity&lt;ApiResponse&lt;LookupCodeTranslationDTO&gt;&gt; addLookupCodeTranslation(@RequestBody LookupCodeTranslationDTO lookupCodeTranslationDTO) {
+        try {
+<span class="nc" id="L214">            LookupCodeTranslationDTO lookupCode = lookupTypeConfigurationService.addLookCodeTranslation(lookupCodeTranslationDTO);</span>
+<span class="nc" id="L215">            ApiResponse&lt;LookupCodeTranslationDTO&gt; response = new ApiResponse&lt;&gt;(</span>
+                    lookupCode,
+                    true,
+                    &quot;LOOKUP-CODE-CREATED-SUCCESS&quot;,
+                    &quot;Information&quot;
+            );
+<span class="nc" id="L221">            return ResponseEntity.status(HttpStatus.CREATED).body(response);</span>
+<span class="nc" id="L222">        } catch (Exception e) {</span>
+<span class="nc" id="L223">            ApiResponse&lt;LookupCodeTranslationDTO&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;LOOKUP-CODE-CREATED-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L228">                    Collections.singletonList(e.getMessage())</span>
+            );
+<span class="nc" id="L230">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/lookupTypeCodes&quot;)
+    public List&lt;Map&lt;String, Object&gt;&gt; getLookupTypeCodes(
+            @RequestParam(required = false) int p_app_module,
+            @RequestParam(required = false) int p_module_function,
+            @RequestParam String p_lookup_type) {
+<span class="nc" id="L239">        return lookupTypeConfigurationService.callGetLookUpTypeCodes(p_lookup_type);</span>
+    }
+
+    @GetMapping(&quot;/lookupCode&quot;)
+    public List&lt;LookupCode&gt; getAllLookupCodesById(@RequestParam Integer lookupId) {
+<span class="nc" id="L244">        return lookupTypeConfigurationService.getAllLookupCodesById(lookupId);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

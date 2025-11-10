@@ -1,0 +1,687 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JobOpeningService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.jobOpening</a> &gt; <span class="el_source">JobOpeningService.java</span></div><h1>JobOpeningService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.jobOpening;
+
+import com.atomicnorth.hrm.exception.ResourceNotFoundException;
+import com.atomicnorth.hrm.tenant.domain.designation.Designation;
+import com.atomicnorth.hrm.tenant.domain.employement.employee_job_applicant.JobApplicant;
+import com.atomicnorth.hrm.tenant.domain.jobOpening.*;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.LookupCodeRepository;
+import com.atomicnorth.hrm.tenant.repository.designation.DesignationRepository;
+import com.atomicnorth.hrm.tenant.repository.employement.employee_job_applicant.JobApplicantRepository;
+import com.atomicnorth.hrm.tenant.repository.employement.employee_on_boarding.OnboardApplicantRepo;
+import com.atomicnorth.hrm.tenant.repository.jobOpening.*;
+import com.atomicnorth.hrm.tenant.service.EmployeeService;
+import com.atomicnorth.hrm.tenant.service.dto.jobOpening.JobOfferDTO;
+import com.atomicnorth.hrm.tenant.service.dto.jobOpening.JobOfferTermDTO;
+import com.atomicnorth.hrm.tenant.service.dto.jobOpening.JobOpeningDTO;
+import com.atomicnorth.hrm.tenant.service.dto.jobOpening.OfferTermMasterDTO;
+import com.atomicnorth.hrm.tenant.service.lookup.LookupTypeConfigurationService;
+import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+
+import javax.persistence.EntityNotFoundException;
+import javax.persistence.criteria.*;
+import javax.transaction.Transactional;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+public class JobOpeningService {
+    private final OfferTermMasterRepository offerTermMasterRepository;
+    private final JobOfferRepository jobOfferRepository;
+    private final JobOpeningRepository jobOpeningRepository;
+    private final DesignationRepository designationRepository;
+    private final JobApplicantRepository employeeJobApplicantRepository;
+    private final JobOfferTermsRepository jobOfferTermsRepository;
+    private final TermsConditionRepository termsConditionRepository;
+    private final OnboardApplicantRepo onboardApplicantRepo;
+    private final LookupCodeRepository lookupCodeRepository;
+    private final LookupTypeConfigurationService lookupService;
+<span class="nc" id="L52">    private final Logger log = LoggerFactory.getLogger(JobOpeningService.class);</span>
+    @Autowired
+    private ModelMapper modelMapper;
+    @Autowired
+    private EmployeeService employeeService;
+
+<span class="nc" id="L58">    public JobOpeningService(OfferTermMasterRepository offerTermMasterRepository, JobOfferRepository jobOfferRepository, JobOpeningRepository jobOpeningRepository, DesignationRepository designationRepository, JobApplicantRepository employeeJobApplicantRepository, JobOfferTermsRepository jobOfferTermsRepository, TermsConditionRepository termsConditionRepository, OnboardApplicantRepo onboardApplicantRepo, LookupCodeRepository lookupCodeRepository, LookupTypeConfigurationService lookupService) {</span>
+<span class="nc" id="L59">        this.offerTermMasterRepository = offerTermMasterRepository;</span>
+<span class="nc" id="L60">        this.jobOfferRepository = jobOfferRepository;</span>
+<span class="nc" id="L61">        this.jobOpeningRepository = jobOpeningRepository;</span>
+<span class="nc" id="L62">        this.designationRepository = designationRepository;</span>
+<span class="nc" id="L63">        this.employeeJobApplicantRepository = employeeJobApplicantRepository;</span>
+<span class="nc" id="L64">        this.jobOfferTermsRepository = jobOfferTermsRepository;</span>
+<span class="nc" id="L65">        this.termsConditionRepository = termsConditionRepository;</span>
+<span class="nc" id="L66">        this.onboardApplicantRepo = onboardApplicantRepo;</span>
+<span class="nc" id="L67">        this.lookupCodeRepository = lookupCodeRepository;</span>
+<span class="nc" id="L68">        this.lookupService = lookupService;</span>
+<span class="nc" id="L69">    }</span>
+
+    public Specification&lt;JobOpening&gt; searchByColumn(String column, String value) {
+<span class="nc" id="L72">        return (root, query, cb) -&gt; {</span>
+<span class="nc bnc" id="L73" title="All 5 branches missed.">            switch (column.toLowerCase()) {</span>
+                case &quot;status&quot;:
+<span class="nc" id="L75">                    return lookupCodeMatchPredicate(cb, root.get(&quot;status&quot;), value, &quot;STATUS_LIST&quot;);</span>
+                case &quot;employmenttype&quot;:
+<span class="nc" id="L77">                    return lookupCodeMatchPredicate(cb, root.get(&quot;employmentType&quot;), value, &quot;EMPLOYMENT_TYPE_LIST&quot;);</span>
+                case &quot;currency&quot;:
+<span class="nc" id="L79">                    return lookupCodeMatchPredicate(cb, root.get(&quot;currency&quot;), value, &quot;CURRENCY_LIST&quot;);</span>
+                case &quot;salarypaidper&quot;:
+<span class="nc" id="L81">                    return lookupCodeMatchPredicate(cb, root.get(&quot;salaryPaidPer&quot;), value, &quot;SALARY_PAID_PER_LIST&quot;);</span>
+                default:
+<span class="nc" id="L83">                    return cb.like(cb.lower(root.get(column)), &quot;%&quot; + value.toLowerCase() + &quot;%&quot;);</span>
+            }
+        };
+    }
+
+    private Predicate lookupCodeMatchPredicate(CriteriaBuilder cb, Path&lt;String&gt; path, String searchValue, String type) {
+<span class="nc" id="L89">        List&lt;String&gt; matchingCodes = lookupService.getCodesByMeaningAndType(searchValue, type);</span>
+<span class="nc bnc" id="L90" title="All 2 branches missed.">        if (matchingCodes.isEmpty()) {</span>
+<span class="nc" id="L91">            return cb.disjunction();</span>
+        }
+<span class="nc" id="L93">        return path.in(matchingCodes);</span>
+    }
+
+
+    public static Specification&lt;JobOffer&gt; searchByColumnJobOffer(String column, String value) {
+<span class="nc" id="L98">        return (Root&lt;JobOffer&gt; root, CriteriaQuery&lt;?&gt; query, CriteriaBuilder criteriaBuilder) -&gt; {</span>
+<span class="nc" id="L99">            Path&lt;?&gt; path = root.get(column);</span>
+
+<span class="nc bnc" id="L101" title="All 2 branches missed.">            if (path.getJavaType().equals(String.class)) {</span>
+<span class="nc" id="L102">                return criteriaBuilder.like(criteriaBuilder.lower(root.get(column)), &quot;%&quot; + value.toLowerCase() + &quot;%&quot;);</span>
+<span class="nc bnc" id="L103" title="All 2 branches missed.">            } else if (path.getJavaType().equals(Date.class)) {</span>
+                try {
+<span class="nc" id="L105">                    Date parsedDate = new SimpleDateFormat(&quot;yyyy-MM-dd&quot;).parse(value);</span>
+<span class="nc" id="L106">                    return criteriaBuilder.equal(root.get(column), parsedDate);</span>
+<span class="nc" id="L107">                } catch (ParseException e) {</span>
+<span class="nc" id="L108">                    throw new RuntimeException(&quot;Invalid date format for field: &quot; + column, e);</span>
+                }
+            } else {
+<span class="nc" id="L111">                return criteriaBuilder.equal(root.get(column), value);</span>
+            }
+        };
+    }
+
+    public JobOpening saveOrUpdateJobOpening(JobOpeningDTO dto) {
+        JobOpening entity;
+<span class="nc" id="L118">        UserLoginDetail token = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L119">        String username = String.valueOf(token.getUsername());</span>
+<span class="nc bnc" id="L120" title="All 2 branches missed.">        if (dto.getJobOpeningId() != null) {</span>
+<span class="nc" id="L121">            entity = jobOpeningRepository.findById(dto.getJobOpeningId())</span>
+<span class="nc" id="L122">                    .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Job Opening not found with id: &quot; + dto.getJobOpeningId()));</span>
+<span class="nc" id="L123">            entity.setJobTitle(dto.getJobTitle());</span>
+<span class="nc" id="L124">            entity.setDesignationId(dto.getDesignationId());</span>
+<span class="nc" id="L125">            entity.setStatus(dto.getStatus());</span>
+<span class="nc" id="L126">            entity.setPostedOn(dto.getPostedOn());</span>
+<span class="nc" id="L127">            entity.setClosesOn(dto.getClosesOn());</span>
+<span class="nc" id="L128">            entity.setEmploymentType(dto.getEmploymentType());</span>
+<span class="nc" id="L129">            entity.setDepartmentId(dto.getDepartmentId());</span>
+<span class="nc" id="L130">            entity.setLocation(dto.getLocation());</span>
+<span class="nc" id="L131">            entity.setPublishOnWebsite(dto.getPublishOnWebsite());</span>
+<span class="nc" id="L132">            entity.setDescription(dto.getDescription());</span>
+<span class="nc" id="L133">            entity.setCurrency(dto.getCurrency());</span>
+<span class="nc" id="L134">            entity.setSalaryPaidPer(dto.getSalaryPaidPer());</span>
+<span class="nc" id="L135">            entity.setLowerRange(dto.getLowerRange());</span>
+<span class="nc" id="L136">            entity.setUpperRange(dto.getUpperRange());</span>
+<span class="nc" id="L137">            entity.setPublishSalaryRange(dto.getPublishSalaryRange());</span>
+<span class="nc" id="L138">            entity.setCreatedBy(String.valueOf(username));</span>
+<span class="nc" id="L139">            entity.setLastUpdatedBy(String.valueOf(username));</span>
+<span class="nc" id="L140">            entity.setCreationDate(new Date());</span>
+<span class="nc" id="L141">            entity.setLastUpdatedDate(new Date());</span>
+        } else {
+<span class="nc" id="L143">            entity = new JobOpening();</span>
+<span class="nc" id="L144">            entity.setJobTitle(dto.getJobTitle());</span>
+<span class="nc" id="L145">            entity.setDesignationId(dto.getDesignationId());</span>
+<span class="nc" id="L146">            entity.setStatus(dto.getStatus());</span>
+<span class="nc" id="L147">            entity.setPostedOn(dto.getPostedOn());</span>
+<span class="nc" id="L148">            entity.setClosesOn(dto.getClosesOn());</span>
+<span class="nc" id="L149">            entity.setEmploymentType(dto.getEmploymentType());</span>
+<span class="nc" id="L150">            entity.setDepartmentId(dto.getDepartmentId());</span>
+<span class="nc" id="L151">            entity.setLocation(dto.getLocation());</span>
+<span class="nc" id="L152">            entity.setPublishOnWebsite(dto.getPublishOnWebsite());</span>
+<span class="nc" id="L153">            entity.setDescription(dto.getDescription());</span>
+<span class="nc" id="L154">            entity.setCurrency(dto.getCurrency());</span>
+<span class="nc" id="L155">            entity.setSalaryPaidPer(dto.getSalaryPaidPer());</span>
+<span class="nc" id="L156">            entity.setLowerRange(dto.getLowerRange());</span>
+<span class="nc" id="L157">            entity.setUpperRange(dto.getUpperRange());</span>
+<span class="nc" id="L158">            entity.setPublishSalaryRange(dto.getPublishSalaryRange());</span>
+<span class="nc" id="L159">            entity.setCreatedBy(String.valueOf(username));</span>
+<span class="nc" id="L160">            entity.setLastUpdatedBy(String.valueOf(username));</span>
+<span class="nc" id="L161">            entity.setCreationDate(new Date());</span>
+<span class="nc" id="L162">            entity.setLastUpdatedDate(new Date());</span>
+
+        }
+<span class="nc" id="L165">        return jobOpeningRepository.save(entity);</span>
+    }
+
+    public JobOpeningDTO getJobOpeningById(Integer jobOpeningId) {
+<span class="nc" id="L169">        return jobOpeningRepository.findById(jobOpeningId)</span>
+<span class="nc" id="L170">                .map(this::convertToDTO)</span>
+<span class="nc" id="L171">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Job Opening not found with ID: &quot; + jobOpeningId));</span>
+    }
+
+    @Transactional()
+    public Map&lt;String, Object&gt; getPaginatedJobOpenings(Pageable pageable, String searchColumn, String searchValue) {
+        Page&lt;JobOpening&gt; jobOpenings;
+
+<span class="nc bnc" id="L178" title="All 2 branches missed.">        if (&quot;designationName&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L179">            jobOpenings = jobOpeningRepository.findByDesignation_DesignationNameContainingIgnoreCase(searchValue, pageable);</span>
+<span class="nc bnc" id="L180" title="All 2 branches missed.">        } else if (&quot;departmentName&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L181">            jobOpenings = jobOpeningRepository.findByDepartment_DnameContainingIgnoreCase(searchValue, pageable);</span>
+<span class="nc bnc" id="L182" title="All 4 branches missed.">        } else if (searchColumn != null &amp;&amp; searchValue != null) {</span>
+<span class="nc" id="L183">            Specification&lt;JobOpening&gt; spec = searchByColumn(searchColumn, searchValue);</span>
+<span class="nc" id="L184">            jobOpenings = jobOpeningRepository.findAll(spec, pageable);</span>
+<span class="nc" id="L185">        } else {</span>
+<span class="nc" id="L186">            jobOpenings = jobOpeningRepository.findAll(pageable);</span>
+        }
+
+        // Convert Employee entities to DTOs using ModelMapper
+<span class="nc" id="L190">        List&lt;JobOpeningDTO&gt; jobOpeningDTOList = jobOpenings.getContent().stream()</span>
+<span class="nc" id="L191">                .map(this::convertToDTO)</span>
+<span class="nc" id="L192">                .peek(dto -&gt; {</span>
+<span class="nc" id="L193">                    dto.setCurrency(fetchLookupName(dto.getCurrency()));</span>
+<span class="nc" id="L194">                    dto.setLocation(fetchLookupName(dto.getLocation()));</span>
+<span class="nc" id="L195">                    dto.setSalaryPaidPer(fetchLookupName(dto.getSalaryPaidPer()));</span>
+<span class="nc" id="L196">                    dto.setEmploymentType(fetchLookupName(dto.getEmploymentType()));</span>
+<span class="nc" id="L197">                })</span>
+<span class="nc" id="L198">                .collect(Collectors.toList());</span>
+
+        // Prepare response map
+<span class="nc" id="L201">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L202">        response.put(&quot;result&quot;, jobOpeningDTOList);</span>
+<span class="nc" id="L203">        response.put(&quot;currentPage&quot;, pageable.getPageNumber() + 1);</span>
+<span class="nc" id="L204">        response.put(&quot;pageSize&quot;, pageable.getPageSize());</span>
+<span class="nc" id="L205">        response.put(&quot;totalItems&quot;, jobOpenings.getTotalElements());</span>
+<span class="nc" id="L206">        response.put(&quot;totalPages&quot;, jobOpenings.getTotalPages());</span>
+
+<span class="nc" id="L208">        return response;</span>
+    }
+
+    private JobOpeningDTO convertToDTO(JobOpening entity) {
+<span class="nc" id="L212">        JobOpeningDTO dto = modelMapper.map(entity, JobOpeningDTO.class);</span>
+<span class="nc bnc" id="L213" title="All 2 branches missed.">        dto.setDesignationName(entity.getDesignation() != null ? entity.getDesignation().getDesignationName() : null);</span>
+<span class="nc bnc" id="L214" title="All 2 branches missed.">        dto.setDepartmentName(entity.getDepartment() != null ? entity.getDepartment().getDname() : null);</span>
+<span class="nc" id="L215">        return dto;</span>
+    }
+
+    private String fetchLookupName(String lookupCode) {
+<span class="nc" id="L219">        List&lt;Object&gt; lookupResults = lookupCodeRepository.findByLookupCode(lookupCode);</span>
+<span class="nc bnc" id="L220" title="All 2 branches missed.">        return lookupResults.isEmpty() ? &quot;Unknown&quot; : lookupResults.get(0).toString();</span>
+    }
+
+    public void softDeleteJobOpening(Integer jobOpeningId) {
+<span class="nc" id="L224">        JobOpening entity = jobOpeningRepository.findById(jobOpeningId)</span>
+<span class="nc" id="L225">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Job Opening not found with ID: &quot; + jobOpeningId));</span>
+<span class="nc" id="L226">        entity.setStatus(&quot;N&quot;);</span>
+<span class="nc" id="L227">        jobOpeningRepository.save(entity);</span>
+<span class="nc" id="L228">    }</span>
+
+    //This code for  EMS-402-Back-End-Job-Offer
+    @Transactional
+    public JobOfferDTO saveOrUpdateJobOffer(JobOfferDTO jobOfferDTO) throws ParseException {
+<span class="nc" id="L233">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+        JobOffer jobOffer;
+
+<span class="nc bnc" id="L236" title="All 2 branches missed.">        if (jobOfferDTO.getJobOfferId() != null) {</span>
+<span class="nc" id="L237">            jobOffer = jobOfferRepository.findById(jobOfferDTO.getJobOfferId())</span>
+<span class="nc" id="L238">                    .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Job Offer with ID &quot; + jobOfferDTO.getJobOfferId() + &quot; not found&quot;));</span>
+            // Update fields in JobOffer
+<span class="nc bnc" id="L240" title="All 2 branches missed.">            if (employeeService.checkEmployeeExists(jobOffer.getJobApplicantId())) {</span>
+<span class="nc" id="L241">                throw  new IllegalArgumentException(&quot;Employee already exists for this job applicant.&quot;);</span>
+            }
+<span class="nc" id="L243">            jobOffer.setJobOfferName(jobOfferDTO.getJobOfferName());</span>
+<span class="nc" id="L244">            jobOffer.setJobApplicantId(jobOfferDTO.getJobApplicantId());</span>
+<span class="nc" id="L245">            jobOffer.setStatus(jobOfferDTO.getStatus());</span>
+<span class="nc" id="L246">            jobOffer.setOfferDate(jobOfferDTO.getOfferDate());</span>
+<span class="nc" id="L247">            jobOffer.setDesignationId(jobOfferDTO.getDesignationId());</span>
+<span class="nc" id="L248">            jobOffer.setJobOfferTemplateId(jobOfferDTO.getJobOfferTemplateId());</span>
+<span class="nc" id="L249">            jobOffer.setStartDate(jobOfferDTO.getStartDate());</span>
+<span class="nc" id="L250">            jobOffer.setTermsConditionId(jobOfferDTO.getTermsConditionId());</span>
+<span class="nc" id="L251">            jobOffer.setEndDate(jobOfferDTO.getEndDate());</span>
+<span class="nc" id="L252">            jobOffer.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L253">            jobOffer.setLastUpdatedDate(new Date());</span>
+<span class="nc" id="L254">            jobOffer.setCreationDate(new Date());</span>
+<span class="nc" id="L255">            jobOffer.setNoticePeriod(jobOfferDTO.getNoticePeriod());</span>
+<span class="nc" id="L256">            jobOffer.setCreatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc bnc" id="L257" title="All 2 branches missed.">            if (jobOffer.getJobOfferTermTemplates() == null) {</span>
+<span class="nc" id="L258">                jobOffer.setJobOfferTermTemplates(new ArrayList&lt;&gt;());</span>
+            }
+<span class="nc bnc" id="L260" title="All 2 branches missed.">            if (jobOfferDTO.getJobOfferTerms() != null) {</span>
+<span class="nc" id="L261">                List&lt;JobOfferTerm&gt; existingTerms = jobOffer.getJobOfferTermTemplates();</span>
+<span class="nc" id="L262">                Map&lt;Integer, JobOfferTerm&gt; existingTermsMap = existingTerms.stream()</span>
+<span class="nc" id="L263">                        .collect(Collectors.toMap(JobOfferTerm::getSeqNo, term -&gt; term));</span>
+
+<span class="nc bnc" id="L265" title="All 2 branches missed.">                for (JobOfferTermDTO termDTO : jobOfferDTO.getJobOfferTerms()) {</span>
+<span class="nc bnc" id="L266" title="All 4 branches missed.">                    if (termDTO.getSeqNo() != null &amp;&amp; existingTermsMap.containsKey(termDTO.getSeqNo())) {</span>
+                        // Update existing term
+<span class="nc" id="L268">                        JobOfferTerm existingTerm = existingTermsMap.get(termDTO.getSeqNo());</span>
+<span class="nc" id="L269">                        existingTerm.setOfferTermId(termDTO.getOfferTermId());</span>
+<span class="nc" id="L270">                        existingTerm.setOfferTermId(termDTO.getOfferTermId());</span>
+<span class="nc" id="L271">                        existingTerm.setDescription(termDTO.getDescription());</span>
+<span class="nc" id="L272">                        existingTerm.setValue(termDTO.getValue());</span>
+<span class="nc" id="L273">                        existingTerm.setStartDate(termDTO.getStartDate());</span>
+<span class="nc" id="L274">                        existingTerm.setEndDate(termDTO.getEndDate());</span>
+<span class="nc" id="L275">                        existingTerm.setIsActive(termDTO.getIsActive());</span>
+<span class="nc" id="L276">                        existingTerm.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L277">                        existingTerm.setLastUpdatedDate(new Date());</span>
+<span class="nc" id="L278">                        existingTerm.setCreationDate(new Date());</span>
+<span class="nc" id="L279">                        existingTerm.setCreatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L280">                    } else {</span>
+<span class="nc" id="L281">                        JobOfferTerm newTerm = mapJobOfferTermTemplateToEntity(termDTO);</span>
+<span class="nc" id="L282">                        newTerm.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L283">                        newTerm.setIsActive(termDTO.getIsActive());</span>
+<span class="nc" id="L284">                        newTerm.setLastUpdatedDate(new Date());</span>
+<span class="nc" id="L285">                        newTerm.setCreationDate(new Date());</span>
+<span class="nc" id="L286">                        newTerm.setCreatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L287">                        newTerm.setJobOffer(jobOffer);</span>
+<span class="nc" id="L288">                        existingTerms.add(newTerm);</span>
+                    }
+<span class="nc" id="L290">                }</span>
+<span class="nc" id="L291">            }</span>
+        } else {
+<span class="nc" id="L293">            jobOffer = mapToEntity(jobOfferDTO);</span>
+<span class="nc" id="L294">            jobOffer.setCreatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L295">            jobOffer.setCreationDate(new Date());</span>
+<span class="nc" id="L296">            jobOffer.setLastUpdatedDate(new Date());</span>
+<span class="nc" id="L297">            jobOffer.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+
+<span class="nc bnc" id="L299" title="All 2 branches missed.">            if (jobOfferDTO.getJobOfferTerms() != null) {</span>
+<span class="nc bnc" id="L300" title="All 2 branches missed.">                if (jobOffer.getJobOfferTermTemplates() == null) {</span>
+<span class="nc" id="L301">                    jobOffer.setJobOfferTermTemplates(new ArrayList&lt;&gt;());</span>
+                }
+<span class="nc bnc" id="L303" title="All 2 branches missed.">                for (JobOfferTermDTO termDTO : jobOfferDTO.getJobOfferTerms()) {</span>
+<span class="nc" id="L304">                    JobOfferTerm newTerm = mapJobOfferTermTemplateToEntity(termDTO);</span>
+<span class="nc" id="L305">                    newTerm.setIsActive(termDTO.getIsActive());</span>
+<span class="nc" id="L306">                    newTerm.setCreatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L307">                    newTerm.setCreationDate(new Date());</span>
+<span class="nc" id="L308">                    newTerm.setLastUpdatedDate(new Date());</span>
+<span class="nc" id="L309">                    newTerm.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L310">                    newTerm.setJobOffer(jobOffer);</span>
+<span class="nc" id="L311">                    jobOffer.getJobOfferTermTemplates().add(newTerm);</span>
+<span class="nc" id="L312">                }</span>
+            }
+        }
+<span class="nc" id="L315">        JobOffer savedJobOffer = jobOfferRepository.save(jobOffer);</span>
+<span class="nc" id="L316">        return mapToDTOForSave(savedJobOffer);</span>
+    }
+
+    @Transactional()
+    public Map&lt;String, Object&gt; getPaginatedJobOffers(Pageable pageable, String searchColumn, String searchValue) {
+        Page&lt;JobOffer&gt; jobOffers;
+
+<span class="nc bnc" id="L323" title="All 2 branches missed.">        if (&quot;designationName&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L324">            jobOffers = jobOfferRepository.findByDesignation_DesignationNameContainingIgnoreCase(searchValue, pageable);</span>
+<span class="nc bnc" id="L325" title="All 2 branches missed.">        } else if (&quot;jobApplicantName&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L326">            jobOffers = jobOfferRepository.findByEmployeeJobApplicant_applicantNameContainingIgnoreCase(searchValue, pageable);</span>
+<span class="nc bnc" id="L327" title="All 2 branches missed.">        } else if (&quot;jobOfferTemplateName&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L328">            jobOffers = jobOfferRepository.findByJobOfferTermsTemplate_titleContainingIgnoreCase(searchValue, pageable);</span>
+<span class="nc bnc" id="L329" title="All 2 branches missed.">        } else if (&quot;termAndConditionName&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L330">            jobOffers = jobOfferRepository.findByTermsCondition_titleContainingIgnoreCase(searchValue, pageable);</span>
+<span class="nc bnc" id="L331" title="All 4 branches missed.">        } else if (searchColumn != null &amp;&amp; searchValue != null) {</span>
+<span class="nc" id="L332">            Specification&lt;JobOffer&gt; spec = searchByColumnJobOffer(searchColumn, searchValue);</span>
+<span class="nc" id="L333">            jobOffers = jobOfferRepository.findAll(spec, pageable);</span>
+<span class="nc" id="L334">        } else {</span>
+<span class="nc" id="L335">            Sort sort = pageable.getSort();</span>
+<span class="nc bnc" id="L336" title="All 2 branches missed.">            if (sort.isSorted()) {</span>
+<span class="nc" id="L337">                Sort.Order designationOrder = sort.getOrderFor(&quot;designationName&quot;);</span>
+<span class="nc bnc" id="L338" title="All 2 branches missed.">                if (designationOrder != null) {</span>
+<span class="nc" id="L339">                    pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),</span>
+<span class="nc" id="L340">                            Sort.by(designationOrder.getDirection(), &quot;designation.designationName&quot;));</span>
+                }
+<span class="nc" id="L342">                Sort.Order jobApplicantName = sort.getOrderFor(&quot;jobApplicantName&quot;);</span>
+<span class="nc bnc" id="L343" title="All 2 branches missed.">                if (jobApplicantName != null) {</span>
+<span class="nc" id="L344">                    pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),</span>
+<span class="nc" id="L345">                            Sort.by(jobApplicantName.getDirection(), &quot;employeeJobApplicant.applicantName&quot;));</span>
+                }
+<span class="nc" id="L347">                Sort.Order jobOfferTemplateName = sort.getOrderFor(&quot;jobOfferTemplateName&quot;);</span>
+<span class="nc bnc" id="L348" title="All 2 branches missed.">                if (jobOfferTemplateName != null) {</span>
+<span class="nc" id="L349">                    pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),</span>
+<span class="nc" id="L350">                            Sort.by(jobOfferTemplateName.getDirection(), &quot;jobOfferTermsTemplate.title&quot;));</span>
+                }
+<span class="nc" id="L352">                Sort.Order termAndConditionName = sort.getOrderFor(&quot;termAndConditionName&quot;);</span>
+<span class="nc bnc" id="L353" title="All 2 branches missed.">                if (termAndConditionName != null) {</span>
+<span class="nc" id="L354">                    pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),</span>
+<span class="nc" id="L355">                            Sort.by(termAndConditionName.getDirection(), &quot;termsCondition.title&quot;));</span>
+                }
+            }
+<span class="nc" id="L358">            jobOffers = jobOfferRepository.findAll(pageable);</span>
+        }
+
+<span class="nc" id="L361">        List&lt;JobOfferDTO&gt; jobOfferDTOS = jobOffers.getContent().stream()</span>
+<span class="nc" id="L362">                .map(jobOffer -&gt; {</span>
+<span class="nc" id="L363">                    JobOfferDTO dto = convertToDTO(jobOffer);</span>
+<span class="nc" id="L364">                    Optional.ofNullable(jobOffer.getJobOfferTermTemplates())</span>
+<span class="nc" id="L365">                            .ifPresent(terms -&gt; dto.setJobOfferTerms(</span>
+<span class="nc" id="L366">                                    terms.stream().map(this::mapTermsToDTO).collect(Collectors.toList())</span>
+                            ));
+<span class="nc" id="L368">                    return dto;</span>
+<span class="nc" id="L369">                }).peek(dto -&gt; {</span>
+<span class="nc" id="L370">                    dto.setEmployeeCreated(onboardApplicantRepo.existsByJobApplicantId(dto.getJobApplicantId()));</span>
+<span class="nc" id="L371">                })</span>
+<span class="nc" id="L372">                .collect(Collectors.toList());</span>
+
+        // Prepare response map
+<span class="nc" id="L375">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L376">        response.put(&quot;result&quot;, jobOfferDTOS);</span>
+<span class="nc" id="L377">        response.put(&quot;currentPage&quot;, pageable.getPageNumber() + 1);</span>
+<span class="nc" id="L378">        response.put(&quot;pageSize&quot;, pageable.getPageSize());</span>
+<span class="nc" id="L379">        response.put(&quot;totalItems&quot;, jobOffers.getTotalElements());</span>
+<span class="nc" id="L380">        response.put(&quot;totalPages&quot;, jobOffers.getTotalPages());</span>
+
+<span class="nc" id="L382">        return response;</span>
+    }
+
+    private JobOfferDTO convertToDTO(JobOffer entity) {
+<span class="nc" id="L386">        JobOfferDTO dto = modelMapper.map(entity, JobOfferDTO.class);</span>
+<span class="nc bnc" id="L387" title="All 2 branches missed.">        dto.setDesignationName(entity.getDesignation() != null ? entity.getDesignation().getDesignationName() : null);</span>
+<span class="nc bnc" id="L388" title="All 2 branches missed.">        dto.setJobApplicantName(entity.getEmployeeJobApplicant() != null ? entity.getEmployeeJobApplicant().getApplicantName() : null);</span>
+<span class="nc bnc" id="L389" title="All 2 branches missed.">        dto.setTermAndConditionName(entity.getTermsCondition() != null ? entity.getTermsCondition().getTitle() : null);</span>
+<span class="nc bnc" id="L390" title="All 2 branches missed.">        dto.setJobOfferTemplateName(entity.getJobOfferTermsTemplate() != null ? entity.getJobOfferTermsTemplate().getTitle() : null);</span>
+<span class="nc" id="L391">        return dto;</span>
+    }
+
+    private JobOfferTermDTO mapTermsToDTO(JobOfferTerm approver) {
+<span class="nc" id="L395">        JobOfferTermDTO dto = new JobOfferTermDTO();</span>
+<span class="nc" id="L396">        dto.setSeqNo(approver.getSeqNo());</span>
+<span class="nc" id="L397">        dto.setValue(approver.getValue());</span>
+<span class="nc" id="L398">        dto.setOfferTermId(approver.getOfferTermId());</span>
+<span class="nc" id="L399">        dto.setDescription(approver.getDescription());</span>
+<span class="nc" id="L400">        dto.setEndDate(approver.getEndDate());</span>
+<span class="nc" id="L401">        dto.setIsActive(approver.getIsActive());</span>
+<span class="nc" id="L402">        dto.setStartDate(approver.getStartDate());</span>
+<span class="nc" id="L403">        dto.setCreationDate(approver.getCreationDate());</span>
+<span class="nc" id="L404">        dto.setLastUpdatedDate(approver.getLastUpdatedDate());</span>
+<span class="nc" id="L405">        dto.setCreatedBy(approver.getCreatedBy());</span>
+<span class="nc" id="L406">        dto.setLastUpdatedBy(approver.getLastUpdatedBy());</span>
+<span class="nc" id="L407">        return dto;</span>
+    }
+
+    public JobOfferDTO getJobOfferById(Integer jobOfferId) {
+<span class="nc" id="L411">        JobOffer jobOffer = jobOfferRepository.findById(jobOfferId)</span>
+<span class="nc" id="L412">                .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Job Offer with ID &quot; + jobOfferId + &quot; not found&quot;));</span>
+<span class="nc" id="L413">        JobOfferDTO jobOfferDTO = mapToDTO(jobOffer);</span>
+<span class="nc" id="L414">        List&lt;JobOfferTermDTO&gt; jobOfferTerms = jobOffer.getJobOfferTermTemplates()</span>
+<span class="nc" id="L415">                .stream()</span>
+<span class="nc" id="L416">                .map(this::mapJobOfferTermTemplateToDTO)</span>
+<span class="nc" id="L417">                .collect(Collectors.toList());</span>
+<span class="nc" id="L418">        jobOfferDTO.setJobOfferTerms(jobOfferTerms);</span>
+
+<span class="nc" id="L420">        return jobOfferDTO;</span>
+    }
+
+    @Transactional
+    public void softDeleteJobOffer(Integer id) {
+<span class="nc" id="L425">        JobOffer jobOffer = jobOfferRepository.findById(id)</span>
+<span class="nc" id="L426">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Job offer with ID &quot; + id + &quot; not found&quot;));</span>
+<span class="nc" id="L427">        jobOffer.setStatus(&quot;N&quot;);</span>
+<span class="nc" id="L428">        jobOfferRepository.save(jobOffer);</span>
+<span class="nc" id="L429">    }</span>
+
+    private JobOffer mapToEntity(JobOfferDTO dto) {
+<span class="nc" id="L432">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L433">        JobOffer entity = new JobOffer();</span>
+<span class="nc" id="L434">        entity.setJobOfferId(dto.getJobOfferId());</span>
+<span class="nc" id="L435">        entity.setJobOfferName(dto.getJobOfferName());</span>
+<span class="nc" id="L436">        entity.setJobApplicantId(dto.getJobApplicantId());</span>
+<span class="nc" id="L437">        entity.setNoticePeriod(dto.getNoticePeriod());</span>
+<span class="nc" id="L438">        entity.setStatus(dto.getStatus());</span>
+<span class="nc" id="L439">        entity.setOfferDate(dto.getOfferDate());</span>
+<span class="nc" id="L440">        entity.setDesignationId(dto.getDesignationId());</span>
+<span class="nc" id="L441">        entity.setJobOfferTemplateId(dto.getJobOfferTemplateId());</span>
+<span class="nc" id="L442">        entity.setStartDate(dto.getStartDate());</span>
+<span class="nc" id="L443">        entity.setCreatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L444">        entity.setCreationDate(new Date());</span>
+<span class="nc" id="L445">        entity.setLastUpdatedDate(new Date());</span>
+<span class="nc" id="L446">        entity.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L447">        entity.setTermsConditionId(dto.getTermsConditionId());</span>
+<span class="nc" id="L448">        entity.setEndDate(dto.getEndDate());</span>
+<span class="nc" id="L449">        return entity;</span>
+    }
+
+    private JobOfferTerm mapJobOfferTermTemplateToEntity(JobOfferTermDTO termDTO) {
+<span class="nc" id="L453">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L454">        JobOfferTerm term = new JobOfferTerm();</span>
+<span class="nc" id="L455">        term.setSeqNo(termDTO.getSeqNo());</span>
+<span class="nc" id="L456">        term.setOfferTermId(termDTO.getOfferTermId());</span>
+<span class="nc" id="L457">        term.setDescription(termDTO.getDescription());</span>
+<span class="nc" id="L458">        term.setValue(termDTO.getValue());</span>
+<span class="nc" id="L459">        term.setStartDate(termDTO.getStartDate());</span>
+<span class="nc" id="L460">        term.setEndDate(termDTO.getEndDate());</span>
+<span class="nc" id="L461">        term.setCreatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L462">        term.setCreationDate(new Date());</span>
+<span class="nc" id="L463">        term.setLastUpdatedDate(new Date());</span>
+<span class="nc" id="L464">        term.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L465">        return term;</span>
+    }
+
+    private JobOfferDTO mapToDTO(JobOffer entity) {
+<span class="nc" id="L469">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L470">        JobOfferDTO dto = new JobOfferDTO();</span>
+<span class="nc" id="L471">        dto.setJobOfferId(entity.getJobOfferId());</span>
+<span class="nc" id="L472">        dto.setJobOfferName(entity.getJobOfferName());</span>
+<span class="nc" id="L473">        dto.setJobApplicantId(entity.getJobApplicantId());</span>
+<span class="nc" id="L474">        dto.setNoticePeriod(entity.getNoticePeriod());</span>
+<span class="nc" id="L475">        dto.setStatus(entity.getStatus());</span>
+<span class="nc" id="L476">        dto.setOfferDate(entity.getOfferDate());</span>
+<span class="nc" id="L477">        dto.setDesignationId(entity.getDesignationId());</span>
+<span class="nc" id="L478">        dto.setJobOfferTemplateId(entity.getJobOfferTemplateId());</span>
+<span class="nc" id="L479">        dto.setStartDate(entity.getStartDate());</span>
+<span class="nc" id="L480">        dto.setTermsConditionId(entity.getTermsConditionId());</span>
+        //fetch designation name
+<span class="nc bnc" id="L482" title="All 2 branches missed.">        if (entity.getDesignationId() != null) {</span>
+<span class="nc" id="L483">            Optional&lt;Designation&gt; designationOptional = designationRepository.findById(Math.toIntExact(entity.getDesignationId()));</span>
+<span class="nc bnc" id="L484" title="All 2 branches missed.">            if (designationOptional.isPresent()) {</span>
+<span class="nc" id="L485">                Designation designation = designationOptional.get();</span>
+<span class="nc" id="L486">                dto.setDesignationName(designation.getDesignationName());</span>
+<span class="nc" id="L487">            } else {</span>
+<span class="nc" id="L488">                dto.setDesignationName(&quot;Unknown Designation&quot;);</span>
+            }
+        }
+<span class="nc bnc" id="L491" title="All 2 branches missed.">        if (entity.getJobApplicantId() != null) {</span>
+<span class="nc" id="L492">            Optional&lt;JobApplicant&gt; employeeJobApplicantOptional = employeeJobApplicantRepository.findById(Math.toIntExact(entity.getJobApplicantId()));</span>
+<span class="nc bnc" id="L493" title="All 2 branches missed.">            if (employeeJobApplicantOptional.isPresent()) {</span>
+<span class="nc" id="L494">                JobApplicant employeeJobApplicant = employeeJobApplicantOptional.get();</span>
+<span class="nc" id="L495">                dto.setJobApplicantName(employeeJobApplicant.getApplicantName());</span>
+<span class="nc" id="L496">            } else {</span>
+<span class="nc" id="L497">                dto.setJobApplicantName(&quot;Unknown Employee Job Applicant&quot;);</span>
+            }
+        }
+<span class="nc bnc" id="L500" title="All 2 branches missed.">        if (entity.getJobOfferTemplateId() != null) {</span>
+<span class="nc" id="L501">            Optional&lt;JobOfferTermsTemplate&gt; jobOfferTermsTemplateOptional = jobOfferTermsRepository.findById(Math.toIntExact(entity.getJobOfferTemplateId()));</span>
+<span class="nc bnc" id="L502" title="All 2 branches missed.">            if (jobOfferTermsTemplateOptional.isPresent()) {</span>
+<span class="nc" id="L503">                JobOfferTermsTemplate jobOfferTermsTemplate = jobOfferTermsTemplateOptional.get();</span>
+<span class="nc" id="L504">                dto.setJobOfferTemplateName(jobOfferTermsTemplate.getTitle());</span>
+<span class="nc" id="L505">            } else {</span>
+<span class="nc" id="L506">                dto.setJobOfferTemplateName(&quot;Unknown Job Offer Terms Template&quot;);</span>
+            }
+        }
+<span class="nc bnc" id="L509" title="All 2 branches missed.">        if (entity.getTermsConditionId() != null) {</span>
+<span class="nc" id="L510">            Optional&lt;TermsCondition&gt; termsConditionOptional = termsConditionRepository.findById(Math.toIntExact(entity.getTermsConditionId()));</span>
+<span class="nc bnc" id="L511" title="All 2 branches missed.">            if (termsConditionOptional.isPresent()) {</span>
+<span class="nc" id="L512">                TermsCondition termsCondition = termsConditionOptional.get();</span>
+<span class="nc" id="L513">                dto.setTermAndConditionName(termsCondition.getTitle());</span>
+<span class="nc" id="L514">            } else {</span>
+<span class="nc" id="L515">                dto.setTermAndConditionName(&quot;Unknown Terms Condition&quot;);</span>
+            }
+        }
+<span class="nc" id="L518">        dto.setCreatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L519">        dto.setCreationDate(new Date());</span>
+<span class="nc" id="L520">        dto.setLastUpdatedDate(new Date());</span>
+<span class="nc" id="L521">        dto.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L522">        dto.setEndDate(entity.getEndDate());</span>
+<span class="nc bnc" id="L523" title="All 2 branches missed.">        if (entity.getJobOfferTermTemplates() != null) {</span>
+<span class="nc" id="L524">            List&lt;JobOfferTermDTO&gt; termsDTO = entity.getJobOfferTermTemplates().stream()</span>
+<span class="nc" id="L525">                    .map(this::mapJobOfferTermTemplateToDTO)</span>
+<span class="nc" id="L526">                    .collect(Collectors.toList());</span>
+<span class="nc" id="L527">            dto.setJobOfferTerms(termsDTO);</span>
+        }
+<span class="nc" id="L529">        return dto;</span>
+    }
+
+    private JobOfferDTO mapToDTOForSave(JobOffer entity) {
+<span class="nc" id="L533">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L534">        JobOfferDTO dto = new JobOfferDTO();</span>
+<span class="nc" id="L535">        dto.setJobOfferId(entity.getJobOfferId());</span>
+<span class="nc" id="L536">        dto.setJobOfferName(entity.getJobOfferName());</span>
+<span class="nc" id="L537">        dto.setJobApplicantId(entity.getJobApplicantId());</span>
+<span class="nc" id="L538">        dto.setNoticePeriod(entity.getNoticePeriod());</span>
+<span class="nc" id="L539">        dto.setStatus(entity.getStatus());</span>
+<span class="nc" id="L540">        dto.setOfferDate(entity.getOfferDate());</span>
+<span class="nc" id="L541">        dto.setDesignationId(entity.getDesignationId());</span>
+<span class="nc" id="L542">        dto.setJobOfferTemplateId(entity.getJobOfferTemplateId());</span>
+<span class="nc" id="L543">        dto.setStartDate(entity.getStartDate());</span>
+<span class="nc" id="L544">        dto.setTermsConditionId(entity.getTermsConditionId());</span>
+<span class="nc" id="L545">        dto.setCreatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L546">        dto.setCreationDate(new Date());</span>
+<span class="nc" id="L547">        dto.setLastUpdatedDate(new Date());</span>
+<span class="nc" id="L548">        dto.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L549">        dto.setEndDate(entity.getEndDate());</span>
+<span class="nc bnc" id="L550" title="All 2 branches missed.">        if (entity.getJobOfferTermTemplates() != null) {</span>
+<span class="nc" id="L551">            List&lt;JobOfferTermDTO&gt; termsDTO = entity.getJobOfferTermTemplates().stream()</span>
+<span class="nc" id="L552">                    .map(this::mapJobOfferTermTemplateToDTO)</span>
+<span class="nc" id="L553">                    .collect(Collectors.toList());</span>
+<span class="nc" id="L554">            dto.setJobOfferTerms(termsDTO);</span>
+        }
+<span class="nc" id="L556">        return dto;</span>
+    }
+
+    private JobOfferTermDTO mapJobOfferTermTemplateToDTO(JobOfferTerm term) {
+<span class="nc" id="L560">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L561">        JobOfferTermDTO termDTO = new JobOfferTermDTO();</span>
+<span class="nc" id="L562">        termDTO.setSeqNo(term.getSeqNo());</span>
+<span class="nc" id="L563">        termDTO.setOfferTermId(term.getOfferTermId());</span>
+<span class="nc" id="L564">        termDTO.setDescription(term.getDescription());</span>
+<span class="nc" id="L565">        termDTO.setValue(term.getValue());</span>
+<span class="nc" id="L566">        termDTO.setStartDate(term.getStartDate());</span>
+<span class="nc" id="L567">        termDTO.setEndDate(term.getEndDate());</span>
+<span class="nc" id="L568">        termDTO.setIsActive(term.getIsActive());</span>
+<span class="nc" id="L569">        termDTO.setCreatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L570">        termDTO.setCreationDate(new Date());</span>
+<span class="nc" id="L571">        termDTO.setLastUpdatedDate(new Date());</span>
+<span class="nc" id="L572">        termDTO.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L573">        return termDTO;</span>
+    }
+
+    //create api for OfferTermMaster
+    public OfferTermMaster saveAndUpdateOfferTermMaster(OfferTermMasterDTO termMasterDTO) {
+        OfferTermMaster offerTermMaster;
+<span class="nc" id="L579">        UserLoginDetail token = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L580">        String username = String.valueOf(token.getUsername());</span>
+<span class="nc bnc" id="L581" title="All 2 branches missed.">        if (termMasterDTO.getId() != null) {</span>
+<span class="nc" id="L582">            offerTermMaster = offerTermMasterRepository.findById(termMasterDTO.getId()).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Offer Term Master not found with &quot; + termMasterDTO.getId()));</span>
+<span class="nc" id="L583">            offerTermMaster.setTitle(termMasterDTO.getTitle());</span>
+<span class="nc" id="L584">            offerTermMaster.setType(termMasterDTO.getType());</span>
+<span class="nc" id="L585">            offerTermMaster.setValue(termMasterDTO.getValue());</span>
+<span class="nc" id="L586">            offerTermMaster.setStartDate(termMasterDTO.getStartDate());</span>
+<span class="nc" id="L587">            offerTermMaster.setEndDate(termMasterDTO.getEndDate());</span>
+<span class="nc" id="L588">            offerTermMaster.setCreatedBy(username);</span>
+<span class="nc" id="L589">            offerTermMaster.setLastUpdatedBy(username);</span>
+        } else {
+<span class="nc" id="L591">            offerTermMaster = new OfferTermMaster();</span>
+<span class="nc" id="L592">            offerTermMaster.setTitle(termMasterDTO.getTitle());</span>
+<span class="nc" id="L593">            offerTermMaster.setType(termMasterDTO.getType());</span>
+<span class="nc" id="L594">            offerTermMaster.setValue(termMasterDTO.getValue());</span>
+<span class="nc" id="L595">            offerTermMaster.setStartDate(termMasterDTO.getStartDate());</span>
+<span class="nc" id="L596">            offerTermMaster.setEndDate(termMasterDTO.getEndDate());</span>
+<span class="nc" id="L597">            offerTermMaster.setCreatedBy(username);</span>
+<span class="nc" id="L598">            offerTermMaster.setLastUpdatedBy(username);</span>
+        }
+<span class="nc" id="L600">        return offerTermMasterRepository.save(offerTermMaster);</span>
+    }
+
+    public Map&lt;String, Object&gt; getAllOfferTermMaster(String searchField, String searchKeyword, Pageable pageable) {
+        Page&lt;OfferTermMaster&gt; offerTermMasters;
+
+<span class="nc bnc" id="L606" title="All 6 branches missed.">        if (searchKeyword != null &amp;&amp; !searchKeyword.trim().isEmpty() &amp;&amp; searchField != null) {</span>
+<span class="nc" id="L607">            offerTermMasters = offerTermMasterRepository.searchOfferTerm(searchKeyword, searchField, pageable);</span>
+        } else {
+<span class="nc" id="L609">            offerTermMasters = offerTermMasterRepository.findAll(pageable);</span>
+        }
+
+<span class="nc" id="L612">        List&lt;OfferTermMasterDTO&gt; offerTermMasterDTOS = offerTermMasters.getContent().stream()</span>
+<span class="nc" id="L613">                .map(this::convertsToDTO)</span>
+<span class="nc" id="L614">                .peek(dto -&gt; {</span>
+<span class="nc" id="L615">                    dto.setType(fetchLookupName(dto.getType()));</span>
+<span class="nc" id="L616">                })</span>
+<span class="nc" id="L617">                .collect(Collectors.toList());</span>
+<span class="nc" id="L618">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L619">        response.put(&quot;result&quot;, offerTermMasterDTOS);</span>
+<span class="nc" id="L620">        response.put(&quot;currentPage&quot;, offerTermMasters.getNumber() + 1);</span>
+<span class="nc" id="L621">        response.put(&quot;totalItems&quot;, offerTermMasters.getTotalElements());</span>
+<span class="nc" id="L622">        response.put(&quot;totalPages&quot;, offerTermMasters.getTotalPages());</span>
+
+<span class="nc" id="L624">        return response;</span>
+    }
+
+    private OfferTermMasterDTO convertsToDTO(OfferTermMaster entity) {
+<span class="nc" id="L628">        OfferTermMasterDTO dto = new OfferTermMasterDTO();</span>
+<span class="nc" id="L629">        BeanUtils.copyProperties(entity, dto);</span>
+<span class="nc" id="L630">        return dto;</span>
+    }
+
+    public OfferTermMasterDTO getOfferTermMasterById(Long id) {
+<span class="nc" id="L634">        return offerTermMasterRepository.findById(id)</span>
+<span class="nc" id="L635">                .map(this::convertsToDTO)</span>
+<span class="nc" id="L636">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Offer Term Master not found with ID: &quot; + id));</span>
+    }
+
+
+    @Transactional()
+    public List&lt;JobOfferDTO&gt; getNonAssociateJobOffers() {
+<span class="nc" id="L642">        List&lt;Integer&gt; existingJobOfferIds = onboardApplicantRepo.findAllJobOfferIds();</span>
+<span class="nc" id="L643">        List&lt;JobOffer&gt; jobOffers = jobOfferRepository</span>
+<span class="nc bnc" id="L644" title="All 2 branches missed.">                .findJobOffersExcludingExisting(existingJobOfferIds.isEmpty() ? List.of(-1) : existingJobOfferIds);</span>
+
+<span class="nc" id="L646">        return jobOffers.stream()</span>
+<span class="nc" id="L647">                .map(this::convertToDTO).peek(dto -&gt; {</span>
+<span class="nc" id="L648">                    dto.setDepartmentId(employeeJobApplicantRepository.findById(dto.getJobApplicantId()).get().getDepartmentId());</span>
+<span class="nc" id="L649">                })</span>
+<span class="nc" id="L650">                .collect(Collectors.toList());</span>
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; jobOpeningDropdownList() {
+<span class="nc" id="L654">        return jobOpeningRepository.findAll().stream()</span>
+<span class="nc" id="L655">                .filter(jobOpening -&gt; &quot;Y&quot;.equals(jobOpening.getStatus()))</span>
+<span class="nc" id="L656">                .map(jobOpening -&gt; {</span>
+<span class="nc" id="L657">                    Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L658">                    result.put(&quot;jobOpeningId&quot;, jobOpening.getJobOpeningId());</span>
+<span class="nc" id="L659">                    result.put(&quot;jobTitle&quot;, jobOpening.getJobTitle());</span>
+<span class="nc" id="L660">                    return result;</span>
+<span class="nc" id="L661">                }).collect(Collectors.toList());</span>
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; jobOfferDropdownList() {
+<span class="nc" id="L665">        return jobOfferRepository.findAll().stream()</span>
+<span class="nc" id="L666">                .filter(jobOffer -&gt; &quot;Y&quot;.equals(jobOffer.getStatus()))</span>
+<span class="nc" id="L667">                .map(jobOffer -&gt; {</span>
+<span class="nc" id="L668">                    Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L669">                    result.put(&quot;jobOfferId&quot;, jobOffer.getJobOfferId());</span>
+<span class="nc" id="L670">                    result.put(&quot;jobOfferName&quot;, jobOffer.getJobOfferName());</span>
+<span class="nc" id="L671">                    return result;</span>
+<span class="nc" id="L672">                }).collect(Collectors.toList());</span>
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; offerTermsMasterDropdownList() {
+<span class="nc" id="L676">        return offerTermMasterRepository.findAll().stream()</span>
+<span class="nc bnc" id="L677" title="All 4 branches missed.">                .filter(x -&gt; x.getEndDate() != null &amp;&amp; x.getEndDate().after(new Date()))</span>
+<span class="nc" id="L678">                .map(offerTermMaster -&gt; {</span>
+<span class="nc" id="L679">                    Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L680">                    result.put(&quot;offerTermMasterId&quot;, offerTermMaster.getId());</span>
+<span class="nc" id="L681">                    result.put(&quot;offerTermMasterTitle&quot;, offerTermMaster.getTitle());</span>
+<span class="nc" id="L682">                    result.put(&quot;value&quot;, offerTermMaster.getValue());</span>
+<span class="nc" id="L683">                    return result;</span>
+<span class="nc" id="L684">                }).collect(Collectors.toList());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

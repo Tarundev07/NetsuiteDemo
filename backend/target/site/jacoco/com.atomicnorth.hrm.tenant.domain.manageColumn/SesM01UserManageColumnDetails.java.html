@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SesM01UserManageColumnDetails.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.domain.manageColumn</a> &gt; <span class="el_source">SesM01UserManageColumnDetails.java</span></div><h1>SesM01UserManageColumnDetails.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.domain.manageColumn;
+
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import lombok.*;
+
+import javax.persistence.*;
+import java.util.Date;
+
+
+@Getter
+<span class="nc" id="L11">@Setter</span>
+<span class="nc" id="L12">@AllArgsConstructor</span>
+<span class="nc" id="L13">@NoArgsConstructor</span>
+<span class="nc" id="L14">@ToString</span>
+@Entity
+@Table(name = &quot;ses_m01_user_manage_column_details&quot;)
+public class SesM01UserManageColumnDetails {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = &quot;USER_MANAGE_COLUMN_DETAILS_ID&quot;)
+<span class="nc" id="L22">    private Integer userManageColumnDetailsId;</span>
+
+    @ManyToOne
+    @JoinColumn(name = &quot;USER_MANAGE_COLUMN_ID&quot;, nullable = false)
+    @JsonBackReference
+<span class="nc" id="L27">    private SesM00UserManageColumns userManageColumn;</span>
+
+    @Column(name = &quot;COLUMN_LOOKUP_CODE&quot;, nullable = false, length = 200)
+<span class="nc" id="L30">    private String columnLookupCode;</span>
+
+    @Column(name = &quot;DISPLAY_SNO&quot;, nullable = false)
+<span class="nc" id="L33">    private Integer displaySno;</span>
+
+    @Column(name = &quot;CREATION_DATE&quot;, nullable = false)
+<span class="nc" id="L36">    private Date creationDate;</span>
+
+    @Column(name = &quot;LAST_UPDATE_DATE&quot;, nullable = false)
+<span class="nc" id="L39">    private Date lastUpdateDate;</span>
+
+    @Column(name = &quot;CREATED_BY&quot;, nullable = false)
+<span class="nc" id="L42">    private Integer createdBy;</span>
+
+    @Column(name = &quot;LAST_UPDATED_BY&quot;, nullable = false)
+<span class="nc" id="L45">    private Integer lastUpdatedBy;</span>
+
+    @Column(name = &quot;OPERATION_SOURCE&quot;, nullable = false, length = 50)
+<span class="nc" id="L48">    private String operationSource;</span>
+
+    @Column(name = &quot;IS_LOCKED&quot;, nullable = false, length = 240)
+<span class="nc" id="L51">    private String isLocked;</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

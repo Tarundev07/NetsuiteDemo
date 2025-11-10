@@ -1,0 +1,348 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SetUpCompanyService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.company</a> &gt; <span class="el_source">SetUpCompanyService.java</span></div><h1>SetUpCompanyService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.company;
+
+
+import com.atomicnorth.hrm.tenant.domain.company.Ses_M00_Set_Up_Company;
+import com.atomicnorth.hrm.tenant.domain.holiday.HolidaysCalendar;
+import com.atomicnorth.hrm.tenant.domain.lookup.LookupCode;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.LookupCodeRepository;
+import com.atomicnorth.hrm.tenant.repository.company.SetUpCompanyRepository;
+import com.atomicnorth.hrm.tenant.service.dto.company.SetUpCompanyDTOForRequest;
+import com.atomicnorth.hrm.tenant.service.dto.company.SetUpCompanyDTOForResponse;
+import com.atomicnorth.hrm.tenant.service.lookup.LookupTypeConfigurationService;
+import org.apache.commons.beanutils.BeanUtils;
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+
+import javax.persistence.EntityManager;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.Path;
+import javax.persistence.criteria.Predicate;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+@Service
+public class SetUpCompanyService {
+
+    private final SetUpCompanyRepository repository;
+
+    private final LookupCodeRepository lookupCodeRepository;
+
+    private final ModelMapper modelMapper;
+
+    private final LookupTypeConfigurationService lookupService;
+
+    @Autowired
+    private EntityManager entityManager;
+
+
+    @Autowired
+<span class="nc" id="L47">    public SetUpCompanyService(SetUpCompanyRepository repository, LookupCodeRepository lookupCodeRepository, ModelMapper modelMapper, LookupTypeConfigurationService lookupService) {</span>
+<span class="nc" id="L48">        this.repository = repository;</span>
+<span class="nc" id="L49">        this.lookupCodeRepository = lookupCodeRepository;</span>
+<span class="nc" id="L50">        this.modelMapper = modelMapper;</span>
+<span class="nc" id="L51">        this.lookupService = lookupService;</span>
+<span class="nc" id="L52">    }</span>
+
+    public SetUpCompanyDTOForResponse saveCompany(SetUpCompanyDTOForRequest request) {
+<span class="nc" id="L55">        UserLoginDetail user = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L56">        String username = String.valueOf(user.getUsername());</span>
+        Ses_M00_Set_Up_Company companyEntity;
+
+<span class="nc bnc" id="L59" title="All 4 branches missed.">        if (request.getParentCompany() != null &amp;&amp; request.getParentCompany() == 0) {</span>
+<span class="nc" id="L60">            request.setParentCompany(null);</span>
+        }
+
+<span class="nc bnc" id="L63" title="All 2 branches missed.">        if (request.getCompanyId() != null) {</span>
+<span class="nc" id="L64">            companyEntity = repository.findById(request.getCompanyId())</span>
+<span class="nc" id="L65">                    .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Company with ID &quot; + request.getCompanyId() + &quot; not found.&quot;));</span>
+
+<span class="nc" id="L67">            Optional&lt;Ses_M00_Set_Up_Company&gt; existingCompany = repository.findByCompanyName(request.getCompanyName());</span>
+<span class="nc bnc" id="L68" title="All 4 branches missed.">            if (existingCompany.isPresent() &amp;&amp; !existingCompany.get().getCompanyId().equals(request.getCompanyId())) {</span>
+<span class="nc" id="L69">                throw new IllegalArgumentException(&quot;Another company with the name '&quot; + request.getCompanyName() + &quot;' already exists.&quot;);</span>
+            }
+<span class="nc bnc" id="L71" title="All 2 branches missed.">            if (request.getCompanyAbbreviation() != null) {</span>
+<span class="nc" id="L72">                Optional&lt;Ses_M00_Set_Up_Company&gt; existingAbbreviation =</span>
+<span class="nc" id="L73">                        repository.findByCompanyAbbreviation(request.getCompanyAbbreviation());</span>
+
+<span class="nc bnc" id="L75" title="All 2 branches missed.">                if (existingAbbreviation.isPresent() &amp;&amp;</span>
+<span class="nc bnc" id="L76" title="All 2 branches missed.">                        (request.getCompanyId() == null ||</span>
+<span class="nc bnc" id="L77" title="All 2 branches missed.">                                !existingAbbreviation.get().getCompanyId().equals(request.getCompanyId()))) {</span>
+<span class="nc" id="L78">                    throw new IllegalArgumentException(&quot;A company with '&quot; + request.getCompanyAbbreviation() + &quot;'  abbreviation already exists.&quot;);</span>
+                }
+            }
+
+<span class="nc" id="L82">            modelMapper.map(request, companyEntity);</span>
+<span class="nc" id="L83">            companyEntity.setLastUpdatedDate(new Date());</span>
+<span class="nc" id="L84">        } else {</span>
+<span class="nc bnc" id="L85" title="All 2 branches missed.">            if (repository.findByCompanyName(request.getCompanyName()).isPresent()) {</span>
+<span class="nc" id="L86">                throw new IllegalArgumentException(&quot;A company with the name '&quot; + request.getCompanyName() + &quot;' already exists.&quot;);</span>
+            }
+<span class="nc bnc" id="L88" title="All 2 branches missed.">            if (repository.findByCompanyAbbreviation(request.getCompanyAbbreviation()).isPresent()) {</span>
+<span class="nc" id="L89">                throw new IllegalArgumentException(&quot;A company with '&quot; + request.getCompanyAbbreviation() + &quot;'  abbreviation already exists.&quot;);</span>
+            }
+<span class="nc" id="L91">            companyEntity = modelMapper.map(request, Ses_M00_Set_Up_Company.class);</span>
+<span class="nc" id="L92">            companyEntity.setCreatedOn(new Date());</span>
+<span class="nc" id="L93">            companyEntity.setCreatedBy(username);</span>
+        }
+<span class="nc" id="L95">        Ses_M00_Set_Up_Company savedEntity = repository.save(companyEntity);</span>
+<span class="nc" id="L96">        return modelMapper.map(savedEntity, SetUpCompanyDTOForResponse.class);</span>
+    }
+
+    public Map&lt;String, Object&gt; getAllCompanies(Pageable pageable, String searchColumn, String searchValue, String sortColumn, String sortDirection) {
+<span class="nc" id="L100">        Page&lt;Ses_M00_Set_Up_Company&gt; pageData = getFilteredCompanies(PageRequest.of(0, Integer.MAX_VALUE), searchColumn, searchValue); // fetch all</span>
+
+<span class="nc" id="L102">        Set&lt;Integer&gt; allLookupIds = new HashSet&lt;&gt;();</span>
+<span class="nc" id="L103">        List&lt;Ses_M00_Set_Up_Company&gt; entities = pageData.getContent();</span>
+
+<span class="nc bnc" id="L105" title="All 2 branches missed.">        for (Ses_M00_Set_Up_Company entity : entities) {</span>
+<span class="nc" id="L106">            Collections.addAll(allLookupIds,</span>
+<span class="nc" id="L107">                    entity.getDefaultCurrency(),</span>
+<span class="nc" id="L108">                    entity.getCountry(),</span>
+<span class="nc" id="L109">                    entity.getDefaultLetterHead(),</span>
+<span class="nc" id="L110">                    entity.getTaxId(),</span>
+<span class="nc" id="L111">                    entity.getChartOfAccount(),</span>
+<span class="nc" id="L112">                    entity.getChartOfAccountTemplate(),</span>
+<span class="nc" id="L113">                    entity.getWriteOffAccount(),</span>
+<span class="nc" id="L114">                    entity.getLostAccount(),</span>
+<span class="nc" id="L115">                    entity.getDefaultPaymentDiscountAccount(),</span>
+<span class="nc" id="L116">                    entity.getPaymentTermTemplate(),</span>
+<span class="nc" id="L117">                    entity.getExchangeGainLoss(),</span>
+<span class="nc" id="L118">                    entity.getUnreleasedGainLoss(),</span>
+<span class="nc" id="L119">                    entity.getRoundOffAccount(),</span>
+<span class="nc" id="L120">                    entity.getRoundOffOpening(),</span>
+<span class="nc" id="L121">                    entity.getRoundOffCostCenter()</span>
+            );
+<span class="nc" id="L123">        }</span>
+
+<span class="nc" id="L125">        Map&lt;Integer, String&gt; lookupMap = lookupCodeRepository.findAllById(allLookupIds).stream()</span>
+<span class="nc" id="L126">                .collect(Collectors.toMap(LookupCode::getLookupCodeId, LookupCode::getMeaning));</span>
+
+<span class="nc" id="L128">        List&lt;SetUpCompanyDTOForResponse&gt; dtoList = entities.stream()</span>
+<span class="nc" id="L129">                .map(entity -&gt; convertToDTOWithLookup(entity, lookupMap))</span>
+<span class="nc" id="L130">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L132">        Comparator&lt;SetUpCompanyDTOForResponse&gt; comparator = getEnrichedFieldComparator(sortColumn);</span>
+<span class="nc bnc" id="L133" title="All 2 branches missed.">        if (comparator != null) {</span>
+<span class="nc bnc" id="L134" title="All 2 branches missed.">            dtoList.sort(&quot;DESC&quot;.equalsIgnoreCase(sortDirection) ? comparator.reversed() : comparator);</span>
+        } else {
+<span class="nc" id="L136">            int start = (int) pageable.getOffset();</span>
+<span class="nc" id="L137">            int end = Math.min((start + pageable.getPageSize()), dtoList.size());</span>
+<span class="nc" id="L138">            dtoList = dtoList.subList(start, end);</span>
+        }
+
+<span class="nc" id="L141">        return Map.of(</span>
+                &quot;result&quot;, dtoList,
+<span class="nc" id="L143">                &quot;currentPage&quot;, pageable.getPageNumber() + 1,</span>
+<span class="nc" id="L144">                &quot;pageSize&quot;, pageable.getPageSize(),</span>
+<span class="nc" id="L145">                &quot;totalItems&quot;, pageData.getTotalElements(),</span>
+<span class="nc" id="L146">                &quot;totalPages&quot;, (int) Math.ceil((double) pageData.getTotalElements() / pageable.getPageSize())</span>
+        );
+    }
+
+    private Page&lt;Ses_M00_Set_Up_Company&gt; getFilteredCompanies(Pageable pageable, String column, String value) {
+<span class="nc bnc" id="L151" title="All 2 branches missed.">        if (&quot;holidayName&quot;.equalsIgnoreCase(column)) {</span>
+<span class="nc" id="L152">            return repository.findByHolidaysCalendar_NameContainingIgnoreCase(value, pageable);</span>
+<span class="nc bnc" id="L153" title="All 2 branches missed.">        } else if (&quot;parentCompanyName&quot;.equalsIgnoreCase(column)) {</span>
+<span class="nc" id="L154">            return repository.findByParentCompanyEntity_CompanyNameContainingIgnoreCase(value, pageable);</span>
+<span class="nc bnc" id="L155" title="All 4 branches missed.">        } else if (column != null &amp;&amp; value != null) {</span>
+<span class="nc" id="L156">            return repository.findAll(searchByColumn(column, value), pageable);</span>
+        } else {
+<span class="nc" id="L158">            return repository.findAll(pageable);</span>
+        }
+    }
+
+    private Comparator&lt;SetUpCompanyDTOForResponse&gt; getEnrichedFieldComparator(String sortColumn) {
+<span class="nc bnc" id="L163" title="All 2 branches missed.">        if (sortColumn == null) return null;</span>
+
+<span class="nc bnc" id="L165" title="All 19 branches missed.">        switch (sortColumn.toLowerCase()) {</span>
+            case &quot;countryname&quot;:
+<span class="nc" id="L167">                return Comparator.comparing(SetUpCompanyDTOForResponse::getCountryName,</span>
+<span class="nc" id="L168">                        Comparator.nullsLast(String::compareToIgnoreCase));</span>
+            case &quot;companyid&quot;:
+<span class="nc" id="L170">                return Comparator.comparing(SetUpCompanyDTOForResponse::getCompanyId,</span>
+<span class="nc" id="L171">                        Comparator.nullsLast(Integer::compare));</span>
+            case &quot;companyname&quot;:
+<span class="nc" id="L173">                return Comparator.comparing(SetUpCompanyDTOForResponse::getCompanyName,</span>
+<span class="nc" id="L174">                        Comparator.nullsLast(String::compareToIgnoreCase));</span>
+            case &quot;companyabbreviation&quot;:
+<span class="nc" id="L176">                return Comparator.comparing(SetUpCompanyDTOForResponse::getCompanyAbbreviation,</span>
+<span class="nc" id="L177">                        Comparator.nullsLast(String::compareToIgnoreCase));</span>
+            case &quot;letterheadname&quot;:
+<span class="nc" id="L179">                return Comparator.comparing(SetUpCompanyDTOForResponse::getLetterHeadName,</span>
+<span class="nc" id="L180">                        Comparator.nullsLast(String::compareToIgnoreCase));</span>
+            case &quot;currency&quot;:
+<span class="nc" id="L182">                return Comparator.comparing(SetUpCompanyDTOForResponse::getCurrency,</span>
+<span class="nc" id="L183">                        Comparator.nullsLast(String::compareToIgnoreCase));</span>
+            case &quot;tax&quot;:
+<span class="nc" id="L185">                return Comparator.comparing(SetUpCompanyDTOForResponse::getTax,</span>
+<span class="nc" id="L186">                        Comparator.nullsLast(String::compareToIgnoreCase));</span>
+            case &quot;chartofaccountname&quot;:
+<span class="nc" id="L188">                return Comparator.comparing(SetUpCompanyDTOForResponse::getChartOfAccountName,</span>
+<span class="nc" id="L189">                        Comparator.nullsLast(String::compareToIgnoreCase));</span>
+            case &quot;chartofaccounttemplatename&quot;:
+<span class="nc" id="L191">                return Comparator.comparing(SetUpCompanyDTOForResponse::getChartOfAccountTemplateName,</span>
+<span class="nc" id="L192">                        Comparator.nullsLast(String::compareToIgnoreCase));</span>
+            case &quot;writeoffaccountname&quot;:
+<span class="nc" id="L194">                return Comparator.comparing(SetUpCompanyDTOForResponse::getWriteOffAccountName,</span>
+<span class="nc" id="L195">                        Comparator.nullsLast(String::compareToIgnoreCase));</span>
+            case &quot;lostaccountname&quot;:
+<span class="nc" id="L197">                return Comparator.comparing(SetUpCompanyDTOForResponse::getLostAccountName,</span>
+<span class="nc" id="L198">                        Comparator.nullsLast(String::compareToIgnoreCase));</span>
+            case &quot;defaultpaymentdiscountaccountname&quot;:
+<span class="nc" id="L200">                return Comparator.comparing(SetUpCompanyDTOForResponse::getDefaultPaymentDiscountAccountName,</span>
+<span class="nc" id="L201">                        Comparator.nullsLast(String::compareToIgnoreCase));</span>
+            case &quot;paymenttermtemplatename&quot;:
+<span class="nc" id="L203">                return Comparator.comparing(SetUpCompanyDTOForResponse::getPaymentTermTemplateName,</span>
+<span class="nc" id="L204">                        Comparator.nullsLast(String::compareToIgnoreCase));</span>
+            case &quot;exchangegainlossname&quot;:
+<span class="nc" id="L206">                return Comparator.comparing(SetUpCompanyDTOForResponse::getExchangeGainLossName,</span>
+<span class="nc" id="L207">                        Comparator.nullsLast(String::compareToIgnoreCase));</span>
+            case &quot;unreleasedgainlossname&quot;:
+<span class="nc" id="L209">                return Comparator.comparing(SetUpCompanyDTOForResponse::getUnreleasedGainLossName,</span>
+<span class="nc" id="L210">                        Comparator.nullsLast(String::compareToIgnoreCase));</span>
+            case &quot;roundoffaccountname&quot;:
+<span class="nc" id="L212">                return Comparator.comparing(SetUpCompanyDTOForResponse::getRoundOffAccountName,</span>
+<span class="nc" id="L213">                        Comparator.nullsLast(String::compareToIgnoreCase));</span>
+            case &quot;roundoffopeningname&quot;:
+<span class="nc" id="L215">                return Comparator.comparing(SetUpCompanyDTOForResponse::getRoundOffOpeningName,</span>
+<span class="nc" id="L216">                        Comparator.nullsLast(String::compareToIgnoreCase));</span>
+            case &quot;roundoffcostcentername&quot;:
+<span class="nc" id="L218">                return Comparator.comparing(SetUpCompanyDTOForResponse::getRoundOffCostCenterName,</span>
+<span class="nc" id="L219">                        Comparator.nullsLast(String::compareToIgnoreCase));</span>
+            default:
+<span class="nc" id="L221">                return null;</span>
+        }
+    }
+
+    public Specification&lt;Ses_M00_Set_Up_Company&gt; searchByColumn(String column, String value) {
+<span class="nc" id="L226">        return (root, query, cb) -&gt; {</span>
+<span class="nc" id="L227">            String field = column.toLowerCase();</span>
+<span class="nc bnc" id="L228" title="All 16 branches missed.">            switch (field) {</span>
+                case &quot;countryname&quot;:
+<span class="nc" id="L230">                    return lookupCodeMatchPredicate(cb, root.get(&quot;country&quot;), value, &quot;COUNTRY_LIST&quot;);</span>
+                case &quot;letterheadname&quot;:
+<span class="nc" id="L232">                    return lookupCodeMatchPredicate(cb, root.get(&quot;defaultLetterHead&quot;), value, &quot;LETTER_HEAD&quot;);</span>
+                case &quot;currency&quot;:
+<span class="nc" id="L234">                    return lookupCodeMatchPredicate(cb, root.get(&quot;defaultCurrency&quot;), value, &quot;CURRENCY_LIST&quot;);</span>
+                case &quot;tax&quot;:
+<span class="nc" id="L236">                    return lookupCodeMatchPredicate(cb, root.get(&quot;taxId&quot;), value, &quot;TAX_ID&quot;);</span>
+                case &quot;chartofaccountname&quot;:
+<span class="nc" id="L238">                    return lookupCodeMatchPredicate(cb, root.get(&quot;chartOfAccount&quot;), value, &quot;ACCOUNT_LIST&quot;);</span>
+                case &quot;chartofaccounttemplatename&quot;:
+<span class="nc" id="L240">                    return lookupCodeMatchPredicate(cb, root.get(&quot;chartOfAccountTemplate&quot;), value, &quot;ACCOUNT_TEMPLATE&quot;);</span>
+                case &quot;writeoffaccountname&quot;:
+<span class="nc" id="L242">                    return lookupCodeMatchPredicate(cb, root.get(&quot;writeOffAccount&quot;), value, &quot;WRITE_OFF_ACCOUNT&quot;);</span>
+                case &quot;lostaccountname&quot;:
+<span class="nc" id="L244">                    return lookupCodeMatchPredicate(cb, root.get(&quot;lostAccount&quot;), value, &quot;LOST_ACCOUNT&quot;);</span>
+                case &quot;defaultpaymentdiscountaccountname&quot;:
+<span class="nc" id="L246">                    return lookupCodeMatchPredicate(cb, root.get(&quot;defaultPaymentDiscountAccount&quot;), value, &quot;PAYMENT_DISCOUNT_ACCOUNT&quot;);</span>
+                case &quot;paymenttermtemplatename&quot;:
+<span class="nc" id="L248">                    return lookupCodeMatchPredicate(cb, root.get(&quot;paymentTermTemplate&quot;), value, &quot;PAYMENT_TERM_TEMPLATE&quot;);</span>
+                case &quot;exchangegainlossname&quot;:
+<span class="nc" id="L250">                    return lookupCodeMatchPredicate(cb, root.get(&quot;exchangeGainLoss&quot;), value, &quot;EXCHANGE_GAIN_LOSS&quot;);</span>
+                case &quot;unreleasedgainlossname&quot;:
+<span class="nc" id="L252">                    return lookupCodeMatchPredicate(cb, root.get(&quot;unreleasedGainLoss&quot;), value, &quot;UNRELEASED_GAIN_LOSS&quot;);</span>
+                case &quot;roundoffaccountname&quot;:
+<span class="nc" id="L254">                    return lookupCodeMatchPredicate(cb, root.get(&quot;roundOffAccount&quot;), value, &quot;ROUND_OFF_ACCOUNT&quot;);</span>
+                case &quot;roundoffopeningname&quot;:
+<span class="nc" id="L256">                    return lookupCodeMatchPredicate(cb, root.get(&quot;roundOffOpening&quot;), value, &quot;ROUND_OFF_OPENING&quot;);</span>
+                case &quot;roundoffcostcentername&quot;:
+<span class="nc" id="L258">                    return lookupCodeMatchPredicate(cb, root.get(&quot;roundOffCostCenter&quot;), value, &quot;ROUND_OFF_COST_CENTER&quot;);</span>
+                default:
+<span class="nc" id="L260">                    return cb.like(cb.lower(root.get(column)), &quot;%&quot; + value.toLowerCase() + &quot;%&quot;);</span>
+            }
+        };
+    }
+
+    private Predicate lookupCodeMatchPredicate(CriteriaBuilder cb, Path&lt;Integer&gt; path, String value, String type) {
+<span class="nc" id="L266">        List&lt;Integer&gt; ids = lookupService.getIdByMeaningAndType(value, type);</span>
+<span class="nc bnc" id="L267" title="All 2 branches missed.">        return ids.isEmpty() ? cb.disjunction() : path.in(ids);</span>
+    }
+
+    private SetUpCompanyDTOForResponse convertToDTOWithLookup(Ses_M00_Set_Up_Company entity, Map&lt;Integer, String&gt; lookupMap) {
+<span class="nc" id="L271">        SetUpCompanyDTOForResponse dto = modelMapper.map(entity, SetUpCompanyDTOForResponse.class);</span>
+
+        // Set ID fields
+<span class="nc" id="L274">        dto.setDefaultCurrencyId(entity.getDefaultCurrency());</span>
+<span class="nc" id="L275">        dto.setCountryId(entity.getCountry());</span>
+<span class="nc" id="L276">        dto.setDefaultLetterHeadId(entity.getDefaultLetterHead());</span>
+<span class="nc" id="L277">        dto.setChartOfAccountId(entity.getChartOfAccount());</span>
+<span class="nc" id="L278">        dto.setChartOfAccountTemplateId(entity.getChartOfAccountTemplate());</span>
+<span class="nc" id="L279">        dto.setWriteOffAccountId(entity.getWriteOffAccount());</span>
+<span class="nc" id="L280">        dto.setLostAccountId(entity.getLostAccount());</span>
+<span class="nc" id="L281">        dto.setDefaultPaymentDiscountAccountId(entity.getDefaultPaymentDiscountAccount());</span>
+<span class="nc" id="L282">        dto.setPaymentTermTemplateId(entity.getPaymentTermTemplate());</span>
+<span class="nc" id="L283">        dto.setExchangeGainLossId(entity.getExchangeGainLoss());</span>
+<span class="nc" id="L284">        dto.setUnreleasedGainLossId(entity.getUnreleasedGainLoss());</span>
+<span class="nc" id="L285">        dto.setRoundOffAccountId(entity.getRoundOffAccount());</span>
+<span class="nc" id="L286">        dto.setRoundOffOpeningId(entity.getRoundOffOpening());</span>
+<span class="nc" id="L287">        dto.setRoundOffCostCenterId(entity.getRoundOffCostCenter());</span>
+<span class="nc" id="L288">        dto.setTaxId(entity.getTaxId());</span>
+
+        // Enriched values using lookupMap
+<span class="nc" id="L291">        dto.setCurrency(lookupMap.getOrDefault(entity.getDefaultCurrency(), &quot;Unknown&quot;));</span>
+<span class="nc" id="L292">        dto.setCountryName(lookupMap.getOrDefault(entity.getCountry(), &quot;Unknown&quot;));</span>
+<span class="nc" id="L293">        dto.setLetterHeadName(lookupMap.getOrDefault(entity.getDefaultLetterHead(), &quot;Unknown&quot;));</span>
+<span class="nc" id="L294">        dto.setTax(lookupMap.getOrDefault(entity.getTaxId(), &quot;Unknown&quot;));</span>
+<span class="nc" id="L295">        dto.setChartOfAccountName(lookupMap.getOrDefault(entity.getChartOfAccount(), &quot;Unknown&quot;));</span>
+<span class="nc" id="L296">        dto.setChartOfAccountTemplateName(lookupMap.getOrDefault(entity.getChartOfAccountTemplate(), &quot;Unknown&quot;));</span>
+<span class="nc" id="L297">        dto.setWriteOffAccountName(lookupMap.getOrDefault(entity.getWriteOffAccount(), &quot;Unknown&quot;));</span>
+<span class="nc" id="L298">        dto.setLostAccountName(lookupMap.getOrDefault(entity.getLostAccount(), &quot;Unknown&quot;));</span>
+<span class="nc" id="L299">        dto.setDefaultPaymentDiscountAccountName(lookupMap.getOrDefault(entity.getDefaultPaymentDiscountAccount(), &quot;Unknown&quot;));</span>
+<span class="nc" id="L300">        dto.setPaymentTermTemplateName(lookupMap.getOrDefault(entity.getPaymentTermTemplate(), &quot;Unknown&quot;));</span>
+<span class="nc" id="L301">        dto.setExchangeGainLossName(lookupMap.getOrDefault(entity.getExchangeGainLoss(), &quot;Unknown&quot;));</span>
+<span class="nc" id="L302">        dto.setUnreleasedGainLossName(lookupMap.getOrDefault(entity.getUnreleasedGainLoss(), &quot;Unknown&quot;));</span>
+<span class="nc" id="L303">        dto.setRoundOffAccountName(lookupMap.getOrDefault(entity.getRoundOffAccount(), &quot;Unknown&quot;));</span>
+<span class="nc" id="L304">        dto.setRoundOffOpeningName(lookupMap.getOrDefault(entity.getRoundOffOpening(), &quot;Unknown&quot;));</span>
+<span class="nc" id="L305">        dto.setRoundOffCostCenterName(lookupMap.getOrDefault(entity.getRoundOffCostCenter(), &quot;Unknown&quot;));</span>
+
+        // Additional fields
+<span class="nc" id="L308">        dto.setHolidayName(Optional.ofNullable(entity.getHolidaysCalendar()).map(HolidaysCalendar::getName).orElse(&quot;Unknown&quot;));</span>
+<span class="nc" id="L309">        dto.setParentCompanyName(Optional.ofNullable(entity.getParentCompanyEntity()).map(Ses_M00_Set_Up_Company::getCompanyName).orElse(&quot;Unknown&quot;));</span>
+
+<span class="nc" id="L311">        return dto;</span>
+    }
+
+    public SetUpCompanyDTOForResponse getCompaniesById(int id) {
+<span class="nc" id="L315">        return repository.findById(id)</span>
+<span class="nc" id="L316">                .map(entity -&gt; {</span>
+<span class="nc" id="L317">                    SetUpCompanyDTOForResponse dto = modelMapper.map(entity, SetUpCompanyDTOForResponse.class);</span>
+<span class="nc" id="L318">                    dto.setCountryId(entity.getCountry());</span>
+<span class="nc" id="L319">                    dto.setDefaultCurrencyId(entity.getDefaultCurrency());</span>
+<span class="nc" id="L320">                    dto.setParentCompanyId(entity.getParentCompany());</span>
+<span class="nc" id="L321">                    dto.setDefaultLetterHeadId(entity.getDefaultLetterHead());</span>
+<span class="nc" id="L322">                    dto.setChartOfAccountId(entity.getChartOfAccount());</span>
+<span class="nc" id="L323">                    dto.setChartOfAccountTemplateId(entity.getChartOfAccountTemplate());</span>
+<span class="nc" id="L324">                    dto.setWriteOffAccountId(entity.getWriteOffAccount());</span>
+<span class="nc" id="L325">                    dto.setLostAccountId(entity.getLostAccount());</span>
+<span class="nc" id="L326">                    dto.setDefaultPaymentDiscountAccountId(entity.getDefaultPaymentDiscountAccount());</span>
+<span class="nc" id="L327">                    dto.setPaymentTermTemplateId(entity.getPaymentTermTemplate());</span>
+<span class="nc" id="L328">                    dto.setExchangeGainLossId(entity.getExchangeGainLoss());</span>
+<span class="nc" id="L329">                    dto.setUnreleasedGainLossId(entity.getUnreleasedGainLoss());</span>
+<span class="nc" id="L330">                    dto.setRoundOffAccountId(entity.getRoundOffAccount());</span>
+<span class="nc" id="L331">                    dto.setRoundOffOpeningId(entity.getRoundOffOpening());</span>
+<span class="nc" id="L332">                    dto.setRoundOffCostCenterId(entity.getRoundOffCostCenter());</span>
+<span class="nc" id="L333">                    dto.setTaxId(entity.getTaxId());</span>
+<span class="nc" id="L334">                    return dto;</span>
+                })
+<span class="nc" id="L336">                .orElse(null);</span>
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; companyDropdownList() {
+<span class="nc" id="L340">        return repository.findAll().stream().map(company -&gt; {</span>
+<span class="nc" id="L341">            Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L342">            result.put(&quot;companyId&quot;, company.getCompanyId());</span>
+<span class="nc" id="L343">            result.put(&quot;companyName&quot;, company.getCompanyName());</span>
+<span class="nc" id="L344">            return result;</span>
+<span class="nc" id="L345">        }).collect(Collectors.toList());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

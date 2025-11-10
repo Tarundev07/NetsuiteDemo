@@ -1,0 +1,455 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service</a> &gt; <span class="el_source">UserService.java</span></div><h1>UserService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service;
+
+import com.atomicnorth.hrm.configuration.security.SecurityUtils;
+import com.atomicnorth.hrm.tenant.domain.Employee;
+import com.atomicnorth.hrm.tenant.domain.User;
+import com.atomicnorth.hrm.tenant.domain.accessgroup.SesM00UserDivisionMaster;
+import com.atomicnorth.hrm.tenant.domain.accessgroup.UserAssociation;
+import com.atomicnorth.hrm.tenant.domain.roles.Role;
+import com.atomicnorth.hrm.tenant.domain.roles.UserRole;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.repository.LookupCodeRepository;
+import com.atomicnorth.hrm.tenant.repository.UserRepository;
+import com.atomicnorth.hrm.tenant.repository.accessgroup.UserAssociationDataRepository;
+import com.atomicnorth.hrm.tenant.repository.accessgroup.UserDivisionMasterRepository;
+import com.atomicnorth.hrm.tenant.repository.roles.RoleRepository;
+import com.atomicnorth.hrm.tenant.repository.roles.UserRoleRepository;
+import com.atomicnorth.hrm.tenant.service.dto.AdminUserDTO;
+import com.atomicnorth.hrm.tenant.service.dto.EmployeeDTO;
+import com.atomicnorth.hrm.tenant.service.dto.accessgroup.UserAssociationDataDTO;
+import com.atomicnorth.hrm.util.RandomUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@Service
+public class UserService {
+
+<span class="nc" id="L50">    private final Logger log = LoggerFactory.getLogger(UserService.class);</span>
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final RoleRepository roleRepository;
+    private final UserDivisionMasterRepository userDivisionMasterRepository;
+    private final EmployeeRepository employeeRepository;
+    @Autowired
+    private UserAssociationDataRepository userAssociationDataRepository;
+
+    @Autowired
+    private UserRoleRepository userRoleRepository;
+
+<span class="nc" id="L62">    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, EmployeeRepository employeeRepository, RoleRepository roleRepository, UserDivisionMasterRepository userDivisionMasterRepository, LookupCodeRepository lookupCodeRepository) {</span>
+<span class="nc" id="L63">        this.userRepository = userRepository;</span>
+<span class="nc" id="L64">        this.passwordEncoder = passwordEncoder;</span>
+<span class="nc" id="L65">        this.roleRepository = roleRepository;</span>
+<span class="nc" id="L66">        this.userDivisionMasterRepository = userDivisionMasterRepository;</span>
+<span class="nc" id="L67">        this.employeeRepository = employeeRepository;</span>
+<span class="nc" id="L68">    }</span>
+
+    public Optional&lt;User&gt; completePasswordReset(String newPassword, String key) {
+<span class="nc" id="L71">        log.debug(&quot;Reset user password for reset key {}&quot;, key);</span>
+<span class="nc" id="L72">        return userRepository.findOneByResetKey(key).filter(user -&gt; user.getResetDate().isAfter(Instant.now().minus(1, ChronoUnit.DAYS))).map(user -&gt; {</span>
+<span class="nc" id="L73">            user.setPassword(passwordEncoder.encode(newPassword));</span>
+<span class="nc" id="L74">            user.setResetKey(null);</span>
+<span class="nc" id="L75">            user.setResetDate(null);</span>
+<span class="nc" id="L76">            user.setPasswordResetDate(new Date());</span>
+<span class="nc" id="L77">            this.clearUserCaches(user);</span>
+<span class="nc" id="L78">            userRepository.save(user);</span>
+<span class="nc" id="L79">            return user;</span>
+        });
+    }
+
+    public Optional&lt;User&gt; requestPasswordReset(String mail) {
+<span class="nc" id="L84">        return userRepository.findOneByEmailIgnoreCase(mail).filter(User::getActivated).map(user -&gt; {</span>
+<span class="nc" id="L85">            user.setResetKey(RandomUtil.generateResetKey());</span>
+<span class="nc" id="L86">            user.setResetDate(Date.from(Instant.now()).toInstant());</span>
+<span class="nc" id="L87">            this.clearUserCaches(user);</span>
+<span class="nc" id="L88">            return user;</span>
+        });
+    }
+
+    public Optional&lt;AdminUserDTO&gt; updateUser(AdminUserDTO userDTO) {
+<span class="nc" id="L93">        return Optional.of(userRepository.findById(userDTO.getId())).filter(Optional::isPresent).map(Optional::get).map(user -&gt; {</span>
+<span class="nc" id="L94">            this.clearUserCaches(user);</span>
+
+<span class="nc bnc" id="L96" title="All 2 branches missed.">            if (userDTO.getEmail() != null) {</span>
+<span class="nc" id="L97">                user.setEmail(userDTO.getEmail().toLowerCase());</span>
+            }
+
+<span class="nc" id="L100">            user.setActivated(userDTO.getActivated());</span>
+
+<span class="nc" id="L102">            Set&lt;Role&gt; managedAuthorities = user.getAuthorities();</span>
+<span class="nc" id="L103">            managedAuthorities.clear();</span>
+<span class="nc" id="L104">            userDTO.getRoles().stream().map(roleRepository::findById).filter(Optional::isPresent).map(Optional::get).forEach(managedAuthorities::add);</span>
+<span class="nc" id="L105">            this.clearUserCaches(user);</span>
+<span class="nc" id="L106">            log.debug(&quot;Changed Information for User: {}&quot;, user);</span>
+<span class="nc" id="L107">            return user;</span>
+<span class="nc" id="L108">        }).map(AdminUserDTO::new);</span>
+    }
+
+    private void clearUserCaches(User user) {
+<span class="nc" id="L112">    }</span>
+
+    public List&lt;Map&lt;String, Object&gt;&gt; getAllUserTableEntityRMName() {
+<span class="nc" id="L115">        List&lt;Employee&gt; list = employeeRepository.findAll();</span>
+        // Handle the case where findAll() returns null
+<span class="nc bnc" id="L117" title="All 2 branches missed.">        if (list == null) {</span>
+<span class="nc" id="L118">            return Collections.emptyList(); // or throw an exception or handle it appropriately</span>
+        }
+<span class="nc" id="L120">        List&lt;Map&lt;String, Object&gt;&gt; rmDetails = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L121" title="All 2 branches missed.">        for (Employee userTableEntity : list) {</span>
+            // Check for null on the necessary fields before accessing them
+<span class="nc bnc" id="L123" title="All 4 branches missed.">            if (userTableEntity != null &amp;&amp; userTableEntity.getPolicyGroup() != null) {</span>
+<span class="nc bnc" id="L124" title="All 2 branches missed.">                if (userTableEntity.getPolicyGroup().equals(&quot;SUPRA-Noida&quot;)) {</span>
+                    //if (userTableEntity.getUsergroup().equals(&quot;Admin&quot;) || userTableEntity.getUsergroup().equals(&quot;Project Owner&quot;) || userTableEntity.getUsergroup().equals(&quot;Approver&quot;) || userTableEntity.getUsergroup().equals(&quot;Manager&quot;)) {
+<span class="nc" id="L126">                    Map&lt;String, Object&gt; userMap = new HashMap&lt;&gt;();</span>
+                    // Check for null on the fields before using them
+<span class="nc" id="L128">                    userMap.put(&quot;useName&quot;, userTableEntity.getEmployeeId());</span>
+<span class="nc" id="L129">                    userMap.put(&quot;fullName&quot;, userTableEntity.getFirstName() + &quot; &quot; + userTableEntity.getLastName());</span>
+<span class="nc" id="L130">                    rmDetails.add(userMap);</span>
+                    // }
+                }
+            }
+<span class="nc" id="L134">        }</span>
+<span class="nc" id="L135">        return rmDetails;</span>
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; getAllUserTableEntityHRName() {
+<span class="nc" id="L139">        List&lt;Employee&gt; hrlist = employeeRepository.findAll();</span>
+<span class="nc" id="L140">        List&lt;Map&lt;String, Object&gt;&gt; hrDetails = new ArrayList&lt;&gt;();</span>
+        try {
+<span class="nc bnc" id="L142" title="All 2 branches missed.">            for (Employee userTableEntity : hrlist) {</span>
+<span class="nc bnc" id="L143" title="All 2 branches missed.">                if (userTableEntity.getPolicyGroup().equals(&quot;SUPRA-Noida&quot;)) {</span>
+                    //if (userTableEntity.getUserstatus().equals(&quot;Active&quot;) &amp;&amp; (userTableEntity.getUsergroup().equals(&quot;HR&quot;) || userTableEntity.getUsergroup().equals(&quot;Admin&quot;))) {
+<span class="nc" id="L145">                    Map&lt;String, Object&gt; hrUser = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L146">                    hrUser.put(&quot;useName&quot;, userTableEntity.getEmployeeId());</span>
+<span class="nc" id="L147">                    hrUser.put(&quot;fullName&quot;, userTableEntity.getFirstName() + &quot; &quot; + userTableEntity.getLastName());</span>
+<span class="nc" id="L148">                    hrDetails.add(hrUser);</span>
+                    // }
+                }
+<span class="nc" id="L151">            }</span>
+<span class="nc" id="L152">        } catch (Exception e) {</span>
+<span class="nc" id="L153">            e.printStackTrace();</span>
+<span class="nc" id="L154">        }</span>
+<span class="nc" id="L155">        return hrDetails;</span>
+    }
+
+    public List&lt;SesM00UserDivisionMaster&gt; getAllDivisions() {
+<span class="nc" id="L159">        return userDivisionMasterRepository.findByActiveFlag(&quot;A&quot;);</span>
+    }
+
+    @Transactional
+    public AdminUserDTO createUserMaster(AdminUserDTO userMasterTestDTO) {
+<span class="nc" id="L164">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L165">        User user = new User();</span>
+<span class="nc" id="L166">        Optional&lt;User&gt; fetchedEmail = userRepository.findOneByEmailIgnoreCase(userMasterTestDTO.getEmail());</span>
+<span class="nc bnc" id="L167" title="All 2 branches missed.">        if (userMasterTestDTO.getId() == null) {</span>
+            // Create case
+<span class="nc bnc" id="L169" title="All 2 branches missed.">            if (fetchedEmail.isPresent()) {</span>
+<span class="nc" id="L170">                throw new IllegalArgumentException(&quot;User already exists for this email: &quot; + userMasterTestDTO.getEmail());</span>
+            }
+
+<span class="nc" id="L173">            Optional&lt;User&gt; fetchedMobile = userRepository.findOneByMobileNo(userMasterTestDTO.getMobileNo());</span>
+<span class="nc bnc" id="L174" title="All 2 branches missed.">            if (fetchedMobile.isPresent()) {</span>
+<span class="nc" id="L175">                throw new IllegalArgumentException(&quot;User already exists for this mobile number: &quot; + userMasterTestDTO.getMobileNo());</span>
+            }
+<span class="nc" id="L177">        } else {</span>
+            // Update case
+<span class="nc" id="L179">            Optional&lt;User&gt; fetchedMobile = userRepository.findOneByMobileNo(userMasterTestDTO.getMobileNo());</span>
+<span class="nc bnc" id="L180" title="All 4 branches missed.">            if (fetchedMobile.isPresent() &amp;&amp; !fetchedMobile.get().getId().equals(userMasterTestDTO.getId())) {</span>
+<span class="nc" id="L181">                throw new IllegalArgumentException(&quot;User already exists for this mobile number: &quot; + userMasterTestDTO.getMobileNo());</span>
+            }
+        }
+
+<span class="nc" id="L185">        user.setStartDate(userMasterTestDTO.getStartDate());</span>
+<span class="nc" id="L186">        user.setEndDate(userMasterTestDTO.getEndDate());</span>
+<span class="nc" id="L187">        user.setActivated(true);</span>
+<span class="nc" id="L188">        user.setIsActive(&quot;Y&quot;);</span>
+<span class="nc" id="L189">        user.setEmail(userMasterTestDTO.getEmail());</span>
+<span class="nc" id="L190">        user.setDisplayName(userMasterTestDTO.getDisplayName());</span>
+<span class="nc" id="L191">        user.setMobileNo(userMasterTestDTO.getMobileNo());</span>
+<span class="nc" id="L192">        user.setMobileCountryCode(userMasterTestDTO.getMobileCountryCode());</span>
+<span class="nc" id="L193">        user.setCreatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L194">        user.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L195">        user.setLastUpdatedDate(new Date().toInstant());</span>
+<span class="nc" id="L196">        user.setEmailTokenGeneratedDate(new Date());</span>
+<span class="nc" id="L197">        user.setResetDate(new Date().toInstant());</span>
+<span class="nc" id="L198">        user.setPasswordGeneratedDate(new Date());</span>
+<span class="nc" id="L199">        user.setResetTokenExpiresDate(new Date());</span>
+<span class="nc" id="L200">        user.setRoles(userMasterTestDTO.getRoles());</span>
+        // Handle password encoding method--&gt; password string
+<span class="nc bnc" id="L202" title="All 2 branches missed.">        if (userMasterTestDTO.getId() != null) {</span>
+<span class="nc" id="L203">            user.setId(userMasterTestDTO.getId());</span>
+<span class="nc" id="L204">            user.setPassword(fetchedEmail.get().getPassword());</span>
+        } else {
+<span class="nc" id="L206">            user.setCreatedDate(new Date().toInstant());</span>
+<span class="nc" id="L207">            String encryptedPassword = passwordEncoder.encode(userMasterTestDTO.getPassword());</span>
+<span class="nc" id="L208">            user.setPassword(encryptedPassword);</span>
+        }
+        // Handle authorities
+<span class="nc bnc" id="L211" title="All 2 branches missed.">        if (userMasterTestDTO.getRoles() != null) {</span>
+<span class="nc" id="L212">            Set&lt;Role&gt; authorities = null;</span>
+<span class="nc" id="L213">            user.setAuthorities(authorities);</span>
+        }
+<span class="nc bnc" id="L215" title="All 4 branches missed.">        if (userMasterTestDTO.getAssociationData() != null &amp;&amp; !userMasterTestDTO.getAssociationData().isEmpty()) {</span>
+<span class="nc" id="L216">            List&lt;UserAssociation&gt; associations = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L217" title="All 2 branches missed.">            for (UserAssociationDataDTO data : userMasterTestDTO.getAssociationData()) {</span>
+<span class="nc" id="L218">                UserAssociation association = new UserAssociation();</span>
+<span class="nc" id="L219">                association.setUserMasterTest(user);</span>
+<span class="nc" id="L220">                association.setUserType(data.getUserType());</span>
+<span class="nc" id="L221">                association.setIsActive(&quot;Y&quot;);</span>
+<span class="nc" id="L222">                association.setUserTypeId(data.getUserTypeId());</span>
+<span class="nc" id="L223">                association.setCreatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L224">                association.setCreationDate(LocalDateTime.now());</span>
+<span class="nc" id="L225">                association.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L226">                association.setLastUpdateDate(LocalDateTime.now());</span>
+<span class="nc bnc" id="L227" title="All 2 branches missed.">                if (data.getId() != null) association.setId(data.getId());</span>
+<span class="nc" id="L228">                associations.add(association);</span>
+<span class="nc" id="L229">            }</span>
+<span class="nc" id="L230">            user.setAssociations(associations);</span>
+        }
+<span class="nc" id="L232">        User savedUser = userRepository.save(user);</span>
+<span class="nc" id="L233">        long userId = savedUser.getId();</span>
+<span class="nc" id="L234">        String currentUsername = String.valueOf(tokenHolder.getUsername());</span>
+<span class="nc" id="L235">        LocalDateTime currentTime = LocalDateTime.now();</span>
+<span class="nc bnc" id="L236" title="All 2 branches missed.">        for (Integer roleId : userMasterTestDTO.getRoles()) {</span>
+<span class="nc" id="L237">            Optional&lt;UserRole&gt; existingUserRole = userRoleRepository.customFindByUserIdAndRoleId((int) userId, roleId);</span>
+
+<span class="nc bnc" id="L239" title="All 2 branches missed.">            if (existingUserRole.isPresent()) {</span>
+                // Update existing role
+<span class="nc" id="L241">                UserRole userRole = existingUserRole.get();</span>
+<span class="nc" id="L242">                userRole.setLastUpdatedBy(currentUsername);</span>
+<span class="nc" id="L243">                userRole.setLastUpdatedDate(currentTime);</span>
+                //userRole.setStatus(&quot;N&quot;);
+<span class="nc" id="L245">                userRoleRepository.save(userRole);</span>
+<span class="nc" id="L246">            } else {</span>
+                // Insert new role
+<span class="nc" id="L248">                UserRole userRole = new UserRole();</span>
+<span class="nc" id="L249">                userRole.setUserId((int) userId);</span>
+<span class="nc" id="L250">                Role role = new Role();</span>
+<span class="nc" id="L251">                role.setRoleId(roleId);</span>
+<span class="nc" id="L252">                userRole.setRoleId(role);</span>
+<span class="nc" id="L253">                userRole.setCreatedBy(currentUsername);</span>
+<span class="nc" id="L254">                userRole.setLastUpdatedBy(currentUsername);</span>
+<span class="nc" id="L255">                userRole.setCreationDate(currentTime);</span>
+<span class="nc" id="L256">                userRole.setLastUpdatedDate(currentTime);</span>
+<span class="nc" id="L257">                userRole.setStatus(&quot;Y&quot;);</span>
+<span class="nc" id="L258">                userRoleRepository.save(userRole);</span>
+            }
+<span class="nc" id="L260">        }</span>
+<span class="nc" id="L261">        return mapToDTO(savedUser);</span>
+    }
+
+    public AdminUserDTO mapToDTO(User user) {
+<span class="nc" id="L265">        AdminUserDTO dto = new AdminUserDTO();</span>
+<span class="nc" id="L266">        dto.setId(user.getId());</span>
+<span class="nc" id="L267">        dto.setEmail(user.getEmail());</span>
+<span class="nc" id="L268">        dto.setStartDate(user.getStartDate());</span>
+<span class="nc" id="L269">        dto.setEndDate(user.getEndDate());</span>
+<span class="nc" id="L270">        dto.setDisplayName(user.getDisplayName());</span>
+<span class="nc" id="L271">        dto.setMobileCountryCode(user.getMobileCountryCode());</span>
+<span class="nc" id="L272">        dto.setMobileNo(user.getMobileNo());</span>
+<span class="nc" id="L273">        dto.setActivated(user.getActivated());</span>
+<span class="nc" id="L274">        dto.setSsoUserId(user.getKeycloakId());</span>
+<span class="nc bnc" id="L275" title="All 4 branches missed.">        if (user.getRoles() != null &amp;&amp; !user.getRoles().isEmpty()) {</span>
+<span class="nc" id="L276">            dto.setRoles(user.getRoles());</span>
+        }
+<span class="nc bnc" id="L278" title="All 4 branches missed.">        if (user.getAssociations() != null &amp;&amp; !user.getAssociations().isEmpty()) {</span>
+<span class="nc" id="L279">            dto.setAssociationData(new ArrayList&lt;&gt;(user.getAssociations()));</span>
+        }
+<span class="nc" id="L281">        return dto;</span>
+    }
+
+    /*EMPLOYEE LIST FETCH SERVICE*/
+    @Transactional(readOnly = true)
+    public List&lt;EmployeeDTO&gt; getEmployeesNotInAssociations() {
+<span class="nc" id="L287">        List&lt;Long&gt; employeeUserTypeIds = userAssociationDataRepository.findAllEmployeeUserTypeIds();</span>
+
+<span class="nc" id="L289">        List&lt;Integer&gt; employeeUserTypeIdsAsInteger = employeeUserTypeIds.stream()</span>
+<span class="nc" id="L290">                .filter(Objects::nonNull)</span>
+<span class="nc" id="L291">                .map(Long::intValue)</span>
+<span class="nc" id="L292">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L294">        List&lt;Employee&gt; employeesNotInAssociations = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L296" title="All 2 branches missed.">        if (employeeUserTypeIdsAsInteger.isEmpty()) {</span>
+<span class="nc" id="L297">            employeesNotInAssociations = employeeRepository.findAll();</span>
+        } else {
+<span class="nc" id="L299">            employeesNotInAssociations = employeeRepository.findEmployeesNotInUserTypeIds(employeeUserTypeIdsAsInteger);</span>
+        }
+
+<span class="nc" id="L302">        return employeesNotInAssociations.stream()</span>
+<span class="nc bnc" id="L303" title="All 4 branches missed.">                .filter(x -&gt; x.getWorkEmail() != null &amp;&amp; !x.getWorkEmail().isBlank())</span>
+<span class="nc" id="L304">                .map(employee -&gt; {</span>
+<span class="nc" id="L305">                    EmployeeDTO dto = new EmployeeDTO();</span>
+<span class="nc" id="L306">                    dto.setEmployeeId(employee.getEmployeeId());</span>
+<span class="nc" id="L307">                    dto.setEmail(employee.getWorkEmail());</span>
+<span class="nc bnc" id="L308" title="All 4 branches missed.">                    dto.setFirstName((employee.getFirstName() != null ? employee.getFirstName() : &quot;&quot;) + &quot; &quot; + (employee.getLastName() != null ? employee.getLastName() : &quot;&quot;));</span>
+<span class="nc" id="L309">                    dto.setStartDate(employee.getEffectiveStartDate());</span>
+<span class="nc" id="L310">                    dto.setEndDate(employee.getEffectiveEndDate());</span>
+<span class="nc" id="L311">                    dto.setMobileNo(employee.getPrimaryContactNumber());</span>
+<span class="nc" id="L312">                    return dto;</span>
+<span class="nc" id="L313">                }).collect(Collectors.toList());</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Map&lt;String, Object&gt; getAllManagedUsers(String searchKeyword, String searchField, Pageable pageable) {
+        Page&lt;User&gt; userPage;
+
+<span class="nc bnc" id="L320" title="All 6 branches missed.">        if (searchKeyword != null &amp;&amp; !searchKeyword.trim().isEmpty() &amp;&amp; searchField != null) {</span>
+<span class="nc bnc" id="L321" title="All 2 branches missed.">            if (&quot;isActive&quot;.equalsIgnoreCase(searchField)) {</span>
+<span class="nc bnc" id="L322" title="All 2 branches missed.">                if (searchKeyword.trim().toLowerCase().matches(&quot;a|ac|act|activ|active.*&quot;)) {</span>
+<span class="nc" id="L323">                    searchKeyword = &quot;Y&quot;;</span>
+<span class="nc bnc" id="L324" title="All 2 branches missed.">                } else if (searchKeyword.trim().toLowerCase().matches(&quot;i|in|ina|inac|inact|inacti|inactive.*&quot;)) {</span>
+<span class="nc" id="L325">                    searchKeyword = &quot;N&quot;;</span>
+                }
+            }
+<span class="nc" id="L328">            userPage = userRepository.searchUsers(searchKeyword, searchField, pageable);</span>
+        } else {
+<span class="nc" id="L330">            userPage = userRepository.findAll(pageable);</span>
+        }
+
+<span class="nc" id="L333">        Map&lt;Long, List&lt;UserAssociation&gt;&gt; associationsMap = userAssociationDataRepository.findAll().stream()</span>
+<span class="nc" id="L334">                .collect(Collectors.groupingBy(UserAssociation::getUserId));</span>
+
+<span class="nc" id="L336">        List&lt;AdminUserDTO&gt; userDTOs = userPage.getContent().stream().map(user -&gt; {</span>
+<span class="nc" id="L337">            AdminUserDTO dto = new AdminUserDTO(user);</span>
+
+<span class="nc" id="L339">            List&lt;UserAssociation&gt; associations = associationsMap.get(user.getId());</span>
+<span class="nc bnc" id="L340" title="All 2 branches missed.">            if (associations != null) {</span>
+<span class="nc" id="L341">                List&lt;UserAssociationDataDTO&gt; assDto = associations.stream().map(association -&gt; {</span>
+<span class="nc" id="L342">                    UserAssociationDataDTO dataDTO = new UserAssociationDataDTO();</span>
+<span class="nc" id="L343">                    dataDTO.setUserId(association.getUserId());</span>
+<span class="nc" id="L344">                    dataDTO.setUserTypeId(association.getUserTypeId());</span>
+<span class="nc" id="L345">                    dataDTO.setUserType(association.getUserType());</span>
+<span class="nc" id="L346">                    dataDTO.setIsActive(association.getIsActive());</span>
+<span class="nc" id="L347">                    dataDTO.setId(association.getId());</span>
+<span class="nc" id="L348">                    return dataDTO;</span>
+<span class="nc" id="L349">                }).collect(Collectors.toList());</span>
+<span class="nc" id="L350">                dto.setAssociationData(assDto);</span>
+            }
+
+<span class="nc" id="L353">            dto.setDisplayName(user.getDisplayName());</span>
+<span class="nc" id="L354">            dto.setMobileNo(user.getMobileNo());</span>
+<span class="nc" id="L355">            dto.setIsLocked(user.getIsLocked());</span>
+<span class="nc" id="L356">            dto.setAuthType(user.getAuthType());</span>
+<span class="nc bnc" id="L357" title="All 2 branches missed.">            dto.setStartDate(user.getStartDate() != null ? user.getStartDate() : null);</span>
+<span class="nc bnc" id="L358" title="All 2 branches missed.">            dto.setEndDate(user.getEndDate() != null ? user.getEndDate() : null);</span>
+
+<span class="nc" id="L360">            return dto;</span>
+<span class="nc" id="L361">        }).collect(Collectors.toList());</span>
+
+<span class="nc" id="L363">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L364">        response.put(&quot;result&quot;, userDTOs);</span>
+<span class="nc" id="L365">        response.put(&quot;currentPage&quot;, userPage.getNumber() + 1);</span>
+<span class="nc" id="L366">        response.put(&quot;totalItems&quot;, userPage.getTotalElements());</span>
+<span class="nc" id="L367">        response.put(&quot;totalPages&quot;, userPage.getTotalPages());</span>
+
+<span class="nc" id="L369">        return response;</span>
+    }
+
+    public Optional&lt;AdminUserDTO&gt; getUserWithAuthoritie() {
+<span class="nc" id="L373">        return SecurityUtils.getCurrentUserLogin()</span>
+<span class="nc" id="L374">                .flatMap(userRepository::findOneWithAuthoritiesByEmail)</span>
+<span class="nc" id="L375">                .map(user -&gt; {</span>
+<span class="nc" id="L376">                    AdminUserDTO adminUserDTO = new AdminUserDTO(user);</span>
+<span class="nc" id="L377">                    Employee userTable = employeeRepository.findById(Math.toIntExact(user.getId()))</span>
+<span class="nc" id="L378">                            .orElse(null);</span>
+<span class="nc bnc" id="L379" title="All 2 branches missed.">                    if (userTable != null) {</span>
+<span class="nc" id="L380">                        adminUserDTO.setReportingmanager(String.valueOf(userTable.getReportingManagerId()));</span>
+<span class="nc" id="L381">                        adminUserDTO.setHrManager(userTable.getHrManagerId());</span>
+<span class="nc" id="L382">                        adminUserDTO.setUserCode(String.valueOf(userTable.getEmployeeId()));</span>
+                    }
+<span class="nc" id="L384">                    Long userId = user.getId();</span>
+<span class="nc" id="L385">                    UserAssociation userAssociation = userAssociationDataRepository.findByUserId(userId).orElse(null);</span>
+<span class="nc bnc" id="L386" title="All 2 branches missed.">                    if (userAssociation != null) {</span>
+<span class="nc bnc" id="L387" title="All 2 branches missed.">                        if (userAssociation.getUserType().equals(&quot;EMPLOYEE&quot;)) {</span>
+<span class="nc" id="L388">                            Employee employee = employeeRepository.findById(Math.toIntExact(userAssociation.getUserTypeId()))</span>
+<span class="nc" id="L389">                                    .orElse(null);</span>
+<span class="nc bnc" id="L390" title="All 2 branches missed.">                            if (employee != null) {</span>
+<span class="nc" id="L391">                                adminUserDTO.setReportingmanager(String.valueOf(employee.getReportingManagerId()));</span>
+<span class="nc" id="L392">                                adminUserDTO.setHrManager(employee.getHrManagerId());</span>
+<span class="nc" id="L393">                                adminUserDTO.setUserCode(employee.getEmployeeNumber());</span>
+                            }
+                        }
+                    }
+
+<span class="nc" id="L398">                    Set&lt;Integer&gt; userRoleIds = user.getAuthorities().stream().map(Role::getRoleId).collect(Collectors.toSet());</span>
+<span class="nc" id="L399">                    adminUserDTO.setRoles(userRoleIds);</span>
+<span class="nc" id="L400">                    Map&lt;Long, List&lt;UserAssociation&gt;&gt; associationsMap = userAssociationDataRepository.findAll().stream()</span>
+<span class="nc" id="L401">                            .collect(Collectors.groupingBy(UserAssociation::getUserId));</span>
+<span class="nc" id="L402">                    List&lt;UserAssociation&gt; associations = associationsMap.get(userId);</span>
+<span class="nc bnc" id="L403" title="All 4 branches missed.">                    if (associations != null &amp;&amp; !associations.isEmpty()) {</span>
+<span class="nc" id="L404">                        List&lt;UserAssociationDataDTO&gt; assDto = associations.stream()</span>
+<span class="nc" id="L405">                                .filter(association -&gt; association.getUserId().equals(userId))  // Ensure it's the current user</span>
+<span class="nc" id="L406">                                .map(association -&gt; {</span>
+<span class="nc" id="L407">                                    UserAssociationDataDTO dataDTO = new UserAssociationDataDTO();</span>
+<span class="nc" id="L408">                                    dataDTO.setUserId(association.getUserId());</span>
+<span class="nc" id="L409">                                    dataDTO.setUserTypeId(association.getUserTypeId());</span>
+<span class="nc" id="L410">                                    dataDTO.setUserType(association.getUserType());</span>
+<span class="nc" id="L411">                                    dataDTO.setIsActive(association.getIsActive());</span>
+<span class="nc" id="L412">                                    dataDTO.setId(association.getId());</span>
+<span class="nc bnc" id="L413" title="All 2 branches missed.">                                    if (association.getUserTypeId() != null) {</span>
+<span class="nc" id="L414">                                        Employee emp = employeeRepository.findById(Math.toIntExact(association.getUserTypeId()))</span>
+<span class="nc" id="L415">                                                .orElse(null);</span>
+<span class="nc bnc" id="L416" title="All 2 branches missed.">                                        if (emp != null) {</span>
+<span class="nc" id="L417">                                            String fullName = emp.getFirstName() + &quot; &quot; + emp.getLastName() + &quot; (&quot; + emp.getEmployeeNumber() + &quot;)&quot;;</span>
+<span class="nc" id="L418">                                            dataDTO.setFullName(fullName);</span>
+
+                                        }
+                                    }
+<span class="nc" id="L422">                                    return dataDTO;</span>
+                                })
+<span class="nc" id="L424">                                .collect(Collectors.toList());</span>
+<span class="nc" id="L425">                        adminUserDTO.setAssociationData(assDto);</span>
+<span class="nc" id="L426">                    } else {</span>
+<span class="nc" id="L427">                        adminUserDTO.setAssociationData(Collections.emptyList());</span>
+                    }
+<span class="nc" id="L429">                    return adminUserDTO;</span>
+                });
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; userDropdownList() {
+<span class="nc" id="L434">        return userRepository.findAll()</span>
+<span class="nc" id="L435">                .stream()</span>
+<span class="nc" id="L436">                .filter(user -&gt; &quot;Y&quot;.equals(user.getIsActive()))</span>
+<span class="nc" id="L437">                .map(user -&gt; {</span>
+<span class="nc" id="L438">                    Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L439">                    result.put(&quot;userId&quot;, user.getId());</span>
+<span class="nc" id="L440">                    result.put(&quot;userName&quot;, user.getDisplayName());</span>
+<span class="nc" id="L441">                    return result;</span>
+<span class="nc" id="L442">                }).collect(Collectors.toList());</span>
+    }
+
+    public boolean isUserActive(String email) {
+<span class="nc" id="L446">        Optional&lt;User&gt; user = userRepository.findByEmail(email);</span>
+<span class="nc bnc" id="L447" title="All 2 branches missed.">        if (user.isPresent()) {</span>
+<span class="nc bnc" id="L448" title="All 2 branches missed.">            if (user.get().getEndDate() != null) {</span>
+<span class="nc bnc" id="L449" title="All 2 branches missed.">                return !user.get().getEndDate().before(new Date());</span>
+            }
+        }
+<span class="nc" id="L452">        return true;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReimbursementRequestDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.dto.reimbursement</a> &gt; <span class="el_source">ReimbursementRequestDTO.java</span></div><h1>ReimbursementRequestDTO.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.dto.reimbursement;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.Data;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.Date;
+
+<span class="nc bnc" id="L10" title="All 150 branches missed.">@Data</span>
+public class ReimbursementRequestDTO {
+<span class="nc" id="L12">    private Integer srNo;</span>
+<span class="nc" id="L13">    private String reqNo;</span>
+<span class="nc" id="L14">    private Integer employeeId;</span>
+<span class="nc" id="L15">    private Double claimed;</span>
+<span class="nc" id="L16">    private Double approved;</span>
+<span class="nc" id="L17">    private String requestStatus;</span>
+<span class="nc" id="L18">    private String reviewer;</span>
+<span class="nc" id="L19">    private String vpRemark;</span>
+<span class="nc" id="L20">    private String remark;</span>
+<span class="nc" id="L21">    private Long bucketId;</span>
+<span class="nc" id="L22">    private String bankRefNumber;</span>
+<span class="nc" id="L23">    private Date processedDate;</span>
+<span class="nc" id="L24">    private String reassignFlag;</span>
+    @JsonFormat(pattern = &quot;yyyy-MM-dd&quot;)
+<span class="nc" id="L26">    private LocalDate createdOn;</span>
+<span class="nc" id="L27">    private String createdBy;</span>
+<span class="nc" id="L28">    private String lastUpdatedBy;</span>
+<span class="nc" id="L29">    private String raisedBy;</span>
+    @JsonFormat(pattern = &quot;yyyy-MM-dd&quot;)
+<span class="nc" id="L31">    private LocalDate updatedOn;</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

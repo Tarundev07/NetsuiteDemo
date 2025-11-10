@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JobRequisitionService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.jobOpening</a> &gt; <span class="el_source">JobRequisitionService.java</span></div><h1>JobRequisitionService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.jobOpening;
+
+import com.atomicnorth.hrm.tenant.domain.jobOpening.JobRequisition;
+import com.atomicnorth.hrm.tenant.domain.jobOpening.JobRequisitionDTO;
+import com.atomicnorth.hrm.tenant.domain.jobOpening.StaffPlanDetails;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.jobOpening.JobRequisitionRepository;
+import com.atomicnorth.hrm.tenant.repository.jobOpening.StaffPlanDetailsRepository;
+import com.atomicnorth.hrm.util.Enum.Active;
+import lombok.AllArgsConstructor;
+import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Path;
+import javax.persistence.criteria.Root;
+import javax.transaction.Transactional;
+import java.text.ParseException;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L32">@AllArgsConstructor</span>
+public class JobRequisitionService {
+
+    private final JobRequisitionRepository jobRequisitionRepository;
+
+    private final ModelMapper modelMapper;
+
+    private final StaffPlanDetailsRepository staffPlanDetailsRepository;
+
+    @Transactional
+    public Map&lt;String, Object&gt; getAllJobRequisitions(Pageable pageable, String searchColumn, String searchValue) {
+        Page&lt;JobRequisition&gt; jobRequisitions;
+<span class="nc bnc" id="L44" title="All 2 branches missed.">        if (&quot;designationName&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L45">            jobRequisitions = jobRequisitionRepository.findByDesignation_DesignationNameContainingIgnoreCase(searchValue, pageable);</span>
+<span class="nc bnc" id="L46" title="All 2 branches missed.">        } else if (&quot;departmentName&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L47">            jobRequisitions = jobRequisitionRepository.findByDepartment_DnameContainingIgnoreCase(searchValue, pageable);</span>
+<span class="nc bnc" id="L48" title="All 2 branches missed.">        } else if (&quot;requestedByName&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L49">            jobRequisitions = jobRequisitionRepository.findByEmployee_FirstNameContainingIgnoreCase(searchValue, pageable);</span>
+<span class="nc bnc" id="L50" title="All 8 branches missed.">        } else if (searchColumn != null &amp;&amp; searchValue != null &amp;&amp; !searchValue.trim().isEmpty() &amp;&amp; !searchColumn.trim().isEmpty()) {</span>
+<span class="nc" id="L51">            Specification&lt;JobRequisition&gt; spec = searchByColumn(searchColumn, searchValue);</span>
+<span class="nc" id="L52">            jobRequisitions = jobRequisitionRepository.findAll(spec, pageable);</span>
+<span class="nc" id="L53">        } else {</span>
+<span class="nc" id="L54">            Sort sort = pageable.getSort();</span>
+<span class="nc bnc" id="L55" title="All 2 branches missed.">            if (sort.isSorted()) {</span>
+<span class="nc" id="L56">                Sort.Order designationOrder = sort.getOrderFor(&quot;designationName&quot;);</span>
+<span class="nc bnc" id="L57" title="All 2 branches missed.">                if (designationOrder != null) {</span>
+<span class="nc" id="L58">                    pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),</span>
+<span class="nc" id="L59">                            Sort.by(designationOrder.getDirection(), &quot;designation.designationName&quot;));</span>
+                }
+<span class="nc" id="L61">                Sort.Order departmentOrder = sort.getOrderFor(&quot;departmentName&quot;);</span>
+<span class="nc bnc" id="L62" title="All 2 branches missed.">                if (departmentOrder != null) {</span>
+<span class="nc" id="L63">                    pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),</span>
+<span class="nc" id="L64">                            Sort.by(departmentOrder.getDirection(), &quot;department.dname&quot;));</span>
+                }
+<span class="nc" id="L66">                Sort.Order requestedByName = sort.getOrderFor(&quot;requestedByName&quot;);</span>
+<span class="nc bnc" id="L67" title="All 2 branches missed.">                if (requestedByName != null) {</span>
+<span class="nc" id="L68">                    pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),</span>
+<span class="nc" id="L69">                            Sort.by(requestedByName.getDirection(), &quot;employee.firstName&quot;));</span>
+                }
+            }
+<span class="nc" id="L72">            jobRequisitions = jobRequisitionRepository.findAll(pageable);</span>
+        }
+
+<span class="nc" id="L75">        List&lt;JobRequisitionDTO&gt; jobRequisitionDto = jobRequisitions.getContent().stream()</span>
+<span class="nc" id="L76">                .map(this::convertToDTO)</span>
+<span class="nc" id="L77">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L79">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L80">        response.put(&quot;result&quot;, jobRequisitionDto);</span>
+<span class="nc" id="L81">        response.put(&quot;currentPage&quot;, pageable.getPageNumber() + 1);</span>
+<span class="nc" id="L82">        response.put(&quot;pageSize&quot;, pageable.getPageSize());</span>
+<span class="nc" id="L83">        response.put(&quot;totalItems&quot;, jobRequisitions.getTotalElements());</span>
+<span class="nc" id="L84">        response.put(&quot;totalPages&quot;, jobRequisitions.getTotalPages());</span>
+<span class="nc" id="L85">        return response;</span>
+    }
+
+    private JobRequisitionDTO convertToDTO(JobRequisition entity) {
+<span class="nc" id="L89">        JobRequisitionDTO dto = modelMapper.map(entity, JobRequisitionDTO.class);</span>
+<span class="nc bnc" id="L90" title="All 2 branches missed.">        dto.setDesignationName(entity.getDesignation() != null ? entity.getDesignation().getDesignationName() : null);</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">        dto.setDepartmentName(entity.getDepartment() != null ? entity.getDepartment().getDname() : null);</span>
+<span class="nc bnc" id="L92" title="All 2 branches missed.">        dto.setRequestedByName(entity.getRequestedBy() != null ? entity.getEmployee().getFirstName() + &quot; &quot; + entity.getEmployee().getLastName() : null);</span>
+<span class="nc" id="L93">        return dto;</span>
+    }
+
+    public static Specification&lt;JobRequisition&gt; searchByColumn(String column, String value) {
+<span class="nc" id="L97">        return (Root&lt;JobRequisition&gt; root, CriteriaQuery&lt;?&gt; query, CriteriaBuilder criteriaBuilder) -&gt; {</span>
+<span class="nc" id="L98">            Path&lt;?&gt; path = root.get(column);</span>
+
+<span class="nc bnc" id="L100" title="All 2 branches missed.">            if (path.getJavaType().equals(String.class)) {</span>
+<span class="nc" id="L101">                return criteriaBuilder.like(</span>
+<span class="nc" id="L102">                        criteriaBuilder.lower(root.get(column)),</span>
+<span class="nc" id="L103">                        &quot;%&quot; + value.toLowerCase() + &quot;%&quot;</span>
+                );
+<span class="nc bnc" id="L105" title="All 2 branches missed.">            } else if (path.getJavaType().equals(LocalDate.class)) {</span>
+                try {
+                    // Directly parse the LocalDate from the string
+<span class="nc" id="L108">                    LocalDate localDate = LocalDate.parse(value);</span>
+<span class="nc" id="L109">                    return criteriaBuilder.equal(root.get(column), localDate);</span>
+<span class="nc" id="L110">                } catch (DateTimeParseException e) {</span>
+<span class="nc" id="L111">                    throw new RuntimeException(&quot;Invalid date format for field: &quot; + column, e);</span>
+                }
+            } else {
+<span class="nc" id="L114">                return criteriaBuilder.equal(root.get(column), convertToRequiredType(path.getJavaType(), value));</span>
+            }
+        };
+    }
+
+    private static Object convertToRequiredType(Class&lt;?&gt; fieldType, String value) {
+<span class="nc bnc" id="L120" title="All 2 branches missed.">        if (fieldType.equals(Integer.class)) {</span>
+<span class="nc" id="L121">            return Integer.valueOf(value);</span>
+<span class="nc bnc" id="L122" title="All 2 branches missed.">        } else if (fieldType.equals(Long.class)) {</span>
+<span class="nc" id="L123">            return Long.valueOf(value);</span>
+<span class="nc bnc" id="L124" title="All 2 branches missed.">        } else if (fieldType.equals(Double.class)) {</span>
+<span class="nc" id="L125">            return Double.valueOf(value);</span>
+<span class="nc bnc" id="L126" title="All 2 branches missed.">        } else if (fieldType.equals(Boolean.class)) {</span>
+<span class="nc" id="L127">            return Boolean.valueOf(value);</span>
+        } else {
+<span class="nc" id="L129">            return value;</span>
+        }
+    }
+
+    @Transactional
+    public JobRequisitionDTO createUpdateJobRequisition(JobRequisitionDTO jobRequisitionDTO) throws ParseException {
+<span class="nc" id="L135">        JobRequisition jobRequisition = toEntity(jobRequisitionDTO);</span>
+<span class="nc" id="L136">        JobRequisition savedEntity = jobRequisitionRepository.save(jobRequisition);</span>
+<span class="nc" id="L137">        return toDTO(savedEntity);</span>
+    }
+
+    @Transactional
+    public Optional&lt;JobRequisitionDTO&gt; getJobRequisitionById(Integer id) {
+<span class="nc" id="L142">        return jobRequisitionRepository.findById(id).map(this::toDTO);</span>
+    }
+
+
+    private JobRequisitionDTO toDTO(JobRequisition jobRequisition) {
+
+<span class="nc" id="L148">        JobRequisitionDTO dto = new JobRequisitionDTO();</span>
+<span class="nc" id="L149">        dto.setId(jobRequisition.getId());</span>
+<span class="nc" id="L150">        dto.setJobTitle(jobRequisition.getJobTitle());</span>
+<span class="nc" id="L151">        dto.setDesignationId(jobRequisition.getDesignationId());</span>
+<span class="nc" id="L152">        dto.setPositionReq(jobRequisition.getPositionReq());</span>
+<span class="nc" id="L153">        dto.setExpectedSalary(jobRequisition.getExpectedSalary());</span>
+<span class="nc" id="L154">        dto.setDepartmentId(jobRequisition.getDepartmentId());</span>
+<span class="nc" id="L155">        dto.setJobDescription(jobRequisition.getJobDescription());</span>
+<span class="nc" id="L156">        dto.setReasonRequest(jobRequisition.getReasonRequest());</span>
+<span class="nc" id="L157">        dto.setRequestedBy(jobRequisition.getRequestedBy());</span>
+<span class="nc" id="L158">        dto.setRequestedDepId(jobRequisition.getRequestedDepId());</span>
+<span class="nc" id="L159">        dto.setRequestedDesgId(jobRequisition.getRequestedDesgId());</span>
+<span class="nc" id="L160">        dto.setPostedOn(jobRequisition.getPostedOn());</span>
+<span class="nc" id="L161">        dto.setClosesOn(jobRequisition.getClosesOn());</span>
+<span class="nc" id="L162">        dto.setCreatedBy(jobRequisition.getCreatedBy());</span>
+<span class="nc" id="L163">        dto.setCreatedDate(jobRequisition.getCreatedDate());</span>
+<span class="nc" id="L164">        dto.setLastUpdatedBy(jobRequisition.getLastUpdatedBy());</span>
+<span class="nc" id="L165">        dto.setLastUpdatedDate(jobRequisition.getLastUpdatedDate());</span>
+<span class="nc" id="L166">        dto.setIsActive(String.valueOf(jobRequisition.getIsActive()));</span>
+<span class="nc" id="L167">        return dto;</span>
+    }
+
+    private JobRequisition toEntity(JobRequisitionDTO dto) {
+<span class="nc" id="L171">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+
+<span class="nc bnc" id="L173" title="All 2 branches missed.">        JobRequisition entity = dto.getId() != null</span>
+<span class="nc" id="L174">                ? jobRequisitionRepository.findById(dto.getId()).orElseGet(JobRequisition::new)</span>
+<span class="nc" id="L175">                : new JobRequisition();</span>
+<span class="nc" id="L176">        entity.setId(dto.getId());</span>
+<span class="nc" id="L177">        entity.setJobTitle(dto.getJobTitle());</span>
+<span class="nc" id="L178">        entity.setDesignationId(dto.getDesignationId());</span>
+<span class="nc" id="L179">        entity.setPositionReq(dto.getPositionReq());</span>
+<span class="nc" id="L180">        entity.setExpectedSalary(dto.getExpectedSalary());</span>
+<span class="nc" id="L181">        entity.setDepartmentId(dto.getDepartmentId());</span>
+<span class="nc" id="L182">        entity.setJobDescription(dto.getJobDescription());</span>
+<span class="nc" id="L183">        entity.setReasonRequest(dto.getReasonRequest());</span>
+<span class="nc" id="L184">        entity.setRequestedBy(dto.getRequestedBy());</span>
+<span class="nc" id="L185">        entity.setRequestedDepId(dto.getRequestedDepId());</span>
+<span class="nc" id="L186">        entity.setRequestedDesgId(dto.getRequestedDesgId());</span>
+<span class="nc" id="L187">        entity.setPostedOn(dto.getPostedOn());</span>
+<span class="nc" id="L188">        entity.setClosesOn(dto.getClosesOn());</span>
+<span class="nc bnc" id="L189" title="All 2 branches missed.">        entity.setCreatedBy(dto.getCreatedBy() != null ? dto.getCreatedBy() : String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc bnc" id="L190" title="All 2 branches missed.">        entity.setCreatedDate(dto.getCreatedDate() != null ? dto.getCreatedDate() : new Date().toInstant());</span>
+<span class="nc" id="L191">        entity.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L192">        entity.setLastUpdatedDate(new Date().toInstant());</span>
+<span class="nc" id="L193">        entity.setIsActive(Active.valueOf(dto.getIsActive()));</span>
+
+<span class="nc" id="L195">        return entity;</span>
+    }
+
+    @Transactional()
+    public List&lt;JobRequisitionDTO&gt; getNonAssociateJobRequisitions() {
+<span class="nc" id="L200">        List&lt;Integer&gt; existingRaisedJobReq = staffPlanDetailsRepository.findAll().stream()</span>
+<span class="nc bnc" id="L201" title="All 4 branches missed.">                .filter(x -&gt; x.getJobRequisition() != null &amp;&amp; &quot;Y&quot;.equalsIgnoreCase(String.valueOf(x.getIsActive())))</span>
+<span class="nc" id="L202">                .map(StaffPlanDetails::getJobRequisitionId)</span>
+<span class="nc" id="L203">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L205">        List&lt;JobRequisition&gt; jobRequisitions = jobRequisitionRepository</span>
+<span class="nc bnc" id="L206" title="All 2 branches missed.">                .findJobReqExcludingExisting(existingRaisedJobReq.isEmpty() ? List.of(-1) : existingRaisedJobReq);</span>
+
+<span class="nc" id="L208">        return jobRequisitions.stream()</span>
+<span class="nc" id="L209">                .filter(x -&gt; &quot;Y&quot;.equalsIgnoreCase(String.valueOf(x.getIsActive())))</span>
+<span class="nc" id="L210">                .sorted(Comparator.comparing(JobRequisition::getJobTitle, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))</span>
+<span class="nc" id="L211">                .map(this::toDTO)</span>
+<span class="nc" id="L212">                .collect(Collectors.toList());</span>
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; jobRequisitionDropdownList() {
+<span class="nc" id="L216">        return jobRequisitionRepository.findAll()</span>
+<span class="nc" id="L217">                .stream()</span>
+<span class="nc" id="L218">                .filter(jobRequisition -&gt; &quot;Y&quot;.equalsIgnoreCase(String.valueOf(jobRequisition.getIsActive())))</span>
+<span class="nc" id="L219">                .sorted(Comparator.comparing(JobRequisition::getJobTitle, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))</span>
+<span class="nc" id="L220">                .map(job -&gt; {</span>
+<span class="nc" id="L221">                    Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L222">                    result.put(&quot;jobRequisitionId&quot;, job.getId());</span>
+<span class="nc" id="L223">                    result.put(&quot;jobTitle&quot;, job.getJobTitle());</span>
+<span class="nc" id="L224">                    return result;</span>
+<span class="nc" id="L225">                }).collect(Collectors.toList());</span>
+    }
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

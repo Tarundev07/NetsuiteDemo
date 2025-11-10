@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RoleAndPermissions.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.roles</a> &gt; <span class="el_source">RoleAndPermissions.java</span></div><h1>RoleAndPermissions.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.roles;
+
+import com.atomicnorth.hrm.tenant.domain.roles.Application;
+import com.atomicnorth.hrm.tenant.service.dto.roles.RoleRequest;
+import com.atomicnorth.hrm.tenant.service.dto.roles.UserModuleFunctionFeatureDTO;
+import com.atomicnorth.hrm.tenant.service.roles.RoleAndPermissionsService;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping(&quot;api/roles&quot;)
+<span class="nc" id="L24">public class RoleAndPermissions {</span>
+
+    @Autowired
+    private RoleAndPermissionsService roleAndPermissionsService;
+
+    @GetMapping(&quot;/role-permissions&quot;)
+    public HttpEntity&lt;ApiResponse&lt;List&lt;Application&gt;&gt;&gt; getRolePermissions(
+            @RequestParam(value = &quot;languageId&quot;, defaultValue = &quot;0&quot;) int languageId) {
+
+        // Fetch all applications with modules, features, and feature functions
+        try {
+<span class="nc" id="L35">            List&lt;Application&gt; applications = roleAndPermissionsService.getApplicationsWithModulesAndFeatures(languageId);</span>
+<span class="nc" id="L36">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(applications, true, &quot;ROLE_PERMISSION_GET_SUCCESS&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L37">        } catch (Exception e) {</span>
+<span class="nc" id="L38">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ROLE_PERMISSION_GET_ERROR&quot;, &quot;ERROR&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+
+    }
+
+    @PostMapping(&quot;/saveOrUpdateRoles&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;RoleRequest&gt;&gt; saveOrUpdate(@Valid @RequestBody RoleRequest roleRequest) {
+        try {
+<span class="nc" id="L46">            RoleRequest saveOrUpdateRoles = roleAndPermissionsService.saveOrUpdate(roleRequest);</span>
+<span class="nc bnc" id="L47" title="All 2 branches missed.">            String message = (roleRequest.getRoleId() &gt; 0)</span>
+<span class="nc" id="L48">                    ? &quot;ROLE-UPDATE-SUCCESS&quot;</span>
+<span class="nc" id="L49">                    : &quot;ROLE-CREATE-SUCCESS&quot;;</span>
+<span class="nc" id="L50">            ApiResponse&lt;RoleRequest&gt; response = new ApiResponse&lt;&gt;(</span>
+                    saveOrUpdateRoles,
+                    true,
+                    message,
+                    &quot;Success&quot;
+            );
+<span class="nc" id="L56">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L57">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L58">            ApiResponse&lt;RoleRequest&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;ROLE-CREATE-FAILURE&quot;,
+                    &quot;Warning&quot;,
+<span class="nc" id="L63">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L65">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+<span class="nc" id="L66">        } catch (Exception ex) {</span>
+<span class="nc" id="L67">            ex.printStackTrace();</span>
+<span class="nc" id="L68">            ApiResponse&lt;RoleRequest&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;ROLE-CREATE-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L73">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L75">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getAll&quot;)
+    public HttpEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getAllRoles(
+            @RequestParam(value = &quot;page&quot;, defaultValue = &quot;1&quot;) int page,
+            @RequestParam(value = &quot;size&quot;, defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;roleId&quot;, required = false) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;, required = false) String sortDir,
+            @RequestParam(value = &quot;searchKeyword&quot;, required = false) String searchKeyword,
+            @RequestParam(value = &quot;searchField&quot;, required = false) String searchField,
+            @RequestParam(value = &quot;languageId&quot;, defaultValue = &quot;1&quot;) int languageId) {
+        try {
+<span class="nc bnc" id="L89" title="All 2 branches missed.">            if (sortBy.equalsIgnoreCase(&quot;roleName&quot;)) sortBy = &quot;roleNameCode&quot;;</span>
+<span class="nc" id="L90">            Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc" id="L91">            Map&lt;String, Object&gt; roles = roleAndPermissionsService.getAllRoles(searchKeyword, searchField, pageable, languageId);</span>
+<span class="nc" id="L92">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    roles,
+                    true,
+                    &quot;ROLES-LIST-SUCCESS&quot;,
+                    &quot;Success&quot;
+            );
+<span class="nc" id="L98">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L99">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L100">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;ROLES-LIST-FAILURE&quot;,
+                    &quot;Warning&quot;,
+<span class="nc" id="L105">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L107">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+<span class="nc" id="L108">        } catch (Exception e) {</span>
+<span class="nc" id="L109">            e.printStackTrace();</span>
+<span class="nc" id="L110">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;ROLES-LIST-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L115">                    Collections.singletonList(e.getMessage())</span>
+            );
+<span class="nc" id="L117">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/{userId}&quot;)
+    public ResponseEntity&lt;List&lt;UserModuleFunctionFeatureDTO&gt;&gt; getModuleFunctionFeatureByUserId(@PathVariable Integer userId) {
+<span class="nc" id="L123">        List&lt;UserModuleFunctionFeatureDTO&gt; details = roleAndPermissionsService.getModuleFunctionFeatureDetailsByUserId(userId);</span>
+<span class="nc" id="L124">        return ResponseEntity.ok(details);</span>
+    }
+
+    @GetMapping(&quot;get-by-moduleId/{userId}/{moduleId}&quot;)
+    public ResponseEntity&lt;List&lt;UserModuleFunctionFeatureDTO&gt;&gt; getFunctionListByModuleId(
+            @PathVariable Integer userId,
+            @PathVariable Integer moduleId
+    ) {
+<span class="nc" id="L132">        List&lt;UserModuleFunctionFeatureDTO&gt; details = roleAndPermissionsService.getFunctionsByModuleId(userId, moduleId);</span>
+<span class="nc" id="L133">        return ResponseEntity.ok(details);</span>
+    }
+
+    @GetMapping(&quot;/rolesDropdownList/{languageId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; rolesDropdownList(@PathVariable Integer languageId) {
+        try {
+<span class="nc" id="L139">            List&lt;Map&lt;String, Object&gt;&gt; rolesDropdownList = roleAndPermissionsService.rolesDropdownList(languageId);</span>
+<span class="nc" id="L140">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(rolesDropdownList, true, &quot;ROLES_LIST_FETCHED_SUCCESS&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L141">        } catch (Exception e) {</span>
+<span class="nc" id="L142">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ROLES_LIST_FETCHED_ERROR&quot;, &quot;ERROR&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

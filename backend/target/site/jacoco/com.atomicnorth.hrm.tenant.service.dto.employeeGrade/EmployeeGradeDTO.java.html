@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmployeeGradeDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.dto.employeeGrade</a> &gt; <span class="el_source">EmployeeGradeDTO.java</span></div><h1>EmployeeGradeDTO.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.dto.employeeGrade;
+
+import com.atomicnorth.hrm.tenant.domain.AbstractAuditingEntity;
+import com.atomicnorth.hrm.tenant.domain.employeeGrade.EmployeeGrade;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.validation.constraints.NotNull;
+
+<span class="nc bnc" id="L11" title="All 54 branches missed.">@Data</span>
+<span class="nc" id="L12">@AllArgsConstructor</span>
+<span class="nc" id="L13">@NoArgsConstructor</span>
+public class EmployeeGradeDTO extends AbstractAuditingEntity&lt;Long&gt; {
+
+<span class="nc" id="L16">    private Integer id;</span>
+    @NotNull(message = &quot;Salary structured id is required.&quot;)
+<span class="nc" id="L18">    private Integer salaryStructuredId;</span>
+<span class="nc" id="L19">    private String salaryStructuredName;</span>
+    @NotNull(message = &quot;Grade name is required.&quot;)
+<span class="nc" id="L21">    private String gradeName;</span>
+    //@NotNull(message = &quot;Grade Code is required.&quot;)
+<span class="nc" id="L23">    private String gradeCode;</span>
+<span class="nc" id="L24">    private String isActive;</span>
+
+<span class="nc" id="L26">    public EmployeeGradeDTO(EmployeeGrade grade) {</span>
+<span class="nc" id="L27">        this.id = grade.getId();</span>
+<span class="nc" id="L28">        this.salaryStructuredId = grade.getSalaryStructuredId();</span>
+<span class="nc" id="L29">        this.gradeCode = grade.getGradeCode();</span>
+<span class="nc" id="L30">        this.gradeName = grade.getGradeName();</span>
+<span class="nc" id="L31">        this.isActive = grade.getIsActive();</span>
+<span class="nc" id="L32">        this.setCreatedBy(grade.getCreatedBy());</span>
+<span class="nc" id="L33">        this.setCreatedDate(grade.getCreatedDate());</span>
+<span class="nc" id="L34">        this.setLastUpdatedBy(grade.getLastUpdatedBy());</span>
+<span class="nc" id="L35">        this.setLastUpdatedDate(grade.getLastUpdatedDate());</span>
+<span class="nc" id="L36">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>InterviewFeedbackController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest</a> &gt; <span class="el_source">InterviewFeedbackController.java</span></div><h1>InterviewFeedbackController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest;
+
+import com.atomicnorth.hrm.tenant.domain.InterviewFeedback;
+import com.atomicnorth.hrm.tenant.repository.InterviewFeedbackRepository;
+import com.atomicnorth.hrm.tenant.repository.employement.employee_job_applicant.JobApplicantRepository;
+import com.atomicnorth.hrm.tenant.service.InterviewFeedbackService;
+import com.atomicnorth.hrm.tenant.service.dto.InterviewFeedbackDTO;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping(&quot;/api/interview/feedback&quot;)
+@EnableTransactionManagement
+<span class="nc" id="L34">public class InterviewFeedbackController {</span>
+
+<span class="nc" id="L36">    private final Logger log = LoggerFactory.getLogger(InterviewFeedbackController.class);</span>
+
+    @Autowired
+    private InterviewFeedbackService interviewFeedbackService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Autowired
+    private InterviewFeedbackRepository interviewFeedbackRepository;
+
+    @Autowired
+    private JobApplicantRepository employeeJobApplicantRepository;
+
+    private ResponseEntity&lt;ApiResponse&lt;?&gt;&gt; handleValidationErrors(BindingResult bindingResult) {
+<span class="nc" id="L51">        Map&lt;String, String&gt; errors = bindingResult.getFieldErrors().stream()</span>
+<span class="nc" id="L52">                .collect(Collectors.toMap(</span>
+                        FieldError::getField,
+<span class="nc" id="L54">                        fieldError -&gt; fieldError.getDefaultMessage()</span>
+                ));
+<span class="nc" id="L56">        return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_VALIDATION_ERROR&quot;, &quot;FAILURE&quot;,</span>
+<span class="nc" id="L57">                new ArrayList&lt;&gt;(errors.values())), HttpStatus.BAD_REQUEST);</span>
+    }
+    
+    @PostMapping(&quot;/create&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;?&gt;&gt; saveInterviewType(
+            @Valid @RequestBody InterviewFeedbackDTO interviewFeedbackDTO,
+            BindingResult bindingResult) {
+<span class="nc bnc" id="L64" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L65">            return handleValidationErrors(bindingResult);</span>
+        }
+<span class="nc" id="L67">        Long id = interviewFeedbackDTO.getInterviewFeedbackId();</span>
+        try {
+<span class="nc" id="L69">            Optional&lt;InterviewFeedback&gt; existingInterviewFeedbackOpt = interviewFeedbackRepository.findByInterviewIdAndJobApplicantId(interviewFeedbackDTO.getInterviewId(),interviewFeedbackDTO.getJobApplicantId());</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">            if (existingInterviewFeedbackOpt.isPresent()) {</span>
+<span class="nc" id="L71">                InterviewFeedback existingInterviewFeedback = existingInterviewFeedbackOpt.get();</span>
+<span class="nc bnc" id="L72" title="All 2 branches missed.">                if (!existingInterviewFeedback.getInterviewFeedbackId().equals(id)) {</span>
+<span class="nc" id="L73">                    String applicantName = employeeJobApplicantRepository.findJobApplicantNameById(interviewFeedbackDTO.getJobApplicantId()).orElse(&quot;Unknown Applicant&quot;);</span>
+<span class="nc" id="L74">                  return ResponseEntity.ok(</span>
+                            new ApiResponse&lt;&gt;(
+                                    null,
+                                    false,
+                                    &quot;ATMCMN_INTERVIEW_DUPLICATE&quot;,
+                                    &quot;FAILURE&quot;,
+<span class="nc" id="L80">                                    Collections.singletonList(&quot;An Interview feedback for Applicant name : &quot; + applicantName +&quot; already exists&quot;)</span>
+                            )
+                    );
+                }
+            }
+            // Update operation if ID is provided
+<span class="nc bnc" id="L86" title="All 2 branches missed.">            if (id != null) {</span>
+<span class="nc" id="L87">                InterviewFeedbackDTO updatedInterviewFeedbackDTO = interviewFeedbackService.updateInterviewFeedback(id, interviewFeedbackDTO);</span>
+<span class="nc" id="L88">                return ResponseEntity.ok(new ApiResponse&lt;&gt;(updatedInterviewFeedbackDTO, true, &quot;ATMCMN_INTERVIEW_FEEDBACK_UPDATED&quot;, &quot;SUCCESS&quot;));</span>
+            } else {
+<span class="nc" id="L90">                InterviewFeedbackDTO savedInterviewFeedbackDTO = interviewFeedbackService.createInterviewFeedback(interviewFeedbackDTO);</span>
+<span class="nc" id="L91">                return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(savedInterviewFeedbackDTO, true, &quot;ATMCMN_INTERVIEW_FEEDBACK_CREATED&quot;, &quot;SUCCESS&quot;), HttpStatus.CREATED);</span>
+            }
+<span class="nc" id="L93">        } catch (Exception e) {</span>
+<span class="nc" id="L94">            log.error(&quot;Error occurred while saving Interview Feedback&quot;, e);</span>
+<span class="nc" id="L95">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_INTERVIEW_FEEDBACK_SAVE_ERROR&quot;, &quot;FAILURE&quot;,</span>
+<span class="nc" id="L96">                    Collections.singletonList(e.getMessage())), HttpStatus.INTERNAL_SERVER_ERROR);</span>
+        }
+    }
+
+    @GetMapping(&quot;/findAll&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;ObjectNode&gt;&gt; getAllInterviewFeedbacks(
+            @RequestParam(value = &quot;page&quot;, defaultValue = &quot;1&quot;) int page,
+            @RequestParam(value = &quot;size&quot;, defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;interviewFeedbackId&quot;) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;) String sortDir,
+            @RequestParam(value = &quot;searchKeyword&quot;, required = false) String searchKeyword,
+            @RequestParam(value = &quot;searchField&quot;, required = false) String searchField) {
+
+        try {
+<span class="nc" id="L110">            List&lt;InterviewFeedbackDTO&gt; interviewFeedbacks = interviewFeedbackService.findAllInterviewFeedbacks();</span>
+            // Convert DTO List to List of Maps
+<span class="nc" id="L112">            List&lt;Map&lt;String, Object&gt;&gt; fullData = interviewFeedbacks.stream()</span>
+<span class="nc" id="L113">                    .map(dto -&gt; objectMapper.convertValue(dto, new TypeReference&lt;Map&lt;String, Object&gt;&gt;() {</span>
+                    }))
+<span class="nc" id="L115">                    .collect(Collectors.toList());</span>
+            // Apply Searching
+<span class="nc bnc" id="L117" title="All 8 branches missed.">            if (searchField != null &amp;&amp; !searchField.isEmpty() &amp;&amp; searchKeyword != null &amp;&amp; !searchKeyword.isEmpty()) {</span>
+<span class="nc" id="L118">                fullData = fullData.stream()</span>
+<span class="nc bnc" id="L119" title="All 2 branches missed.">                        .filter(data -&gt; data.containsKey(searchField) &amp;&amp;</span>
+<span class="nc bnc" id="L120" title="All 2 branches missed.">                                data.get(searchField) != null &amp;&amp;</span>
+<span class="nc bnc" id="L121" title="All 2 branches missed.">                                data.get(searchField).toString().toLowerCase().contains(searchKeyword.toLowerCase()))</span>
+<span class="nc" id="L122">                        .collect(Collectors.toList());</span>
+            }
+            // Apply Sorting
+<span class="nc bnc" id="L125" title="All 4 branches missed.">            if (sortBy != null &amp;&amp; !sortBy.isEmpty()) {</span>
+<span class="nc" id="L126">                Comparator&lt;Map&lt;String, Object&gt;&gt; comparator = (data1, data2) -&gt; {</span>
+<span class="nc" id="L127">                    Object obj1 = data1.getOrDefault(sortBy, &quot;&quot;);</span>
+<span class="nc" id="L128">                    Object obj2 = data2.getOrDefault(sortBy, &quot;&quot;);</span>
+<span class="nc bnc" id="L129" title="All 2 branches missed.">                    if (obj1 == null) obj1 = &quot;&quot;;</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">                    if (obj2 == null) obj2 = &quot;&quot;;</span>
+                    // Handle numeric comparisons
+<span class="nc bnc" id="L132" title="All 4 branches missed.">                    if (obj1 instanceof Number &amp;&amp; obj2 instanceof Number) {</span>
+<span class="nc" id="L133">                        return Double.compare(((Number) obj1).doubleValue(), ((Number) obj2).doubleValue());</span>
+                    }
+                    // Convert to string and compare
+<span class="nc" id="L136">                    return obj1.toString().compareToIgnoreCase(obj2.toString());</span>
+                };
+                // Apply descending order if required
+<span class="nc bnc" id="L139" title="All 2 branches missed.">                if (&quot;desc&quot;.equalsIgnoreCase(sortDir)) {</span>
+<span class="nc" id="L140">                    comparator = comparator.reversed();</span>
+                }
+<span class="nc" id="L142">                fullData = fullData.stream().sorted(comparator).collect(Collectors.toList());</span>
+            }
+            // Apply Pagination
+<span class="nc" id="L145">            int totalItems = fullData.size();</span>
+<span class="nc" id="L146">            int totalPages = (int) Math.ceil((double) totalItems / size);</span>
+<span class="nc" id="L147">            int startIndex = Math.max(0, Math.min((page - 1) * size, totalItems));</span>
+<span class="nc" id="L148">            int endIndex = Math.min(startIndex + size, totalItems);</span>
+<span class="nc" id="L149">            List&lt;Map&lt;String, Object&gt;&gt; currentPageData = fullData.subList(startIndex, endIndex);</span>
+            // Response Data
+<span class="nc" id="L151">            ObjectNode responseData = objectMapper.createObjectNode();</span>
+<span class="nc" id="L152">            responseData.set(&quot;result&quot;, objectMapper.valueToTree(currentPageData));</span>
+<span class="nc" id="L153">            responseData.put(&quot;totalElements&quot;, totalItems);</span>
+<span class="nc" id="L154">            responseData.put(&quot;totalPages&quot;, totalPages);</span>
+<span class="nc" id="L155">            responseData.put(&quot;pageSize&quot;, size);</span>
+<span class="nc" id="L156">            responseData.put(&quot;currentPage&quot;, page);</span>
+<span class="nc" id="L157">            ApiResponse&lt;ObjectNode&gt; apiResponse = new ApiResponse&lt;&gt;(</span>
+                    responseData, true, &quot;ATMCMN_INTERVIEW_FEEDBACKS_FETCHED&quot;, &quot;SUCCESS&quot;);
+<span class="nc" id="L159">            return ResponseEntity.ok(apiResponse);</span>
+<span class="nc" id="L160">        } catch (Exception e) {</span>
+<span class="nc" id="L161">            log.error(&quot;Error occurred while fetching Interview Feedbacks&quot;, e);</span>
+<span class="nc" id="L162">            ApiResponse&lt;ObjectNode&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null, false, &quot;ATMCMN_INTERVIEW_FEEDBACKS_FETCH_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L164">                    Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L165">            return new ResponseEntity&lt;&gt;(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);</span>
+        }
+    }
+
+    @GetMapping(&quot;/{interviewId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;InterviewFeedbackDTO&gt;&gt; getInterviewTypeById(@PathVariable Long interviewId) {
+        try {
+<span class="nc" id="L172">            return interviewFeedbackService.getInterviewByInterviewId(interviewId)</span>
+<span class="nc" id="L173">                    .map(interviewFeedack -&gt; ResponseEntity.ok(new ApiResponse&lt;&gt;(</span>
+                            interviewFeedack, true, &quot;ATMCMN_INTERVIEW_FEEDBACK_FETCHED&quot;, &quot;SUCCESS&quot;)))
+<span class="nc" id="L175">                    .orElse(new ResponseEntity&lt;&gt;(</span>
+                            new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_INTERVIEW_FEEDBACK_NOT_FOUND&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L177">                                    Collections.singletonList(&quot;Interview Feedback not found with ID: &quot; + interviewId)),</span>
+                            HttpStatus.NOT_FOUND));
+<span class="nc" id="L179">        } catch (Exception e) {</span>
+<span class="nc" id="L180">            log.error(&quot;Error occurred while fetching Interview Feedback by ID&quot;, e);</span>
+<span class="nc" id="L181">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_INTERVIEW_FEEDBACK_FETCH_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L183">                            Collections.singletonList(e.getMessage())),</span>
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

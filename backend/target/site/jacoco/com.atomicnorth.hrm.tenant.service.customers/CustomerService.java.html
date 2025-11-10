@@ -1,0 +1,622 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CustomerService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.customers</a> &gt; <span class="el_source">CustomerService.java</span></div><h1>CustomerService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.customers;
+
+import com.atomicnorth.hrm.tenant.domain.Employee;
+import com.atomicnorth.hrm.tenant.domain.customers.Customer;
+import com.atomicnorth.hrm.tenant.domain.customers.CustomerAccount;
+import com.atomicnorth.hrm.tenant.domain.customers.CustomerSite;
+import com.atomicnorth.hrm.tenant.domain.location.CityMaster;
+import com.atomicnorth.hrm.tenant.domain.location.CountryMaster;
+import com.atomicnorth.hrm.tenant.domain.location.StateMaster;
+import com.atomicnorth.hrm.tenant.domain.project.Project;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.LookupCodeRepository;
+import com.atomicnorth.hrm.tenant.repository.customers.CustomerAccountRepository;
+import com.atomicnorth.hrm.tenant.repository.customers.CustomerRepository;
+import com.atomicnorth.hrm.tenant.repository.customers.CustomerSiteRepository;
+import com.atomicnorth.hrm.tenant.repository.employement.employee_job_applicant.JobApplicantRepository;
+import com.atomicnorth.hrm.tenant.repository.project.ProjectRepository;
+import com.atomicnorth.hrm.tenant.service.SequenceGeneratorService;
+import com.atomicnorth.hrm.tenant.service.dto.customers.*;
+import com.atomicnorth.hrm.util.Enum.SequenceType;
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityNotFoundException;
+import javax.persistence.PersistenceContext;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.Join;
+import javax.persistence.criteria.JoinType;
+import javax.persistence.criteria.Path;
+import javax.persistence.criteria.Predicate;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L45">public class CustomerService {</span>
+
+    @PersistenceContext
+    private EntityManager entityManager;
+    @Autowired
+    private CustomerSiteRepository customerSiteRepo;
+    @Autowired
+    private CustomerAccountRepository customerAccountRepository;
+    @Autowired
+    private JobApplicantRepository employeeJobApplicantRepository;
+    @Autowired
+    private CustomerRepository customerRepository;
+    @Autowired
+    private LookupCodeRepository lookupCodeRepository;
+    @Autowired
+    private ModelMapper modelMapper;
+    @Autowired
+    private SequenceGeneratorService sequenceGeneratorService;
+    @Autowired
+    private ProjectRepository projectRepository;
+
+
+    public Map&lt;String, Object&gt; getPaginatedCustomerSites(Pageable pageable, String searchColumn, String searchValue) {
+<span class="nc" id="L68">        Specification&lt;CustomerSite&gt; spec = (root, query, criteriaBuilder) -&gt; {</span>
+<span class="nc bnc" id="L69" title="All 6 branches missed.">            if (searchColumn != null &amp;&amp; searchValue != null &amp;&amp; !searchValue.isEmpty()) {</span>
+                // Handle search for countryName (fetching corresponding countryId)
+<span class="nc bnc" id="L71" title="All 2 branches missed.">                if (searchColumn.equals(&quot;countryName&quot;)) {</span>
+<span class="nc" id="L72">                    List&lt;Integer&gt; countryIds = lookupCodeRepository.findLookupIdsByName(searchValue);</span>
+<span class="nc bnc" id="L73" title="All 2 branches missed.">                    if (countryIds.isEmpty()) return criteriaBuilder.disjunction();</span>
+<span class="nc" id="L74">                    return root.get(&quot;countryId&quot;).in(countryIds);</span>
+                }
+
+                // Default: Handle numeric or string search dynamically
+                try {
+<span class="nc" id="L79">                    Integer numericValue = Integer.parseInt(searchValue);</span>
+<span class="nc" id="L80">                    return criteriaBuilder.equal(root.get(searchColumn), numericValue);</span>
+<span class="nc" id="L81">                } catch (NumberFormatException e) {</span>
+<span class="nc" id="L82">                    return criteriaBuilder.like(criteriaBuilder.lower(root.get(searchColumn).as(String.class)), &quot;%&quot; + searchValue.toLowerCase() + &quot;%&quot;);</span>
+                }
+            }
+<span class="nc" id="L85">            return criteriaBuilder.conjunction();</span>
+        };
+
+<span class="nc" id="L88">        Page&lt;CustomerSite&gt; customerSitePage = customerSiteRepo.findAll(spec, pageable);</span>
+
+        // Fetch related data in batch
+<span class="nc" id="L91">        Set&lt;Integer&gt; countryIds = new HashSet&lt;&gt;();</span>
+
+<span class="nc" id="L93">        customerSitePage.forEach(site -&gt; {</span>
+<span class="nc bnc" id="L94" title="All 2 branches missed.">            if (site.getCountryId() != null) countryIds.add(site.getCountryId());</span>
+<span class="nc" id="L95">        });</span>
+
+<span class="nc" id="L97">        Map&lt;Integer, String&gt; countryMap = fetchLookupNames(countryIds);</span>
+
+        // Map to DTOs
+<span class="nc" id="L100">        List&lt;CustomerEntityCustomerSiteDTO&gt; siteDTOList = customerSitePage.getContent().stream().map(site -&gt; {</span>
+<span class="nc" id="L101">            CustomerEntityCustomerSiteDTO dto = modelMapper.map(site, CustomerEntityCustomerSiteDTO.class);</span>
+<span class="nc" id="L102">            dto.setCountryName((countryMap.get(site.getCountryId()))); // Map country name</span>
+<span class="nc" id="L103">            return dto;</span>
+<span class="nc" id="L104">        }).collect(Collectors.toList());</span>
+
+        // Create response
+<span class="nc" id="L107">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L108">        response.put(&quot;result&quot;, siteDTOList);</span>
+<span class="nc" id="L109">        response.put(&quot;currentPage&quot;, customerSitePage.getNumber() + 1);</span>
+<span class="nc" id="L110">        response.put(&quot;totalItems&quot;, customerSitePage.getTotalElements());</span>
+<span class="nc" id="L111">        response.put(&quot;totalPages&quot;, customerSitePage.getTotalPages());</span>
+
+<span class="nc" id="L113">        return response;</span>
+    }
+
+    // Fetch Lookup Names (e.g., Country Names)
+    private Map&lt;Integer, String&gt; fetchLookupNames(Set&lt;Integer&gt; lookupIds) {
+<span class="nc bnc" id="L118" title="All 2 branches missed.">        if (lookupIds.isEmpty()) return Collections.emptyMap();</span>
+
+<span class="nc" id="L120">        List&lt;Object[]&gt; results = lookupCodeRepository.findLookupNamesByIds(lookupIds);</span>
+<span class="nc" id="L121">        return results.stream().collect(Collectors.toMap(row -&gt; (Integer) row[0], // Country ID</span>
+<span class="nc" id="L122">                row -&gt; (String) row[1]   // Country Name</span>
+        ));
+    }
+
+    public CustomerDTO saveOrUpdate(CustomerDTO dto) {
+<span class="nc" id="L127">        UserLoginDetail user = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L128">        String name = String.valueOf(user.getUsername());</span>
+        Customer customer;
+<span class="nc bnc" id="L130" title="All 2 branches missed.">        if (dto.getCustomerId() != null) {</span>
+            // Update existing
+<span class="nc" id="L132">            customer = customerRepository.findById(dto.getCustomerId()).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Customer not found with ID &quot; + dto.getCustomerId()));</span>
+        } else {
+            // Create new
+<span class="nc" id="L135">            customer = new Customer();</span>
+<span class="nc" id="L136">            customer.setCreatedDate(Instant.now());</span>
+<span class="nc" id="L137">            customer.setCreatedBy(name);</span>
+        }
+<span class="nc" id="L139">        modelMapper.map(dto, customer);</span>
+<span class="nc bnc" id="L140" title="All 2 branches missed.">        if (dto.getEffectiveEndDate() != null) {</span>
+<span class="nc" id="L141">            customer.setEffectiveEndDate(dto.getEffectiveEndDate());</span>
+        } else {
+<span class="nc" id="L143">            customer.setEffectiveEndDate(null);</span>
+        }
+<span class="nc" id="L145">        customer.setLastUpdatedDate(Instant.now());</span>
+<span class="nc" id="L146">        customer.setLastUpdatedBy(name);</span>
+<span class="nc" id="L147">        Customer savedCustomer = customerRepository.save(customer);</span>
+<span class="nc" id="L148">        return modelMapper.map(savedCustomer, CustomerDTO.class);</span>
+    }
+
+    public CustomerDTO getCustomerById(Integer customerId) {
+<span class="nc" id="L152">        Customer customer = customerRepository.findByCustomerId(customerId).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Customer not found with id: &quot; + customerId));</span>
+<span class="nc" id="L153">        CustomerDTO dto = modelMapper.map(customer, CustomerDTO.class);</span>
+<span class="nc bnc" id="L154" title="All 2 branches missed.">        dto.setCountryName(customer.getCountry() != null ? customer.getCountry().getCountryName() : &quot;Unknown&quot;);</span>
+<span class="nc bnc" id="L155" title="All 2 branches missed.">        dto.setCityName(customer.getCity() != null ? customer.getCity().getCityName() : &quot;Unknown&quot;);</span>
+<span class="nc bnc" id="L156" title="All 2 branches missed.">        dto.setSalesRepresentativeName(customer.getSalesRepresentative() != null ? customer.getSalesRepresentative().getFullName() : &quot;Unknown&quot;);</span>
+<span class="nc" id="L157">        return dto;</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;CustomerNamesDtos&gt; getAllCustomersNameAndId() {
+<span class="nc" id="L162">        return customerRepository.findAllBy();</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Map&lt;String, Object&gt; getAllCustomers(Pageable pageable, String searchField, String searchKeyword) {
+        Page&lt;Customer&gt; customers;
+
+<span class="nc bnc" id="L169" title="All 8 branches missed.">        if (searchField != null &amp;&amp; searchKeyword != null &amp;&amp; !searchKeyword.trim().isEmpty() &amp;&amp; !searchField.trim().isEmpty()) {</span>
+<span class="nc" id="L170">            Specification&lt;Customer&gt; spec = buildCustomerSpecification(searchField, searchKeyword);</span>
+<span class="nc" id="L171">            customers = customerRepository.findAll(spec, pageable);</span>
+<span class="nc" id="L172">        } else {</span>
+<span class="nc" id="L173">            customers = customerRepository.findAll(pageable);</span>
+        }
+
+<span class="nc" id="L176">        List&lt;CustomerDTO&gt; customerDTOList = customers.getContent().stream().map(this::mapToCustomerDTO).collect(Collectors.toList());</span>
+
+<span class="nc" id="L178">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L179">        response.put(&quot;result&quot;, customerDTOList);</span>
+<span class="nc" id="L180">        response.put(&quot;currentPage&quot;, pageable.getPageNumber() + 1);</span>
+<span class="nc" id="L181">        response.put(&quot;pageSize&quot;, pageable.getPageSize());</span>
+<span class="nc" id="L182">        response.put(&quot;totalItems&quot;, customers.getTotalElements());</span>
+<span class="nc" id="L183">        response.put(&quot;totalPages&quot;, customers.getTotalPages());</span>
+
+<span class="nc" id="L185">        return response;</span>
+    }
+
+    private Specification&lt;Customer&gt; buildCustomerSpecification(String searchField, String searchKeyword) {
+<span class="nc" id="L189">        return (root, query, criteriaBuilder) -&gt; {</span>
+<span class="nc" id="L190">            Predicate predicate = null;</span>
+<span class="nc" id="L191">            String lowerSearchKeyword = &quot;%&quot; + searchKeyword.toLowerCase() + &quot;%&quot;;</span>
+<span class="nc bnc" id="L192" title="All 2 branches missed.">            if (&quot;countryName&quot;.equalsIgnoreCase(searchField)) {</span>
+<span class="nc" id="L193">                Join&lt;Customer, CountryMaster&gt; countryJoin = root.join(&quot;country&quot;, JoinType.LEFT);</span>
+<span class="nc" id="L194">                predicate = criteriaBuilder.like(criteriaBuilder.lower(countryJoin.get(&quot;countryName&quot;)), lowerSearchKeyword);</span>
+<span class="nc bnc" id="L195" title="All 2 branches missed.">            } else if (&quot;cityName&quot;.equalsIgnoreCase(searchField)) {</span>
+<span class="nc" id="L196">                Join&lt;Customer, CityMaster&gt; cityJoin = root.join(&quot;city&quot;, JoinType.LEFT);</span>
+<span class="nc" id="L197">                predicate = criteriaBuilder.like(criteriaBuilder.lower(cityJoin.get(&quot;cityName&quot;)), lowerSearchKeyword);</span>
+<span class="nc bnc" id="L198" title="All 2 branches missed.">            } else if (&quot;stateName&quot;.equalsIgnoreCase(searchField)) {</span>
+<span class="nc" id="L199">                Join&lt;Customer, StateMaster&gt; stateJoin = root.join(&quot;state&quot;, JoinType.LEFT);</span>
+<span class="nc" id="L200">                predicate = criteriaBuilder.like(criteriaBuilder.lower(stateJoin.get(&quot;stateName&quot;)), lowerSearchKeyword);</span>
+<span class="nc bnc" id="L201" title="All 2 branches missed.">            } else if (&quot;salesRepresentativeName&quot;.equalsIgnoreCase(searchField)) {</span>
+<span class="nc" id="L202">                Join&lt;Customer, Employee&gt; employeeJoin = root.join(&quot;salesRepresentative&quot;, JoinType.LEFT);</span>
+<span class="nc" id="L203">                Predicate firstNamePredicate = criteriaBuilder.like(criteriaBuilder.lower(employeeJoin.get(&quot;firstName&quot;)), lowerSearchKeyword);</span>
+<span class="nc" id="L204">                Predicate lastNamePredicate = criteriaBuilder.like(criteriaBuilder.lower(employeeJoin.get(&quot;lastName&quot;)), lowerSearchKeyword);</span>
+<span class="nc" id="L205">                predicate = criteriaBuilder.or(firstNamePredicate, lastNamePredicate);</span>
+<span class="nc bnc" id="L206" title="All 4 branches missed.">            } else if (&quot;effectiveStartDate&quot;.equalsIgnoreCase(searchField) || &quot;effectiveEndDate&quot;.equalsIgnoreCase(searchField)) {</span>
+<span class="nc" id="L207">                Expression&lt;String&gt; formattedDate = criteriaBuilder.function(&quot;DATE_FORMAT&quot;, String.class, root.get(searchField), criteriaBuilder.literal(&quot;%Y-%m-%d&quot;));</span>
+<span class="nc" id="L208">                predicate = criteriaBuilder.like(criteriaBuilder.lower(formattedDate), lowerSearchKeyword);</span>
+<span class="nc" id="L209">            } else {</span>
+                try {
+<span class="nc" id="L211">                    predicate = criteriaBuilder.like(criteriaBuilder.lower(root.get(searchField).as(String.class)), lowerSearchKeyword);</span>
+<span class="nc" id="L212">                } catch (IllegalArgumentException e) {</span>
+<span class="nc" id="L213">                    System.err.println(&quot;Search field '&quot; + searchField + &quot;' not found or not suitable for LIKE operation. Error: &quot; + e.getMessage());</span>
+<span class="nc" id="L214">                    predicate = criteriaBuilder.conjunction();</span>
+<span class="nc" id="L215">                }</span>
+            }
+<span class="nc" id="L217">            return predicate;</span>
+        };
+    }
+    private CustomerDTO mapToCustomerDTO(Customer customer) {
+<span class="nc" id="L221">        CustomerDTO dto = modelMapper.map(customer, CustomerDTO.class);</span>
+<span class="nc" id="L222">        dto.setPrimaryCurrency(lookupCodeRepository.findByLookupCodes(dto.getPrimaryCurrency()));</span>
+<span class="nc bnc" id="L223" title="All 2 branches missed.">        dto.setCountryName(customer.getCountry() != null ? customer.getCountry().getCountryName() : &quot;Unknown&quot;);</span>
+<span class="nc bnc" id="L224" title="All 2 branches missed.">        dto.setStateName(customer.getState() != null ? customer.getState().getStateName() : &quot;Unknown&quot;);</span>
+<span class="nc bnc" id="L225" title="All 2 branches missed.">        dto.setCityName(customer.getCity() != null ? customer.getCity().getCityName() : &quot;Unknown&quot;);</span>
+<span class="nc bnc" id="L226" title="All 2 branches missed.">        dto.setSalesRepresentativeName(customer.getSalesRepresentative() != null ? customer.getSalesRepresentative().getFullName() : &quot;Unknown&quot;);</span>
+
+<span class="nc" id="L228">        return dto;</span>
+    }
+
+    public CustomerSite findCustomerSiteBySiteId(Integer siteId) {
+<span class="nc" id="L232">        return customerSiteRepo.findById(siteId).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Customer site not found with ID &quot; + siteId));</span>
+    }
+
+    //create customer account and site
+    public CustomerAccountDTO saveOrUpdateCustomerAccount(CustomerAccountDTO dto) {
+<span class="nc" id="L237">        UserLoginDetail user = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L238">        String name = String.valueOf(user.getUsername());</span>
+<span class="nc bnc" id="L239" title="All 4 branches missed.">        if (dto.getAccountName() == null || dto.getAccountName().trim().isEmpty()) {</span>
+<span class="nc" id="L240">            throw new IllegalArgumentException(&quot;Account name cannot be empty&quot;);</span>
+        }
+        // Validate duplicate account name
+<span class="nc" id="L243">        validateDuplicateAccountName(dto.getAccountName(), dto.getAccountId());</span>
+        CustomerAccount customer;
+<span class="nc bnc" id="L245" title="All 2 branches missed.">        if (dto.getAccountId() != null) {</span>
+            // Update existing
+<span class="nc" id="L247">            customer = customerAccountRepository.findById(dto.getAccountId()).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Customer Account not found with ID &quot; + dto.getAccountId()));</span>
+        } else {
+            // Create new
+<span class="nc" id="L250">            customer = new CustomerAccount();</span>
+<span class="nc" id="L251">            customer.setCreatedDate(Instant.now());</span>
+<span class="nc" id="L252">            customer.setCreatedBy(name);</span>
+        }
+<span class="nc" id="L254">        modelMapper.map(dto, customer);</span>
+<span class="nc bnc" id="L255" title="All 4 branches missed.">        if (dto.getAccountCode() == null || dto.getAccountCode().isEmpty()) {</span>
+<span class="nc" id="L256">            customer.setAccountCode(sequenceGeneratorService.generateSequence(SequenceType.CUSTOMER_ACCOUNT.toString(), null));</span>
+        }
+<span class="nc" id="L258">        customer.setLastUpdatedDate(Instant.now());</span>
+<span class="nc" id="L259">        customer.setLastUpdatedBy(name);</span>
+<span class="nc" id="L260">        CustomerAccount savedCustomer = customerAccountRepository.save(customer);</span>
+<span class="nc" id="L261">        return modelMapper.map(savedCustomer, CustomerAccountDTO.class);</span>
+    }
+
+    private void validateDuplicateAccountName(String accountName, Integer currentId) {
+<span class="nc" id="L265">        String normalizedInput = accountName.trim().replaceAll(&quot;\\s+&quot;, &quot; &quot;).toLowerCase();</span>
+
+<span class="nc" id="L267">        List&lt;CustomerAccount&gt; accounts = customerAccountRepository.findAll();</span>
+
+<span class="nc" id="L269">        boolean exists = accounts.stream()</span>
+<span class="nc bnc" id="L270" title="All 4 branches missed.">                .filter(acc -&gt; currentId == null || !acc.getAccountId().equals(currentId)) // Skip current on update</span>
+<span class="nc" id="L271">                .map(acc -&gt; acc.getAccountName().trim().replaceAll(&quot;\\s+&quot;, &quot; &quot;).toLowerCase())</span>
+<span class="nc" id="L272">                .anyMatch(normalized -&gt; normalized.equals(normalizedInput));</span>
+<span class="nc bnc" id="L273" title="All 2 branches missed.">        if (exists) {</span>
+<span class="nc" id="L274">            throw new IllegalArgumentException(&quot;Duplicate account name&quot;);</span>
+        }
+<span class="nc" id="L276">    }</span>
+
+    public CustomerAccountDTO getCustomerByAccountId(Integer accountId) {
+<span class="nc" id="L279">        CustomerAccount customer = customerAccountRepository.findByAccountId(accountId).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Customer not found with id: &quot; + accountId));</span>
+<span class="nc" id="L280">        return modelMapper.map(customer, CustomerAccountDTO.class);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Map&lt;String, Object&gt; getAllCustomerAccount(Pageable pageable, String searchField, String searchKeyword) {
+        Page&lt;CustomerAccount&gt; customers;
+
+<span class="nc bnc" id="L287" title="All 8 branches missed.">        if (searchField != null &amp;&amp; searchKeyword != null &amp;&amp; !searchKeyword.trim().isEmpty() &amp;&amp; !searchField.trim().isEmpty()) {</span>
+<span class="nc" id="L288">            Specification&lt;CustomerAccount&gt; spec = buildCustomerAccountSpecification(searchField, searchKeyword);</span>
+<span class="nc" id="L289">            customers = customerAccountRepository.findAll(spec, pageable);</span>
+<span class="nc" id="L290">        } else {</span>
+<span class="nc" id="L291">            customers = customerAccountRepository.findAll(pageable);</span>
+        }
+
+<span class="nc" id="L294">        List&lt;CustomerAccountDTO&gt; customerDTOList = customers.getContent().stream().map(this::mapToCustomerAccountDTOs).collect(Collectors.toList());</span>
+
+<span class="nc" id="L296">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L297">        response.put(&quot;result&quot;, customerDTOList);</span>
+<span class="nc" id="L298">        response.put(&quot;currentPage&quot;, pageable.getPageNumber() + 1);</span>
+<span class="nc" id="L299">        response.put(&quot;pageSize&quot;, pageable.getPageSize());</span>
+<span class="nc" id="L300">        response.put(&quot;totalItems&quot;, customers.getTotalElements());</span>
+<span class="nc" id="L301">        response.put(&quot;totalPages&quot;, customers.getTotalPages());</span>
+
+<span class="nc" id="L303">        return response;</span>
+    }
+
+    private Specification&lt;CustomerAccount&gt; buildCustomerAccountSpecification(String searchField, String searchKeyword) {
+<span class="nc" id="L307">        return (root, query, criteriaBuilder) -&gt; {</span>
+<span class="nc" id="L308">            Predicate predicate = null;</span>
+<span class="nc" id="L309">            String lowerSearchKeyword = &quot;%&quot; + searchKeyword.toLowerCase() + &quot;%&quot;;</span>
+
+<span class="nc bnc" id="L311" title="All 2 branches missed.">            if (&quot;countryName&quot;.equalsIgnoreCase(searchField)) {</span>
+<span class="nc" id="L312">                Join&lt;CustomerAccount, CountryMaster&gt; countryJoin = root.join(&quot;country&quot;, JoinType.LEFT);</span>
+<span class="nc" id="L313">                predicate = criteriaBuilder.like(criteriaBuilder.lower(countryJoin.get(&quot;countryName&quot;)), lowerSearchKeyword);</span>
+<span class="nc bnc" id="L314" title="All 2 branches missed.">            } else if (&quot;cityName&quot;.equalsIgnoreCase(searchField)) {</span>
+<span class="nc" id="L315">                Join&lt;CustomerAccount, CityMaster&gt; cityJoin = root.join(&quot;city&quot;, JoinType.LEFT);</span>
+<span class="nc" id="L316">                predicate = criteriaBuilder.like(criteriaBuilder.lower(cityJoin.get(&quot;cityName&quot;)), lowerSearchKeyword);</span>
+<span class="nc bnc" id="L317" title="All 2 branches missed.">            } else if (&quot;stateName&quot;.equalsIgnoreCase(searchField)) {</span>
+<span class="nc" id="L318">                Join&lt;CustomerAccount, StateMaster&gt; cityJoin = root.join(&quot;state&quot;, JoinType.LEFT);</span>
+<span class="nc" id="L319">                predicate = criteriaBuilder.like(criteriaBuilder.lower(cityJoin.get(&quot;stateName&quot;)), lowerSearchKeyword);</span>
+<span class="nc bnc" id="L320" title="All 2 branches missed.">            } else if (&quot;customerName&quot;.equalsIgnoreCase(searchField)) {</span>
+<span class="nc" id="L321">                Join&lt;CustomerAccount, Customer&gt; customerJoin = root.join(&quot;customer&quot;, JoinType.LEFT);</span>
+<span class="nc" id="L322">                predicate = criteriaBuilder.like(criteriaBuilder.lower(customerJoin.get(&quot;customerName&quot;)), lowerSearchKeyword);</span>
+<span class="nc bnc" id="L323" title="All 4 branches missed.">            }  else if (&quot;startDate&quot;.equalsIgnoreCase(searchField) || &quot;endDate&quot;.equalsIgnoreCase(searchField)) {</span>
+<span class="nc" id="L324">                Expression&lt;String&gt; formattedDate = criteriaBuilder.function(&quot;DATE_FORMAT&quot;, String.class, root.get(searchField), criteriaBuilder.literal(&quot;%Y-%m-%d&quot;));</span>
+<span class="nc" id="L325">                predicate = criteriaBuilder.like(criteriaBuilder.lower(formattedDate), lowerSearchKeyword);</span>
+<span class="nc" id="L326">            }else {</span>
+                try {
+<span class="nc" id="L328">                    predicate = criteriaBuilder.like(criteriaBuilder.lower(root.get(searchField)), lowerSearchKeyword);</span>
+<span class="nc" id="L329">                } catch (IllegalArgumentException e) {</span>
+<span class="nc" id="L330">                    System.err.println(&quot;Search field '&quot; + searchField + &quot;' not found or not a string for LIKE operation. Error: &quot; + e.getMessage());</span>
+<span class="nc" id="L331">                    predicate = criteriaBuilder.conjunction();</span>
+<span class="nc" id="L332">                }</span>
+            }
+<span class="nc" id="L334">            return predicate;</span>
+        };
+    }
+    private CustomerAccountDTO mapToCustomerAccountDTOs(CustomerAccount customer) {
+<span class="nc" id="L338">        CustomerAccountDTO dto = modelMapper.map(customer, CustomerAccountDTO.class);</span>
+<span class="nc" id="L339">        dto.setPaymentType(lookupCodeRepository.findByLookupCodeId(Integer.valueOf(dto.getPaymentType())).orElse(&quot;Unknown Activity&quot;));</span>
+<span class="nc bnc" id="L340" title="All 2 branches missed.">        dto.setCountryName(customer.getCountry() != null ? customer.getCountry().getCountryName() : &quot;Unknown&quot;);</span>
+<span class="nc bnc" id="L341" title="All 2 branches missed.">        dto.setCustomerName(customer.getCustomer() != null ? customer.getCustomer().getCustomerName() : &quot;Unknown&quot;);</span>
+<span class="nc bnc" id="L342" title="All 2 branches missed.">        dto.setStateName(customer.getState() != null ? customer.getState().getStateName() : &quot;Unknown&quot;);</span>
+<span class="nc bnc" id="L343" title="All 2 branches missed.">        dto.setCityName(customer.getCity() != null ? customer.getCity().getCityName() : &quot;Unknown&quot;);</span>
+<span class="nc" id="L344">        return dto;</span>
+    }
+
+    public List&lt;CustomerSiteDTO&gt; saveOrUpdateCustomerSites(List&lt;CustomerSiteDTO&gt; dtos) {
+<span class="nc" id="L348">        UserLoginDetail user = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L349">        String username = String.valueOf(user.getUsername());</span>
+<span class="nc" id="L350">        List&lt;CustomerSiteDTO&gt; responseList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L351" title="All 2 branches missed.">        for (CustomerSiteDTO dto : dtos) {</span>
+<span class="nc bnc" id="L352" title="All 4 branches missed.">            if (dto.getSiteName() == null || dto.getSiteName().trim().isEmpty()) {</span>
+<span class="nc" id="L353">                throw new IllegalArgumentException(&quot;Site name cannot be empty&quot;);</span>
+            }
+            // Optional: Add duplicate check if needed
+<span class="nc" id="L356">            validateDuplicateSiteName(dto.getSiteName(), dto.getSiteId());</span>
+            CustomerSite site;
+<span class="nc bnc" id="L358" title="All 2 branches missed.">            if (dto.getSiteId() != null) {</span>
+                // Update
+<span class="nc" id="L360">                site = customerSiteRepo.findById(dto.getSiteId())</span>
+<span class="nc" id="L361">                        .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Customer Site not found with ID &quot; + dto.getSiteId()));</span>
+            } else {
+                // New
+<span class="nc" id="L364">                site = new CustomerSite();</span>
+<span class="nc" id="L365">                site.setCreatedDate(Instant.now());</span>
+<span class="nc" id="L366">                site.setCreatedBy(username);</span>
+            }
+<span class="nc" id="L368">            modelMapper.map(dto, site);</span>
+<span class="nc bnc" id="L369" title="All 4 branches missed.">            if (dto.getSiteCode() == null || dto.getSiteCode().isEmpty()) {</span>
+<span class="nc" id="L370">                site.setSiteCode(sequenceGeneratorService.generateSequence(SequenceType.CUSTOMER_SITE.toString(), null));</span>
+            }
+<span class="nc" id="L372">            site.setLastUpdatedDate(Instant.now());</span>
+<span class="nc" id="L373">            site.setLastUpdatedBy(username);</span>
+<span class="nc" id="L374">            CustomerSite saved = customerSiteRepo.save(site);</span>
+<span class="nc" id="L375">            responseList.add(modelMapper.map(saved, CustomerSiteDTO.class));</span>
+<span class="nc" id="L376">        }</span>
+<span class="nc" id="L377">        return responseList;</span>
+    }
+
+    private void validateDuplicateSiteName(String siteName, Integer currentId) {
+<span class="nc" id="L381">        String normalizedInput = siteName.trim().replaceAll(&quot;\\s+&quot;, &quot; &quot;).toLowerCase();</span>
+
+<span class="nc" id="L383">        List&lt;CustomerSite&gt; accounts = customerSiteRepo.findAll();</span>
+
+<span class="nc" id="L385">        boolean exists = accounts.stream()</span>
+<span class="nc bnc" id="L386" title="All 4 branches missed.">                .filter(acc -&gt; currentId == null || !acc.getSiteId().equals(currentId)) // Skip current on update</span>
+<span class="nc" id="L387">                .map(acc -&gt; acc.getSiteName().trim().replaceAll(&quot;\\s+&quot;, &quot; &quot;).toLowerCase())</span>
+<span class="nc" id="L388">                .anyMatch(normalized -&gt; normalized.equals(normalizedInput));</span>
+<span class="nc bnc" id="L389" title="All 2 branches missed.">        if (exists) {</span>
+<span class="nc" id="L390">            throw new IllegalArgumentException(&quot;Duplicate site name&quot;);</span>
+        }
+<span class="nc" id="L392">    }</span>
+
+    @Transactional(readOnly = true)
+    public Map&lt;String, Object&gt; getAllCustomerSites(Pageable pageable, String searchField, String searchKeyword) {
+        Page&lt;CustomerSite&gt; sites;
+
+<span class="nc bnc" id="L398" title="All 8 branches missed.">        if (searchField != null &amp;&amp; searchKeyword != null &amp;&amp; !searchKeyword.trim().isEmpty() &amp;&amp; !searchField.trim().isEmpty()) {</span>
+<span class="nc" id="L399">            Specification&lt;CustomerSite&gt; spec = buildCustomerSitespecification(searchField, searchKeyword);</span>
+<span class="nc" id="L400">            sites = customerSiteRepo.findAll(spec, pageable);</span>
+<span class="nc" id="L401">        } else {</span>
+<span class="nc" id="L402">            sites = customerSiteRepo.findAll(pageable);</span>
+        }
+
+<span class="nc" id="L405">        List&lt;CustomerSiteDTO&gt; customerDTOList = sites.getContent().stream().map(this::mapToCustomerSitesDTOs).collect(Collectors.toList());</span>
+
+<span class="nc" id="L407">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L408">        response.put(&quot;result&quot;, customerDTOList);</span>
+<span class="nc" id="L409">        response.put(&quot;currentPage&quot;, pageable.getPageNumber() + 1);</span>
+<span class="nc" id="L410">        response.put(&quot;pageSize&quot;, pageable.getPageSize());</span>
+<span class="nc" id="L411">        response.put(&quot;totalItems&quot;, sites.getTotalElements());</span>
+<span class="nc" id="L412">        response.put(&quot;totalPages&quot;, sites.getTotalPages());</span>
+
+<span class="nc" id="L414">        return response;</span>
+    }
+
+    private Specification&lt;CustomerSite&gt; buildCustomerSitespecification(String searchField, String searchKeyword) {
+<span class="nc" id="L418">        return (root, query, criteriaBuilder) -&gt; {</span>
+<span class="nc" id="L419">            Predicate predicate = null;</span>
+<span class="nc" id="L420">            String lowerSearchKeyword = &quot;%&quot; + searchKeyword.toLowerCase() + &quot;%&quot;;</span>
+
+<span class="nc bnc" id="L422" title="All 2 branches missed.">            if (&quot;countryName&quot;.equalsIgnoreCase(searchField)) {</span>
+<span class="nc" id="L423">                Join&lt;CustomerSite, CountryMaster&gt; countryJoin = root.join(&quot;country&quot;, JoinType.LEFT);</span>
+<span class="nc" id="L424">                predicate = criteriaBuilder.like(criteriaBuilder.lower(countryJoin.get(&quot;countryName&quot;)), lowerSearchKeyword);</span>
+<span class="nc bnc" id="L425" title="All 2 branches missed.">            } else if (&quot;cityName&quot;.equalsIgnoreCase(searchField)) {</span>
+<span class="nc" id="L426">                Join&lt;CustomerSite, CityMaster&gt; cityJoin = root.join(&quot;city&quot;, JoinType.LEFT);</span>
+<span class="nc" id="L427">                predicate = criteriaBuilder.like(criteriaBuilder.lower(cityJoin.get(&quot;cityName&quot;)), lowerSearchKeyword);</span>
+<span class="nc bnc" id="L428" title="All 2 branches missed.">            } else if (&quot;stateName&quot;.equalsIgnoreCase(searchField)) {</span>
+<span class="nc" id="L429">                Join&lt;CustomerSite, StateMaster&gt; cityJoin = root.join(&quot;state&quot;, JoinType.LEFT);</span>
+<span class="nc" id="L430">                predicate = criteriaBuilder.like(criteriaBuilder.lower(cityJoin.get(&quot;stateName&quot;)), lowerSearchKeyword);</span>
+<span class="nc bnc" id="L431" title="All 2 branches missed.">            } else if (&quot;accountName&quot;.equalsIgnoreCase(searchField)) {</span>
+<span class="nc" id="L432">                Join&lt;CustomerSite, CustomerAccount&gt; customerJoin = root.join(&quot;customerAccount&quot;, JoinType.LEFT);</span>
+<span class="nc" id="L433">                predicate = criteriaBuilder.like(criteriaBuilder.lower(customerJoin.get(&quot;accountName&quot;)), lowerSearchKeyword);</span>
+<span class="nc bnc" id="L434" title="All 4 branches missed.">            }  else if (&quot;startDate&quot;.equalsIgnoreCase(searchField) || &quot;endDate&quot;.equalsIgnoreCase(searchField)) {</span>
+<span class="nc" id="L435">                Expression&lt;String&gt; formattedDate = criteriaBuilder.function(&quot;DATE_FORMAT&quot;, String.class, root.get(searchField), criteriaBuilder.literal(&quot;%Y-%m-%d&quot;));</span>
+<span class="nc" id="L436">                predicate = criteriaBuilder.like(criteriaBuilder.lower(formattedDate), lowerSearchKeyword);</span>
+<span class="nc" id="L437">            }else {</span>
+                try {
+<span class="nc" id="L439">                    predicate = criteriaBuilder.like(criteriaBuilder.lower(root.get(searchField)), lowerSearchKeyword);</span>
+<span class="nc" id="L440">                } catch (IllegalArgumentException e) {</span>
+<span class="nc" id="L441">                    System.err.println(&quot;Search field '&quot; + searchField + &quot;' not found or not a string for LIKE operation. Error: &quot; + e.getMessage());</span>
+<span class="nc" id="L442">                    predicate = criteriaBuilder.conjunction();</span>
+<span class="nc" id="L443">                }</span>
+            }
+<span class="nc" id="L445">            return predicate;</span>
+        };
+    }
+
+    private CustomerSiteDTO mapToCustomerSitesDTOs(CustomerSite customer) {
+<span class="nc" id="L450">        CustomerSiteDTO dto = modelMapper.map(customer, CustomerSiteDTO.class);</span>
+<span class="nc" id="L451">        dto.setCurrency(lookupCodeRepository.findByLookupCodeId(Integer.valueOf(dto.getCurrency())).orElse(&quot;Unknown Activity&quot;));</span>
+<span class="nc bnc" id="L452" title="All 2 branches missed.">        dto.setCountryName(customer.getCountry() != null ? customer.getCountry().getCountryName() : &quot;Unknown&quot;);</span>
+<span class="nc bnc" id="L453" title="All 2 branches missed.">        dto.setAccountName(customer.getCustomerAccount() != null ? customer.getCustomerAccount().getAccountName() : &quot;Unknown&quot;);</span>
+<span class="nc bnc" id="L454" title="All 2 branches missed.">        dto.setStateName(customer.getState() != null ? customer.getState().getStateName() : &quot;Unknown&quot;);</span>
+<span class="nc bnc" id="L455" title="All 2 branches missed.">        dto.setCityName(customer.getCity() != null ? customer.getCity().getCityName() : &quot;Unknown&quot;);</span>
+<span class="nc" id="L456">        return dto;</span>
+    }
+
+    public CustomerSiteDTO getCustomerBySiteId(Integer siteId) {
+<span class="nc" id="L460">        CustomerSite customerSite = customerSiteRepo.findBySiteId(siteId).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Customer site not found with id: &quot; + siteId));</span>
+<span class="nc" id="L461">        return modelMapper.map(customerSite, CustomerSiteDTO.class);</span>
+    }
+    public List&lt;CustomerSiteDTO&gt; getCustomersAccountId(Integer accountId) {
+<span class="nc" id="L464">        List&lt;CustomerSite&gt; customerSites = customerSiteRepo.findCustomersByAccountId(accountId);</span>
+<span class="nc bnc" id="L465" title="All 2 branches missed.">        if (customerSites.isEmpty()) {</span>
+<span class="nc" id="L466">            throw new EntityNotFoundException(&quot;Customer not found with id: &quot; + accountId);</span>
+        }
+<span class="nc" id="L468">        return customerSites.stream().map(customer -&gt; {</span>
+<span class="nc" id="L469">            CustomerSiteDTO dto = modelMapper.map(customer, CustomerSiteDTO.class);</span>
+<span class="nc bnc" id="L470" title="All 2 branches missed.">            dto.setCountryName(customer.getCountry() != null ? customer.getCountry().getCountryName() : &quot;Unknown&quot;);</span>
+<span class="nc bnc" id="L471" title="All 2 branches missed.">            dto.setStateName(customer.getState() != null ? customer.getState().getStateName() : &quot;Unknown&quot;);</span>
+<span class="nc bnc" id="L472" title="All 2 branches missed.">            dto.setCityName(customer.getCity() != null ? customer.getCity().getCityName() : &quot;Unknown&quot;);</span>
+<span class="nc bnc" id="L473" title="All 2 branches missed.">            dto.setAccountName(customer.getCustomerAccount() != null ? customer.getCustomerAccount().getAccountName() : &quot;Unknown&quot;);</span>
+<span class="nc" id="L474">            return dto;</span>
+<span class="nc" id="L475">        }).collect(Collectors.toList());</span>
+    }
+    public Map&lt;String, Object&gt; findCustomerDataByProjectId(Integer projectId) {
+<span class="nc" id="L478">        Integer siteId = projectRepository.findById(projectId).map(Project::getSiteId)</span>
+<span class="nc" id="L479">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Project with id &quot; + projectId + &quot; not found.&quot;));</span>
+<span class="nc" id="L480">        CustomerSite site = customerSiteRepo.findById(siteId).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Customer Site not found for id &quot; + siteId));</span>
+<span class="nc" id="L481">        CustomerAccount customerAccount = customerAccountRepository.findById(site.getAccountId())</span>
+<span class="nc" id="L482">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Customer Account not found for id &quot; + site.getAccountId()));</span>
+<span class="nc" id="L483">        Customer customer = customerRepository.findById(customerAccount.getCustomerId())</span>
+<span class="nc" id="L484">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Customer not found for id &quot; + customerAccount.getCustomerId()));</span>
+<span class="nc" id="L485">        Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L486">        result.put(&quot;siteCode&quot;, site.getSiteCode());</span>
+<span class="nc" id="L487">        result.put(&quot;customerName&quot;, customer.getCustomerName());</span>
+<span class="nc" id="L488">        result.put(&quot;customerDescription&quot;, customer.getCustomerDescription());</span>
+<span class="nc" id="L489">        return result;</span>
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; getCustomerDropdownList() {
+<span class="nc" id="L493">        return customerRepository.findAll()</span>
+<span class="nc" id="L494">                .stream()</span>
+<span class="nc" id="L495">                .filter(customer -&gt; &quot;Y&quot;.equals(customer.getIsActive()))</span>
+<span class="nc" id="L496">                .map(customer -&gt; {</span>
+<span class="nc" id="L497">                    Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L498">                    result.put(&quot;customerId&quot;, customer.getCustomerId());</span>
+<span class="nc" id="L499">                    result.put(&quot;customerName&quot;, customer.getCustomerName());</span>
+<span class="nc" id="L500">                    return result;</span>
+<span class="nc" id="L501">                }).collect(Collectors.toList());</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Map&lt;String, Object&gt; getAccountsByCustomerId(Integer customerId, Pageable pageable, String searchColumn, String searchValue) {
+<span class="nc" id="L506">        Specification&lt;CustomerAccount&gt; spec = (root, query, cb) -&gt; cb.equal(root.get(&quot;customer&quot;).get(&quot;customerId&quot;), customerId);</span>
+<span class="nc bnc" id="L507" title="All 8 branches missed.">        if (searchColumn != null &amp;&amp; searchValue != null &amp;&amp; !searchValue.trim().isEmpty() &amp;&amp; !searchColumn.trim().isEmpty()) {</span>
+<span class="nc" id="L508">            spec = spec.and(buildCustomerAccountSpecifications(searchColumn, searchValue));</span>
+        }
+<span class="nc" id="L510">        Page&lt;CustomerAccount&gt; pageResult = customerAccountRepository.findAll(spec, pageable);</span>
+<span class="nc bnc" id="L511" title="All 4 branches missed.">        if (pageResult.isEmpty() &amp;&amp; pageable.getPageNumber() == 0) {</span>
+<span class="nc" id="L512">            throw new EntityNotFoundException(&quot;Customer accounts not found for customer id: &quot; + customerId);</span>
+        }
+<span class="nc" id="L514">        List&lt;CustomerAccountDTO&gt; customerAccountDTOs = pageResult.getContent().stream().map(this::mapToCustomerAccountDTO).collect(Collectors.toList());</span>
+
+<span class="nc" id="L516">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L517">        response.put(&quot;result&quot;, customerAccountDTOs);</span>
+<span class="nc" id="L518">        response.put(&quot;currentPage&quot;, pageable.getPageNumber() + 1);</span>
+<span class="nc" id="L519">        response.put(&quot;pageSize&quot;, pageable.getPageSize());</span>
+<span class="nc" id="L520">        response.put(&quot;totalItems&quot;, pageResult.getTotalElements());</span>
+<span class="nc" id="L521">        response.put(&quot;totalPages&quot;, pageResult.getTotalPages());</span>
+
+<span class="nc" id="L523">        return response;</span>
+    }
+
+    private Specification&lt;CustomerAccount&gt; buildCustomerAccountSpecifications(String searchField, String searchKeyword) {
+<span class="nc" id="L527">        return (root, query, criteriaBuilder) -&gt; {</span>
+            Predicate predicate;
+<span class="nc" id="L529">            String keyword = &quot;%&quot; + searchKeyword.toLowerCase() + &quot;%&quot;;</span>
+<span class="nc bnc" id="L530" title="All 8 branches missed.">            switch (searchField.toLowerCase()) {</span>
+                case &quot;countryname&quot;:
+<span class="nc" id="L532">                    return criteriaBuilder.like(criteriaBuilder.lower(root.join(&quot;country&quot;, JoinType.LEFT).get(&quot;countryName&quot;)), keyword);</span>
+                case &quot;statename&quot;:
+<span class="nc" id="L534">                    return criteriaBuilder.like(criteriaBuilder.lower(root.join(&quot;state&quot;, JoinType.LEFT).get(&quot;stateName&quot;)), keyword);</span>
+                case &quot;cityname&quot;:
+<span class="nc" id="L536">                    return criteriaBuilder.like(criteriaBuilder.lower(root.join(&quot;city&quot;, JoinType.LEFT).get(&quot;cityName&quot;)), keyword);</span>
+                case &quot;customername&quot;:
+<span class="nc" id="L538">                    return criteriaBuilder.like(criteriaBuilder.lower(root.join(&quot;customer&quot;, JoinType.LEFT).get(&quot;customerName&quot;)), keyword);</span>
+                case &quot;accountname&quot;:
+<span class="nc" id="L540">                    return criteriaBuilder.like(criteriaBuilder.lower(root.get(&quot;accountName&quot;)), keyword);</span>
+                case &quot;accountnumber&quot;:
+<span class="nc" id="L542">                    return criteriaBuilder.like(criteriaBuilder.lower(root.get(&quot;accountNumber&quot;)), keyword);</span>
+                case &quot;startdate&quot;:
+                case &quot;enddate&quot;:
+<span class="nc" id="L545">                    Expression&lt;String&gt; formattedDate = criteriaBuilder.function(&quot;DATE_FORMAT&quot;, String.class, root.get(searchField),</span>
+<span class="nc" id="L546">                            criteriaBuilder.literal(&quot;%Y-%m-%d&quot;));</span>
+<span class="nc" id="L547">                    return criteriaBuilder.like(criteriaBuilder.lower(formattedDate), keyword);</span>
+                default:
+                    try {
+<span class="nc" id="L550">                        return criteriaBuilder.like(criteriaBuilder.lower(root.get(searchField)), keyword);</span>
+<span class="nc" id="L551">                    } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L552">                        System.err.println(&quot;Invalid search field for CustomerAccount: &quot; + searchField + &quot; - &quot; + ex.getMessage());</span>
+<span class="nc" id="L553">                        return criteriaBuilder.conjunction();</span>
+                    }
+            }
+        };
+    }
+    private CustomerAccountDTO mapToCustomerAccountDTO(CustomerAccount customerAccount) {
+<span class="nc" id="L559">        CustomerAccountDTO dto = modelMapper.map(customerAccount, CustomerAccountDTO.class);</span>
+<span class="nc" id="L560">        dto.setPaymentType(lookupCodeRepository.findByLookupCodeId(Integer.valueOf(dto.getPaymentType())).orElse(&quot;Unknown Activity&quot;));</span>
+<span class="nc bnc" id="L561" title="All 2 branches missed.">        dto.setCountryName(customerAccount.getCountry() != null ? customerAccount.getCountry().getCountryName() : &quot;Unknown&quot;);</span>
+<span class="nc bnc" id="L562" title="All 2 branches missed.">        dto.setStateName(customerAccount.getState() != null ? customerAccount.getState().getStateName() : &quot;Unknown&quot;);</span>
+<span class="nc bnc" id="L563" title="All 2 branches missed.">        dto.setCityName(customerAccount.getCity() != null ? customerAccount.getCity().getCityName() : &quot;Unknown&quot;);</span>
+<span class="nc bnc" id="L564" title="All 2 branches missed.">        dto.setCustomerName(customerAccount.getCustomer() != null ? customerAccount.getCustomer().getCustomerName() : &quot;Unknown&quot;);</span>
+
+
+<span class="nc" id="L567">        return dto;</span>
+    }
+    @Transactional(readOnly = true)
+    public Map&lt;String, Object&gt; getCustomersByAccountId(Integer accountId, Pageable pageable, String searchColumn, String searchValue) {
+<span class="nc" id="L571">        Specification&lt;CustomerSite&gt; spec = (root, query, cb) -&gt; cb.equal(root.get(&quot;customerAccount&quot;).get(&quot;accountId&quot;), accountId);</span>
+
+<span class="nc bnc" id="L573" title="All 8 branches missed.">        if (searchColumn != null &amp;&amp; searchValue != null &amp;&amp; !searchValue.trim().isEmpty() &amp;&amp; !searchColumn.trim().isEmpty()) {</span>
+<span class="nc" id="L574">            spec = spec.and(buildCustomerSitespecifications(searchColumn, searchValue));</span>
+        }
+
+<span class="nc" id="L577">        Page&lt;CustomerSite&gt; pageResult = customerSiteRepo.findAll(spec, pageable);</span>
+
+<span class="nc" id="L579">        List&lt;CustomerSiteDTO&gt; customerDTOs = pageResult.getContent().stream()</span>
+<span class="nc" id="L580">                .map(this::mapToCustomerSitesDTOs)</span>
+<span class="nc" id="L581">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L583">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L584">        response.put(&quot;result&quot;, customerDTOs);</span>
+<span class="nc" id="L585">        response.put(&quot;currentPage&quot;, pageable.getPageNumber()+1);</span>
+<span class="nc" id="L586">        response.put(&quot;pageSize&quot;, pageable.getPageSize());</span>
+<span class="nc" id="L587">        response.put(&quot;totalItems&quot;, pageResult.getTotalElements());</span>
+<span class="nc" id="L588">        response.put(&quot;totalPages&quot;, pageResult.getTotalPages());</span>
+
+<span class="nc" id="L590">        return response;</span>
+    }
+    private Specification&lt;CustomerSite&gt; buildCustomerSitespecifications(String searchField, String searchKeyword) {
+<span class="nc" id="L593">        return (root, query, criteriaBuilder) -&gt; {</span>
+            Predicate predicate;
+<span class="nc" id="L595">            String keyword = &quot;%&quot; + searchKeyword.toLowerCase() + &quot;%&quot;;</span>
+
+<span class="nc bnc" id="L597" title="All 6 branches missed.">            switch (searchField.toLowerCase()) {</span>
+                case &quot;countryname&quot;:
+<span class="nc" id="L599">                    return criteriaBuilder.like(criteriaBuilder.lower(root.join(&quot;country&quot;, JoinType.LEFT).get(&quot;countryName&quot;)), keyword);</span>
+                case &quot;statename&quot;:
+<span class="nc" id="L601">                    return criteriaBuilder.like(criteriaBuilder.lower(root.join(&quot;state&quot;, JoinType.LEFT).get(&quot;stateName&quot;)), keyword);</span>
+                case &quot;cityname&quot;:
+<span class="nc" id="L603">                    return criteriaBuilder.like(criteriaBuilder.lower(root.join(&quot;city&quot;, JoinType.LEFT).get(&quot;cityName&quot;)), keyword);</span>
+                case &quot;accountname&quot;:
+<span class="nc" id="L605">                    return criteriaBuilder.like(criteriaBuilder.lower(root.join(&quot;customerAccount&quot;, JoinType.LEFT).get(&quot;accountName&quot;)), keyword);</span>
+                case &quot;startdate&quot;:
+                case &quot;enddate&quot;:
+<span class="nc" id="L608">                    Expression&lt;String&gt; formattedDate = criteriaBuilder.function(&quot;DATE_FORMAT&quot;, String.class, root.get(searchField),</span>
+<span class="nc" id="L609">                            criteriaBuilder.literal(&quot;%Y-%m-%d&quot;));</span>
+<span class="nc" id="L610">                    return criteriaBuilder.like(criteriaBuilder.lower(formattedDate), keyword);</span>
+                default:
+                    try {
+<span class="nc" id="L613">                        return criteriaBuilder.like(criteriaBuilder.lower(root.get(searchField)), keyword);</span>
+<span class="nc" id="L614">                    } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L615">                        System.err.println(&quot;Invalid search field: &quot; + searchField + &quot; - &quot; + ex.getMessage());</span>
+<span class="nc" id="L616">                        return criteriaBuilder.conjunction();</span>
+                    }
+            }
+        };
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

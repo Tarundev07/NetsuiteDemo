@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SupraTranslationCommonServices.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.translation</a> &gt; <span class="el_source">SupraTranslationCommonServices.java</span></div><h1>SupraTranslationCommonServices.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.translation;
+
+import com.atomicnorth.hrm.exception.BadApiRequestException;
+import com.atomicnorth.hrm.tenant.domain.translation.SupraTranslation;
+import com.atomicnorth.hrm.tenant.repository.translation.SupraTranslationRepo;
+import com.atomicnorth.hrm.tenant.service.dto.translation.TranslationDTO;
+import com.atomicnorth.hrm.tenant.service.language.SupraLanguageServices;
+import com.atomicnorth.hrm.tenant.service.translationexporter.ExportTranslatedData;
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L20">public class SupraTranslationCommonServices {</span>
+    @Autowired
+    private SupraTranslationRepo supraTranslationRepo;
+
+    @Autowired
+    private SupraLanguageServices supraLanguageServices;
+
+    @Autowired
+    private ExportTranslatedData exportTranslatedData;
+
+    @Autowired
+    private ModelMapper modelMapper;
+
+    @Transactional(rollbackFor = Exception.class)
+    public boolean saveTranslationData(Map&lt;String, String&gt; translationDataMap) {
+        try {
+<span class="nc" id="L36">            Integer[] arrayLang = supraLanguageServices.getSupraLanguageIds();</span>
+
+<span class="nc" id="L38">            List&lt;SupraTranslation&gt; translationsToSave = translationDataMap.entrySet().stream()</span>
+<span class="nc" id="L39">                    .flatMap(entry -&gt; Arrays.stream(arrayLang)</span>
+<span class="nc" id="L40">                            .map(langId -&gt; {</span>
+<span class="nc" id="L41">                                SupraTranslation translation = new SupraTranslation();</span>
+<span class="nc" id="L42">                                translation.setLanguageId(langId);</span>
+<span class="nc" id="L43">                                translation.setShortCode(entry.getKey());</span>
+<span class="nc" id="L44">                                translation.setDescription(entry.getValue());</span>
+<span class="nc" id="L45">                                translation.setStatus(&quot;A&quot;);</span>
+<span class="nc" id="L46">                                return translation;</span>
+                            }))
+<span class="nc" id="L48">                    .collect(Collectors.toList());</span>
+
+<span class="nc" id="L50">            supraTranslationRepo.saveAll(translationsToSave);</span>
+<span class="nc" id="L51">            return true;</span>
+<span class="nc" id="L52">        } catch (Exception ex) {</span>
+<span class="nc" id="L53">            return false;</span>
+        }
+    }
+
+    @Transactional
+    public List&lt;TranslationDTO&gt; getAllTranslatedData() {
+<span class="nc" id="L59">        List&lt;SupraTranslation&gt; allTranslations = supraTranslationRepo.findAll();</span>
+<span class="nc" id="L60">        List&lt;TranslationDTO&gt; dtos = allTranslations.stream()</span>
+<span class="nc bnc" id="L61" title="All 2 branches missed.">                .filter(translation -&gt; !&quot;F&quot;.equals(translation.getStatus()))</span>
+<span class="nc" id="L62">                .map(this::mapToDTO)</span>
+<span class="nc" id="L63">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L65">        exportTranslatedData.exportTranslatedData(dtos);</span>
+
+<span class="nc" id="L67">        return dtos;</span>
+    }
+
+    public TranslationDTO mapToDTO(SupraTranslation translation) {
+<span class="nc" id="L71">        TranslationDTO dto = new TranslationDTO();</span>
+<span class="nc" id="L72">        dto.setTranslationId(Long.valueOf(translation.getTranslationId()));</span>
+<span class="nc" id="L73">        dto.setLanguageId(translation.getLanguageId());</span>
+
+        // Trim and set shortCode
+<span class="nc bnc" id="L76" title="All 2 branches missed.">        if (translation.getShortCode() != null) {</span>
+<span class="nc" id="L77">            dto.setShortCode(translation.getShortCode().trim());</span>
+        }
+
+<span class="nc" id="L80">        dto.setDescription(translation.getDescription());</span>
+<span class="nc" id="L81">        dto.setStatus(translation.getStatus());</span>
+
+        // Handle nullable fields
+<span class="nc bnc" id="L84" title="All 2 branches missed.">        if (translation.getEffectiveStartDate() != null) {</span>
+<span class="nc" id="L85">            dto.setEffectiveStartDate(translation.getEffectiveStartDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());</span>
+        }
+<span class="nc bnc" id="L87" title="All 2 branches missed.">        if (translation.getEffectiveEndDate() != null) {</span>
+<span class="nc" id="L88">            dto.setEffectiveEndDate(translation.getEffectiveEndDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());</span>
+        }
+<span class="nc bnc" id="L90" title="All 2 branches missed.">        if (translation.getCreationDate() != null) {</span>
+<span class="nc" id="L91">            dto.setCreationDate(translation.getCreationDate().atZone(ZoneId.systemDefault()).toLocalDateTime());</span>
+        }
+<span class="nc bnc" id="L93" title="All 2 branches missed.">        if (translation.getLastUpdateDate() != null) {</span>
+<span class="nc" id="L94">            dto.setLastUpdateDate(translation.getLastUpdateDate().atZone(ZoneId.systemDefault()).toLocalDateTime());</span>
+        }
+
+<span class="nc" id="L97">        dto.setCreatedBy(translation.getCreatedBy());</span>
+<span class="nc" id="L98">        dto.setLastUpdatedBy(translation.getLastUpdatedBy());</span>
+<span class="nc" id="L99">        return dto;</span>
+    }
+
+    @Transactional
+    public List&lt;TranslationDTO&gt; updateTranslations(List&lt;TranslationDTO&gt; inputList) {
+<span class="nc" id="L104">        return inputList.stream()</span>
+<span class="nc bnc" id="L105" title="All 2 branches missed.">                .filter(dto -&gt; dto.getShortCode() != null &amp;&amp;</span>
+<span class="nc bnc" id="L106" title="All 2 branches missed.">                        dto.getLanguageId() != null &amp;&amp;</span>
+<span class="nc bnc" id="L107" title="All 2 branches missed.">                        dto.getDescription() != null)</span>
+<span class="nc" id="L108">                .map(this::updateSingleTranslation)</span>
+<span class="nc" id="L109">                .filter(Objects::nonNull)</span>
+<span class="nc" id="L110">                .collect(Collectors.toList());</span>
+    }
+
+    public TranslationDTO updateSingleTranslation(TranslationDTO dto) {
+        try {
+<span class="nc" id="L115">            Integer languageId = dto.getLanguageId();</span>
+<span class="nc bnc" id="L116" title="All 2 branches missed.">            if (!checkLanguageIdExistence(languageId)) {</span>
+<span class="nc" id="L117">                throw new IllegalArgumentException(&quot;Invalid language ID: &quot; + languageId);</span>
+            }
+
+<span class="nc" id="L120">            Optional&lt;SupraTranslation&gt; optionalTranslation =</span>
+<span class="nc" id="L121">                    supraTranslationRepo.findByShortCodeAndLanguageId(dto.getShortCode(), languageId);</span>
+
+<span class="nc bnc" id="L123" title="All 2 branches missed.">            if (optionalTranslation.isPresent()) {</span>
+<span class="nc" id="L124">                SupraTranslation entity = optionalTranslation.get();</span>
+<span class="nc" id="L125">                entity.setDescription(dto.getDescription());</span>
+<span class="nc" id="L126">                entity.setLastUpdatedBy(dto.getLastUpdatedBy());</span>
+<span class="nc" id="L127">                entity.setLastUpdateDate(LocalDateTime.now());</span>
+
+<span class="nc" id="L129">                SupraTranslation savedEntity = supraTranslationRepo.save(entity);</span>
+
+<span class="nc" id="L131">                return modelMapper.map(savedEntity, TranslationDTO.class);</span>
+            } else {
+<span class="nc" id="L133">                return null;</span>
+            }
+
+<span class="nc" id="L136">        } catch (Exception e) {</span>
+<span class="nc" id="L137">            throw new RuntimeException(&quot;Failed to update translation for shortcode: &quot; + dto.getShortCode(), e);</span>
+        }
+    }
+
+    public List&lt;TranslationDTO&gt; getTranslationsByShortCodes(List&lt;String&gt; shortCodes) {
+<span class="nc bnc" id="L142" title="All 4 branches missed.">        if (shortCodes == null || shortCodes.isEmpty()) {</span>
+<span class="nc" id="L143">            throw new BadApiRequestException(&quot;Shortcodes list cannot be null or empty.&quot;);</span>
+        }
+
+<span class="nc" id="L146">        Integer[] languageIds = supraLanguageServices.getSupraLanguageIds();</span>
+
+        try {
+<span class="nc" id="L149">            List&lt;SupraTranslation&gt; translations = supraTranslationRepo</span>
+<span class="nc" id="L150">                    .findAllByShortCodeInAndLanguageIdIn(shortCodes, Arrays.asList(languageIds));</span>
+
+<span class="nc bnc" id="L152" title="All 4 branches missed.">            if (translations == null || translations.isEmpty()) {</span>
+<span class="nc" id="L153">                throw new BadApiRequestException(&quot;No translation records found for shortcodes: &quot; + shortCodes);</span>
+            }
+
+<span class="nc" id="L156">            return translations.stream()</span>
+<span class="nc" id="L157">                    .map(this::mapToDTO)</span>
+<span class="nc" id="L158">                    .collect(Collectors.toList());</span>
+
+<span class="nc" id="L160">        } catch (Exception ex) {</span>
+<span class="nc" id="L161">            throw new BadApiRequestException(&quot;An error occurred while fetching translations for shortcodes: &quot; + shortCodes, ex);</span>
+        }
+    }
+
+    public List&lt;TranslationDTO&gt; getTranslationsByShortCodesAndLanguageId(List&lt;String&gt; shortCodes, Integer languageId) {
+<span class="nc" id="L166">        List&lt;TranslationDTO&gt; translationDTOs = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L167">        boolean dataFound = false;</span>
+
+        try {
+<span class="nc bnc" id="L170" title="All 2 branches missed.">            for (String shortCode : shortCodes) {</span>
+<span class="nc" id="L171">                Optional&lt;SupraTranslation&gt; optionalTranslation = supraTranslationRepo.findByShortCodeAndLanguageId(shortCode, languageId);</span>
+<span class="nc bnc" id="L172" title="All 2 branches missed.">                if (optionalTranslation.isPresent()) {</span>
+<span class="nc" id="L173">                    SupraTranslation translation = optionalTranslation.get();</span>
+<span class="nc" id="L174">                    translationDTOs.add(mapToDTO(translation));</span>
+<span class="nc" id="L175">                    dataFound = true;</span>
+<span class="nc" id="L176">                } else {</span>
+<span class="nc" id="L177">                    throw new IllegalArgumentException(&quot;Translation not found for shortcode: &quot; + shortCode);</span>
+                }
+<span class="nc" id="L179">            }</span>
+
+<span class="nc bnc" id="L181" title="All 2 branches missed.">            if (!dataFound) {</span>
+<span class="nc" id="L182">                throw new IllegalArgumentException(&quot;No data available for any shortcode&quot;);</span>
+            }
+<span class="nc" id="L184">        } catch (Exception ex) {</span>
+<span class="nc" id="L185">            throw new BadApiRequestException(&quot;An error occurred while fetching translations&quot;, ex);</span>
+<span class="nc" id="L186">        }</span>
+
+<span class="nc" id="L188">        return translationDTOs;</span>
+    }
+
+    private boolean checkLanguageIdExistence(Integer languageId) {
+<span class="nc" id="L192">        Integer[] availableLanguageIds = supraLanguageServices.getSupraLanguageIds();</span>
+<span class="nc bnc" id="L193" title="All 2 branches missed.">        for (Integer id : availableLanguageIds) {</span>
+<span class="nc bnc" id="L194" title="All 2 branches missed.">            if (id.equals(languageId)) {</span>
+<span class="nc" id="L195">                return true;</span>
+            }
+        }
+<span class="nc" id="L198">        return false;</span>
+    }
+
+    public String getDescription(Integer languageId, String shortCode) {
+<span class="nc" id="L202">        Optional&lt;SupraTranslation&gt; translation = supraTranslationRepo.findByLanguageIdAndShortCode(languageId, shortCode);</span>
+<span class="nc" id="L203">        return translation.map(SupraTranslation::getDescription).orElse(&quot;Description not available&quot;);</span>
+    }
+
+    public Map&lt;String, String&gt; getAllDescriptions(int languageId) {
+<span class="nc" id="L207">        List&lt;SupraTranslation&gt; translations = supraTranslationRepo.findByLanguageId(languageId);</span>
+
+<span class="nc" id="L209">        return translations.stream()</span>
+<span class="nc bnc" id="L210" title="All 4 branches missed.">                .filter(translation -&gt; translation.getShortCode() != null &amp;&amp; translation.getDescription() != null) // Ensure no null keys or values</span>
+<span class="nc" id="L211">                .collect(Collectors.toMap(</span>
+                        SupraTranslation::getShortCode,
+                        SupraTranslation::getDescription,
+<span class="nc" id="L214">                        (existing, replacement) -&gt; existing</span>
+                ));
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

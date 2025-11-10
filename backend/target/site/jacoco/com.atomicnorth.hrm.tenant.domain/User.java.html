@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>User.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.domain</a> &gt; <span class="el_source">User.java</span></div><h1>User.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.domain;
+
+import com.atomicnorth.hrm.tenant.domain.accessgroup.UserAssociation;
+import com.atomicnorth.hrm.tenant.domain.roles.Role;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import org.hibernate.annotations.BatchSize;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+
+import javax.persistence.*;
+import java.io.Serializable;
+import java.time.Instant;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+@Entity
+<span class="nc" id="L23">@AllArgsConstructor</span>
+<span class="nc bnc" id="L24" title="All 238 branches missed.">@Data</span>
+@NamedEntityGraph(name = &quot;userAssociate&quot;, attributeNodes = {@NamedAttributeNode(&quot;associations&quot;), @NamedAttributeNode(&quot;authorities&quot;)})
+@Table(name = &quot;ses_m04_user&quot;)
+@Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
+public class User extends AbstractAuditingEntity&lt;Long&gt; implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    @Id
+    @Column(name = &quot;USER_ID&quot;)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<span class="nc" id="L34">    private Long id;</span>
+
+    @Column(name = &quot;PASSWORD&quot;, nullable = false, length = 100)
+<span class="nc" id="L37">    private String password;</span>
+
+    @Column(name = &quot;EMAIL&quot;, length = 100)
+<span class="nc" id="L40">    private String email;</span>
+
+    @Column(name = &quot;ACTIVATED&quot;)
+<span class="nc" id="L43">    private Boolean activated;</span>
+
+    @Column(name = &quot;RESET_KEY&quot;, length = 20)
+<span class="nc" id="L46">    private String resetKey;</span>
+
+    @Column(name = &quot;RESET_DATE&quot;)
+<span class="nc" id="L49">    private Instant resetDate;</span>
+
+    @Column(name = &quot;IS_ACTIVE&quot;, length = 1)
+<span class="nc" id="L52">    private String isActive;</span>
+
+    @Column(name = &quot;END_DATE&quot;)
+    @Temporal(TemporalType.DATE)
+<span class="nc" id="L56">    private Date endDate;</span>
+
+    @Column(name = &quot;START_DATE&quot;)
+    @Temporal(TemporalType.DATE)
+<span class="nc" id="L60">    private Date startDate;</span>
+
+    @Column(name = &quot;DISPLAY_NAME&quot;, length = 50)
+<span class="nc" id="L63">    private String displayName;</span>
+
+    @Column(name = &quot;MOBILE_NO&quot;, length = 50)
+<span class="nc" id="L66">    private String mobileNo;</span>
+
+    @Column(name = &quot;IS_LOCKED&quot;, length = 50)
+<span class="nc" id="L69">    private String isLocked;</span>
+
+    @Column(name = &quot;AUTH_TYPE&quot;, length = 50)
+<span class="nc" id="L72">    private String authType;</span>
+
+    @Column(name = &quot;MOBILE_COUNTRY_CODE&quot;, length = 10)
+<span class="nc" id="L75">    private String mobileCountryCode;</span>
+
+    @Column(name = &quot;IS_EMAIL_VERIFIED&quot;, length = 10)
+<span class="nc" id="L78">    private String isEmailVerified;</span>
+
+    @Column(name = &quot;EMAIL_TOKEN&quot;, length = 50)
+<span class="nc" id="L81">    private String emailToken;</span>
+
+    @Column(name = &quot;EMAIL_TOKEN_GENERATED_DATE&quot;)
+    @Temporal(TemporalType.TIMESTAMP)
+<span class="nc" id="L85">    private Date emailTokenGeneratedDate;</span>
+
+    @Column(name = &quot;CONSECUTIVE_INVALID_ATTEMPT&quot;)
+<span class="nc" id="L88">    private Integer consecutiveInvalidAttempt;</span>
+
+    @Column(name = &quot;LOCKED_DATE&quot;)
+    @Temporal(TemporalType.TIMESTAMP)
+<span class="nc" id="L92">    private Date lockedDate;</span>
+
+    @Column(name = &quot;PASSWORD_GENERATED_DATE&quot;)
+    @Temporal(TemporalType.TIMESTAMP)
+<span class="nc" id="L96">    private Date passwordGeneratedDate;</span>
+
+    @Column(name = &quot;PASSWORD_STRENGTH&quot;)
+<span class="nc" id="L99">    private Integer passwordStrength;</span>
+
+    @Column(name = &quot;RESET_TOKEN&quot;, length = 250)
+<span class="nc" id="L102">    private String resetToken;</span>
+
+    @Column(name = &quot;RESET_TOKEN_EXPIRES_DATE&quot;)
+    @Temporal(TemporalType.TIMESTAMP)
+<span class="nc" id="L106">    private Date resetTokenExpiresDate;</span>
+
+    @Column(name = &quot;PASSWORD_RESET_DATE&quot;)
+    @Temporal(TemporalType.TIMESTAMP)
+<span class="nc" id="L110">    private Date passwordResetDate;</span>
+
+    @Column(name = &quot;SSO_USER_UNIQUE_KEY&quot;, length = 50, unique = true)
+<span class="nc" id="L113">    private String keycloakId;</span>
+
+    @Column(name = &quot;SSO_USER_ACTIVATION&quot;, length = 50, unique = true)
+<span class="nc" id="L116">    private String keycloakUserActivation;</span>
+
+
+    @JsonManagedReference
+    @OneToMany(targetEntity = UserAssociation.class, mappedBy = &quot;userMasterTest&quot;, cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+<span class="nc" id="L121">    private List&lt;UserAssociation&gt; associations;</span>
+
+<span class="nc" id="L123">    @JsonIgnore</span>
+    @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JoinTable(
+            name = &quot;ses_m00_user_roles&quot;,
+            joinColumns = {@JoinColumn(name = &quot;USER_ID&quot;, referencedColumnName = &quot;USER_ID&quot;)},
+            inverseJoinColumns = {@JoinColumn(name = &quot;ROLE_ID&quot;, referencedColumnName = &quot;ROLE_ID&quot;)}
+    )
+    @Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
+    @BatchSize(size = 20)
+<span class="nc" id="L132">    private Set&lt;Role&gt; authorities = new HashSet&lt;&gt;();</span>
+
+    @Transient
+    @JsonProperty(&quot;roles&quot;)
+<span class="nc" id="L136">    private Set&lt;Integer&gt; roles;</span>
+
+<span class="nc" id="L138">    public User() {</span>
+<span class="nc" id="L139">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

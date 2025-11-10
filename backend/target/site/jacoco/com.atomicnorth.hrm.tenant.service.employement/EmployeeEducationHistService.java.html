@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmployeeEducationHistService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.employement</a> &gt; <span class="el_source">EmployeeEducationHistService.java</span></div><h1>EmployeeEducationHistService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.employement;
+
+import com.atomicnorth.hrm.tenant.domain.employement.EmployeeEducationHistory;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.employement.EmployeeEducationHistoryRepository;
+import com.atomicnorth.hrm.tenant.service.dto.EmployeeEducationHistoryDTO;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L18">public class EmployeeEducationHistService {</span>
+
+    @Autowired
+    private EmployeeEducationHistoryRepository employeeEducationHistoryRepository;
+
+    public List&lt;EmployeeEducationHistoryDTO&gt; saveOrUpdate(List&lt;EmployeeEducationHistoryDTO&gt; employeeEducationHistoryDTOs) {
+<span class="nc" id="L24">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L25">        List&lt;EmployeeEducationHistoryDTO&gt; updatedDTOs = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L27" title="All 2 branches missed.">        for (EmployeeEducationHistoryDTO dto : employeeEducationHistoryDTOs) {</span>
+<span class="nc bnc" id="L28" title="All 2 branches missed.">            EmployeeEducationHistory employeeEducationHistory = dto.getEmpEducationId() != null</span>
+<span class="nc" id="L29">                    ? employeeEducationHistoryRepository.findById(dto.getEmpEducationId()).orElse(new EmployeeEducationHistory())</span>
+<span class="nc" id="L30">                    : new EmployeeEducationHistory();</span>
+
+<span class="nc" id="L32">            mapToEntity(dto, employeeEducationHistory);</span>
+
+<span class="nc bnc" id="L34" title="All 2 branches missed.">            if (employeeEducationHistory.getEmpEducationId() == null) {</span>
+<span class="nc" id="L35">                employeeEducationHistory.setCreatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L36">                employeeEducationHistory.setCreatedDate(Instant.now());</span>
+            }
+<span class="nc" id="L38">            employeeEducationHistory.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L39">            employeeEducationHistory.setLastUpdatedDate(Instant.now());</span>
+
+<span class="nc" id="L41">            EmployeeEducationHistory savedEntity = employeeEducationHistoryRepository.save(employeeEducationHistory);</span>
+
+<span class="nc" id="L43">            dto.setEmpEducationId(savedEntity.getEmpEducationId());</span>
+<span class="nc" id="L44">            updatedDTOs.add(dto);</span>
+<span class="nc" id="L45">        }</span>
+
+<span class="nc" id="L47">        return updatedDTOs;</span>
+    }
+
+    private void mapToEntity(EmployeeEducationHistoryDTO dto, EmployeeEducationHistory entity) {
+<span class="nc" id="L51">        entity.setEmpEducationId(dto.getEmpEducationId());</span>
+<span class="nc" id="L52">        entity.setUserName(dto.getUsername());</span>
+<span class="nc" id="L53">        entity.setQualification(dto.getQualification());</span>
+<span class="nc" id="L54">        entity.setSchoolOrCollegeName(dto.getSchoolOrCollegeName());</span>
+<span class="nc" id="L55">        entity.setBoardOrUniversity(dto.getBoardOrUniversity());</span>
+<span class="nc" id="L56">        entity.setStreamOrDegree(dto.getStreamOrDegree());</span>
+<span class="nc" id="L57">        entity.setAcademicStatus(dto.getAcademicStatus());</span>
+<span class="nc" id="L58">        entity.setYearOfCompletion(dto.getYearOfCompletion());</span>
+<span class="nc" id="L59">        entity.setScoreOrCgpa(dto.getScoreOrCgpa());</span>
+<span class="nc" id="L60">        entity.setStartDate(dto.getStartDate());</span>
+<span class="nc" id="L61">        entity.setEndDate(dto.getEndDate());</span>
+<span class="nc" id="L62">        entity.setIsActive(dto.getIsActive());</span>
+<span class="nc" id="L63">    }</span>
+
+    public List&lt;EmployeeEducationHistoryDTO&gt; getEducationByUsername(Integer userId) {
+<span class="nc" id="L66">        List&lt;EmployeeEducationHistory&gt; educationHistories = employeeEducationHistoryRepository.findByUserName(userId);</span>
+
+<span class="nc" id="L68">        return educationHistories.stream()</span>
+<span class="nc" id="L69">                .map(this::convertToDTO)</span>
+<span class="nc" id="L70">                .collect(Collectors.toList());</span>
+    }
+
+    public EmployeeEducationHistoryDTO getEducationById(Integer empEducationId) {
+<span class="nc" id="L74">        Optional&lt;EmployeeEducationHistory&gt; educationHistory = employeeEducationHistoryRepository.findById(empEducationId);</span>
+
+<span class="nc" id="L76">        return educationHistory.map(this::convertToDTO).orElse(null);</span>
+    }
+
+    public void deactivateEducation(Integer empEducationId) {
+<span class="nc" id="L80">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L81">        Optional&lt;EmployeeEducationHistory&gt; educationHistory = employeeEducationHistoryRepository.findById(empEducationId);</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">        if (educationHistory.isPresent()) {</span>
+<span class="nc" id="L83">            EmployeeEducationHistory history = educationHistory.get();</span>
+<span class="nc" id="L84">            history.setIsActive(false);</span>
+<span class="nc" id="L85">            history.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L86">            history.setLastUpdatedDate(Instant.now());</span>
+<span class="nc" id="L87">            employeeEducationHistoryRepository.save(history);</span>
+<span class="nc" id="L88">        } else {</span>
+<span class="nc" id="L89">            throw new RuntimeException(&quot;Education record not found for ID: &quot; + empEducationId);</span>
+        }
+<span class="nc" id="L91">    }</span>
+
+    private EmployeeEducationHistoryDTO convertToDTO(EmployeeEducationHistory entity) {
+<span class="nc" id="L94">        EmployeeEducationHistoryDTO dto = new EmployeeEducationHistoryDTO();</span>
+
+<span class="nc" id="L96">        dto.setEmpEducationId(entity.getEmpEducationId());</span>
+<span class="nc" id="L97">        dto.setUsername(entity.getUserName());</span>
+<span class="nc" id="L98">        dto.setQualification(entity.getQualification());</span>
+<span class="nc" id="L99">        dto.setSchoolOrCollegeName(entity.getSchoolOrCollegeName());</span>
+<span class="nc" id="L100">        dto.setBoardOrUniversity(entity.getBoardOrUniversity());</span>
+<span class="nc" id="L101">        dto.setStreamOrDegree(entity.getStreamOrDegree());</span>
+<span class="nc" id="L102">        dto.setAcademicStatus(entity.getAcademicStatus());</span>
+<span class="nc" id="L103">        dto.setYearOfCompletion(entity.getYearOfCompletion());</span>
+<span class="nc" id="L104">        dto.setScoreOrCgpa(entity.getScoreOrCgpa());</span>
+<span class="nc" id="L105">        dto.setStartDate(entity.getStartDate());</span>
+<span class="nc" id="L106">        dto.setEndDate(entity.getEndDate());</span>
+<span class="nc" id="L107">        dto.setIsActive(entity.getIsActive());</span>
+
+<span class="nc" id="L109">        return dto;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

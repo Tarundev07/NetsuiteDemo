@@ -1,0 +1,17 @@
+backend/.idea/
+backend/target/
+frontend/target/
+frontend/node_modules/
+backend/uploads
+backend/bin
+backend/assets
+backend/src/main/resources/config
+azure-pipeline-dev.yml
+azure-pipelines.yml
+azure-pipeline-dev
+azure-pipelines-1
+azure-pipelines-2
+azure-pipelines-3
+azure-pipelines-4
+azure-pipelines-5
+backend/src/main/java/com/atomicnorth/hrm/configuration/multitenant/MultiTenantDataSourceLookup.java

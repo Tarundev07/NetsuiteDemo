@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OldApiResponseBuilder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.util</a> &gt; <span class="el_source">OldApiResponseBuilder.java</span></div><h1>OldApiResponseBuilder.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.util;
+
+import java.util.List;
+
+<span class="nc" id="L5">public class OldApiResponseBuilder {</span>
+
+    public static &lt;T&gt; OldApiResponseMessageBuilder&lt;T&gt; buildSuccessResponse(String responseCode, List&lt;T&gt; data, String responseMessageType) {
+<span class="nc" id="L8">        return OldApiResponseMessageBuilder.&lt;T&gt;builder()</span>
+<span class="nc" id="L9">                .error(false)  // Use `error` instead of `isError`</span>
+<span class="nc" id="L10">                .responseCode(responseCode)</span>
+<span class="nc" id="L11">                .tokens(List.of())  // Empty tokens by default</span>
+<span class="nc" id="L12">                .data(data)</span>
+<span class="nc" id="L13">                .errors(List.of())  // Empty errors by default</span>
+<span class="nc" id="L14">                .exceptions(List.of())  // Empty exceptions by default</span>
+<span class="nc" id="L15">                .responseMessageType(responseMessageType)</span>
+<span class="nc" id="L16">                .build();</span>
+    }
+
+    public static OldApiResponseMessageBuilder&lt;?&gt; buildFailureResponse(String responseCode, List&lt;String&gt; errors, List&lt;String&gt; exceptions, String responseMessageType) {
+<span class="nc" id="L20">        return OldApiResponseMessageBuilder.builder()</span>
+<span class="nc" id="L21">                .error(true)  // Use `error` instead of `isError`</span>
+<span class="nc" id="L22">                .responseCode(responseCode)</span>
+<span class="nc" id="L23">                .tokens(List.of())  // Empty tokens by default</span>
+<span class="nc" id="L24">                .data(null)  // No data in error responses</span>
+<span class="nc" id="L25">                .errors(errors)</span>
+<span class="nc" id="L26">                .exceptions(exceptions)</span>
+<span class="nc" id="L27">                .responseMessageType(responseMessageType)</span>
+<span class="nc" id="L28">                .build();</span>
+    }
+
+    public static OldApiResponseMessageBuilder&lt;?&gt; buildErrorResponse(Exception ex) {
+<span class="nc" id="L32">        return OldApiResponseMessageBuilder.builder()</span>
+<span class="nc" id="L33">                .error(true)  // Use `error` instead of `isError`</span>
+<span class="nc" id="L34">                .responseCode(&quot;INTERNAL_SERVER_ERROR&quot;)</span>
+<span class="nc" id="L35">                .tokens(List.of())</span>
+<span class="nc" id="L36">                .data(null)</span>
+<span class="nc" id="L37">                .errors(List.of(ex.getMessage()))</span>
+<span class="nc" id="L38">                .exceptions(List.of(ex.getClass().getSimpleName()))</span>
+<span class="nc" id="L39">                .responseMessageType(&quot;ERROR&quot;)</span>
+<span class="nc" id="L40">                .build();</span>
+    }
+
+    /*-----*/
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>StaffPlanService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.jobOpening</a> &gt; <span class="el_source">StaffPlanService.java</span></div><h1>StaffPlanService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.jobOpening;
+
+import com.atomicnorth.hrm.tenant.domain.jobOpening.JobRequisition;
+import com.atomicnorth.hrm.tenant.domain.jobOpening.StaffPlan;
+import com.atomicnorth.hrm.tenant.domain.jobOpening.StaffPlanDetails;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.jobOpening.JobRequisitionRepository;
+import com.atomicnorth.hrm.tenant.repository.jobOpening.StaffPlanDetailsRepository;
+import com.atomicnorth.hrm.tenant.repository.jobOpening.StaffPlanRepository;
+import com.atomicnorth.hrm.tenant.service.dto.jobOpening.StaffPlanDTO;
+import com.atomicnorth.hrm.tenant.service.dto.jobOpening.StaffPlanDetailsDTO;
+import com.atomicnorth.hrm.util.Enum.Active;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+import javax.persistence.TypedQuery;
+import javax.transaction.Transactional;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L28">@RequiredArgsConstructor</span>
+public class StaffPlanService {
+
+    private final StaffPlanRepository staffPlanRepository;
+    private final StaffPlanDetailsRepository staffPlanDetailsRepository;
+    private final JobRequisitionRepository jobRequisitionRepository;
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    @Transactional
+    public StaffPlanDTO createUpdateStaffPlan(StaffPlanDTO staffPlanDTO) {
+<span class="nc" id="L39">        StaffPlan staffPlan = mapToEntity(staffPlanDTO);</span>
+<span class="nc" id="L40">        StaffPlan saveStaffPlan = staffPlanRepository.save(staffPlan);</span>
+
+<span class="nc" id="L42">        return mapToDTO(saveStaffPlan);</span>
+    }
+
+    @Transactional
+    public Map&lt;String, Object&gt; findAllStaffPlan(Pageable pageable, String searchColumn, String searchValue) {
+        Page&lt;StaffPlan&gt; staffPlans;
+<span class="nc bnc" id="L48" title="All 4 branches missed.">        if (searchColumn != null &amp;&amp; searchValue != null) {</span>
+<span class="nc" id="L49">            staffPlans = searchByColumn(searchColumn, searchValue, pageable);</span>
+        } else {
+<span class="nc" id="L51">            staffPlans = staffPlanRepository.findAll(pageable);</span>
+        }
+<span class="nc" id="L53">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L54">        response.put(&quot;result&quot;, staffPlans.getContent());</span>
+<span class="nc" id="L55">        response.put(&quot;currentPage&quot;, pageable.getPageNumber() + 1);</span>
+<span class="nc" id="L56">        response.put(&quot;pageSize&quot;, pageable.getPageSize());</span>
+<span class="nc" id="L57">        response.put(&quot;totalItems&quot;, staffPlans.getTotalElements());</span>
+<span class="nc" id="L58">        response.put(&quot;totalPages&quot;, staffPlans.getTotalPages());</span>
+<span class="nc" id="L59">        return response;</span>
+    }
+
+    public Page&lt;StaffPlan&gt; searchByColumn(String column, String value, Pageable pageable) {
+<span class="nc" id="L63">        String baseQuery = &quot;FROM StaffPlan l WHERE LOWER(l.&quot; + column + &quot;) LIKE LOWER(:value)&quot;;</span>
+<span class="nc" id="L64">        String orderByClause = &quot;&quot;;</span>
+<span class="nc bnc" id="L65" title="All 2 branches missed.">        if (pageable.getSort().isSorted()) {</span>
+<span class="nc" id="L66">            orderByClause = &quot; ORDER BY &quot; + pageable.getSort().stream()</span>
+<span class="nc" id="L67">                    .map(order -&gt; &quot;l.&quot; + order.getProperty() + &quot; &quot; + order.getDirection().name())</span>
+<span class="nc" id="L68">                    .collect(Collectors.joining(&quot;, &quot;));</span>
+        }
+
+<span class="nc" id="L71">        String queryString = &quot;SELECT l &quot; + baseQuery + orderByClause;</span>
+<span class="nc" id="L72">        String countQueryString = &quot;SELECT COUNT(l) &quot; + baseQuery;</span>
+<span class="nc" id="L73">        TypedQuery&lt;StaffPlan&gt; query = entityManager.createQuery(queryString, StaffPlan.class);</span>
+<span class="nc" id="L74">        TypedQuery&lt;Long&gt; countQuery = entityManager.createQuery(countQueryString, Long.class);</span>
+<span class="nc" id="L75">        query.setParameter(&quot;value&quot;, &quot;%&quot; + value + &quot;%&quot;);</span>
+<span class="nc" id="L76">        countQuery.setParameter(&quot;value&quot;, &quot;%&quot; + value + &quot;%&quot;);</span>
+<span class="nc" id="L77">        query.setFirstResult((int) pageable.getOffset());</span>
+<span class="nc" id="L78">        query.setMaxResults(pageable.getPageSize());</span>
+<span class="nc" id="L79">        List&lt;StaffPlan&gt; resultList = query.getResultList();</span>
+<span class="nc" id="L80">        Long totalCount = countQuery.getSingleResult();</span>
+
+<span class="nc" id="L82">        return new PageImpl&lt;&gt;(resultList, pageable, totalCount);</span>
+    }
+
+    @Transactional
+    public Optional&lt;StaffPlanDTO&gt; getStaffPlanById(Long id) {
+<span class="nc" id="L87">        return staffPlanRepository.findById(id).map(this::mapToDTO);</span>
+    }
+
+    private StaffPlan mapToEntity(StaffPlanDTO dto) {
+<span class="nc" id="L91">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+
+<span class="nc" id="L93">        StaffPlan staffPlan = staffPlanRepository.findById(dto.getId()).orElseGet(StaffPlan::new);</span>
+
+<span class="nc" id="L95">        staffPlan.setId(dto.getId());</span>
+<span class="nc bnc" id="L96" title="All 2 branches missed.">        staffPlan.setStaffName(dto.getStaffName() != null ? dto.getStaffName() : staffPlan.getStaffName());</span>
+//        staffPlan.setDepartmentId(dto.getDepartmentId() != null ? dto.getDepartmentId() : staffPlan.getDepartmentId());
+<span class="nc bnc" id="L98" title="All 2 branches missed.">        staffPlan.setIsActive(dto.getIsActive() != null ? Active.valueOf(dto.getIsActive()) : staffPlan.getIsActive());</span>
+<span class="nc bnc" id="L99" title="All 2 branches missed.">        staffPlan.setEffectiveStartDate(dto.getEffectiveStartDate() != null ? dto.getEffectiveStartDate() : staffPlan.getEffectiveStartDate());</span>
+<span class="nc bnc" id="L100" title="All 2 branches missed.">        staffPlan.setEffectiveEndDate(dto.getEffectiveEndDate() != null ? dto.getEffectiveEndDate() : staffPlan.getEffectiveEndDate());</span>
+<span class="nc bnc" id="L101" title="All 2 branches missed.">        staffPlan.setCreatedBy(dto.getCreatedBy() != null ? dto.getCreatedBy() : String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc bnc" id="L102" title="All 2 branches missed.">        staffPlan.setCreatedDate(dto.getCreatedDate() != null ? dto.getCreatedDate() : new Date().toInstant());</span>
+<span class="nc" id="L103">        staffPlan.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L104">        staffPlan.setLastUpdatedDate(new Date().toInstant());</span>
+
+<span class="nc bnc" id="L106" title="All 2 branches missed.">        if (dto.getStaffPlanDetails() != null) {</span>
+<span class="nc" id="L107">            staffPlan.setStaffPlanDetails(</span>
+<span class="nc" id="L108">                    dto.getStaffPlanDetails().stream()</span>
+<span class="nc" id="L109">                            .map(this::mapStaffPlanDetailsToEntity)</span>
+<span class="nc" id="L110">                            .peek(staffDetails -&gt; staffDetails.setStaffPlanId(staffPlan))</span>
+<span class="nc" id="L111">                            .collect(Collectors.toList())</span>
+            );
+        }
+
+<span class="nc" id="L115">        return staffPlan;</span>
+    }
+
+    private StaffPlanDTO mapToDTO(StaffPlan staffPlan) {
+
+<span class="nc" id="L120">        StaffPlanDTO dto = new StaffPlanDTO();</span>
+<span class="nc" id="L121">        dto.setId(staffPlan.getId());</span>
+<span class="nc" id="L122">        dto.setStaffName(staffPlan.getStaffName());</span>
+//        dto.setDepartmentId(staffPlan.getDepartmentId());
+<span class="nc" id="L124">        dto.setIsActive(String.valueOf(staffPlan.getIsActive()));</span>
+<span class="nc" id="L125">        dto.setEffectiveStartDate(staffPlan.getEffectiveStartDate());</span>
+<span class="nc" id="L126">        dto.setEffectiveEndDate(staffPlan.getEffectiveEndDate());</span>
+<span class="nc" id="L127">        dto.setCreatedBy(staffPlan.getCreatedBy());</span>
+<span class="nc" id="L128">        dto.setCreatedDate(staffPlan.getCreatedDate());</span>
+<span class="nc" id="L129">        dto.setLastUpdatedBy(staffPlan.getLastUpdatedBy());</span>
+<span class="nc" id="L130">        dto.setLastUpdatedDate(staffPlan.getLastUpdatedDate());</span>
+
+<span class="nc bnc" id="L132" title="All 2 branches missed.">        if (staffPlan.getStaffPlanDetails() != null) {</span>
+<span class="nc" id="L133">            dto.setStaffPlanDetails(</span>
+<span class="nc" id="L134">                    staffPlan.getStaffPlanDetails().stream()</span>
+<span class="nc" id="L135">                            .map(this::mapStaffPlanDetailsToDTO)</span>
+<span class="nc" id="L136">                            .collect(Collectors.toList())</span>
+            );
+        }
+
+<span class="nc" id="L140">        return dto;</span>
+    }
+
+    private StaffPlanDetails mapStaffPlanDetailsToEntity(StaffPlanDetailsDTO dto) {
+<span class="nc" id="L144">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="nc bnc" id="L145" title="All 2 branches missed.">        StaffPlanDetails staffPlanDetails = dto.getStaffPlanDetailsId() != null</span>
+<span class="nc" id="L146">                ? staffPlanDetailsRepository.findById(dto.getStaffPlanDetailsId()).orElse(new StaffPlanDetails())</span>
+<span class="nc" id="L147">                : new StaffPlanDetails();</span>
+
+<span class="nc" id="L149">        staffPlanDetails.setId(dto.getStaffPlanDetailsId());</span>
+<span class="nc" id="L150">        staffPlanDetails.setDesignationId(dto.getDesignationId());</span>
+<span class="nc" id="L151">        staffPlanDetails.setDepartmentId(dto.getDepartmentId());</span>
+<span class="nc" id="L152">        staffPlanDetails.setRequiredVacancies(dto.getRequiredVacancies());</span>
+<span class="nc" id="L153">        staffPlanDetails.setEstimateCost(dto.getEstimateCost());</span>
+<span class="nc" id="L154">        staffPlanDetails.setJobRequisitionId(dto.getJobRequisitionId());</span>
+<span class="nc bnc" id="L155" title="All 2 branches missed.">        staffPlanDetails.setCreatedBy(dto.getCreatedBy() != null ? dto.getCreatedBy() : String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc bnc" id="L156" title="All 2 branches missed.">        staffPlanDetails.setCreatedDate(dto.getCreatedDate() != null ? dto.getCreatedDate() : new Date().toInstant());</span>
+<span class="nc" id="L157">        staffPlanDetails.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L158">        staffPlanDetails.setLastUpdatedDate(new Date().toInstant());</span>
+<span class="nc" id="L159">        staffPlanDetails.setIsActive(Active.valueOf(dto.getIsActive()));</span>
+
+<span class="nc" id="L161">        return staffPlanDetails;</span>
+    }
+
+    private StaffPlanDetailsDTO mapStaffPlanDetailsToDTO(StaffPlanDetails staffPlanDetails) {
+
+<span class="nc" id="L166">        StaffPlanDetailsDTO dto = new StaffPlanDetailsDTO();</span>
+<span class="nc" id="L167">        dto.setStaffPlanDetailsId(staffPlanDetails.getId());</span>
+<span class="nc" id="L168">        dto.setDesignationId(staffPlanDetails.getDesignationId());</span>
+<span class="nc" id="L169">        dto.setDepartmentId(staffPlanDetails.getDepartmentId());</span>
+<span class="nc" id="L170">        dto.setRequiredVacancies(staffPlanDetails.getRequiredVacancies());</span>
+<span class="nc" id="L171">        dto.setEstimateCost(staffPlanDetails.getEstimateCost());</span>
+<span class="nc" id="L172">        dto.setJobRequisitionId(staffPlanDetails.getJobRequisitionId());</span>
+<span class="nc" id="L173">        String jobRequisitionName = jobRequisitionRepository.findById(staffPlanDetails.getJobRequisitionId())</span>
+<span class="nc" id="L174">                .map(JobRequisition::getJobTitle)</span>
+<span class="nc" id="L175">                .orElse(null);</span>
+
+<span class="nc" id="L177">        dto.setJobRequisitionName(jobRequisitionName);</span>
+<span class="nc" id="L178">        dto.setCreatedBy(staffPlanDetails.getCreatedBy());</span>
+<span class="nc" id="L179">        dto.setCreatedDate(staffPlanDetails.getCreatedDate());</span>
+<span class="nc" id="L180">        dto.setLastUpdatedBy(staffPlanDetails.getLastUpdatedBy());</span>
+<span class="nc" id="L181">        dto.setLastUpdatedDate(staffPlanDetails.getLastUpdatedDate());</span>
+<span class="nc" id="L182">        dto.setIsActive(String.valueOf(staffPlanDetails.getIsActive()));</span>
+
+<span class="nc" id="L184">        return dto;</span>
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; getStaffPlanByDesignationId(int id) {
+<span class="nc" id="L188">        List&lt;Object[]&gt; planByDesignation = staffPlanDetailsRepository.getPlanByDesignation(id);</span>
+<span class="nc" id="L189">        List&lt;Map&lt;String, Object&gt;&gt; resultSet = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L190" title="All 2 branches missed.">        for (Object[] obj : planByDesignation) {</span>
+<span class="nc" id="L191">            Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L192">            result.put(&quot;staffPlanDetailsId&quot;, obj[0]);</span>
+<span class="nc" id="L193">            result.put(&quot;designationId&quot;, obj[1]);</span>
+<span class="nc" id="L194">            result.put(&quot;requiredVacancies&quot;, obj[2]);</span>
+<span class="nc" id="L195">            result.put(&quot;estimateCost&quot;, obj[3]);</span>
+<span class="nc" id="L196">            result.put(&quot;staffPlanId&quot;, obj[4]);</span>
+<span class="nc" id="L197">            result.put(&quot;staffPlanDetailsStatus&quot;, obj[5]);</span>
+<span class="nc" id="L198">            result.put(&quot;staffName&quot;, obj[6]);</span>
+<span class="nc" id="L199">            result.put(&quot;department&quot;, obj[7]);</span>
+<span class="nc" id="L200">            resultSet.add(result);</span>
+<span class="nc" id="L201">        }</span>
+<span class="nc" id="L202">        return resultSet;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

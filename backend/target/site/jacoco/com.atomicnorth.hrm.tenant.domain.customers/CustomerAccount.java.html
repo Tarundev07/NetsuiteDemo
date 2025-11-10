@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CustomerAccount.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.domain.customers</a> &gt; <span class="el_source">CustomerAccount.java</span></div><h1>CustomerAccount.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.domain.customers;
+
+
+
+import com.atomicnorth.hrm.tenant.domain.AbstractAuditingEntity;
+import com.atomicnorth.hrm.tenant.domain.Employee;
+import com.atomicnorth.hrm.tenant.domain.location.CityMaster;
+import com.atomicnorth.hrm.tenant.domain.location.CountryMaster;
+import com.atomicnorth.hrm.tenant.domain.location.StateMaster;
+import lombok.Data;
+
+import javax.persistence.*;
+import java.time.LocalDate;
+import java.util.Date;
+import java.util.List;
+
+<span class="nc bnc" id="L17" title="All 182 branches missed.">@Data</span>
+@Entity
+@Table(name = &quot;ses_m22_customer_account&quot;)
+public class CustomerAccount extends AbstractAuditingEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = &quot;ACCOUNT_ID&quot;)
+<span class="nc" id="L24">    private Integer accountId;</span>
+
+    @Column(name = &quot;ACCOUNT_CODE&quot;)
+<span class="nc" id="L27">    private String accountCode;</span>
+
+    @Column(name = &quot;NAME&quot;)
+<span class="nc" id="L30">    private String accountName;</span>
+
+    @Column(name = &quot;CUSTOMER_ID&quot;)
+<span class="nc" id="L33">    private Integer customerId;</span>
+
+    @Column(name = &quot;DESCRIPTION&quot;)
+<span class="nc" id="L36">    private String description;</span>
+
+    @Column(name = &quot;START_DATE&quot;)
+<span class="nc" id="L39">    private LocalDate startDate;</span>
+
+    @Column(name = &quot;END_DATE&quot;)
+<span class="nc" id="L42">    private LocalDate endDate;</span>
+
+    @Column(name = &quot;ADDRESS&quot;)
+<span class="nc" id="L45">    private String address;</span>
+
+    @Column(name = &quot;PAYMENT_TYPE&quot;)
+<span class="nc" id="L48">    private String paymentType;</span>
+
+    @Column(name = &quot;GST_NUMBER&quot;)
+<span class="nc" id="L51">    private String gstNumber;</span>
+
+    @Column(name = &quot;PIN_CODE&quot;)
+<span class="nc" id="L54">    private String pinCode;</span>
+
+    @Column(name = &quot;PAN_NUMBER&quot;)
+<span class="nc" id="L57">    private String panNumber;</span>
+
+    @Column(name = &quot;COUNTRY_ID&quot;)
+<span class="nc" id="L60">    private Integer countryId;</span>
+
+    @Column(name = &quot;STATE_ID&quot;)
+<span class="nc" id="L63">    private Integer stateId;</span>
+
+    @Column(name = &quot;CITY_ID&quot;)
+<span class="nc" id="L66">    private Integer cityId;</span>
+
+    @Column(name = &quot;IS_TAXABLE&quot;)
+<span class="nc" id="L69">    private String isTaxable;</span>
+
+    @Column(name = &quot;IS_CREDIT_ENABLE&quot;)
+<span class="nc" id="L72">    private String isCreditEnable;</span>
+
+    @Column(name = &quot;IS_ACTIVE&quot;)
+<span class="nc" id="L75">    private String isActive;</span>
+    @ManyToOne
+    @JoinColumn(name = &quot;COUNTRY_ID&quot;, insertable = false, updatable = false)
+<span class="nc" id="L78">    private CountryMaster country;</span>
+
+    @ManyToOne
+    @JoinColumn(name = &quot;CITY_ID&quot;, insertable = false, updatable = false)
+<span class="nc" id="L82">    private CityMaster city;</span>
+    @ManyToOne
+    @JoinColumn(name = &quot;STATE_ID&quot;, insertable = false, updatable = false)
+<span class="nc" id="L85">    private StateMaster state;</span>
+    @ManyToOne
+    @JoinColumn(name = &quot;CUSTOMER_ID&quot;, referencedColumnName = &quot;CUSTOMER_ID&quot;, insertable = false, updatable = false)
+<span class="nc" id="L88">    private Customer customer;</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

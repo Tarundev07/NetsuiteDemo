@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AssetService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.asset</a> &gt; <span class="el_source">AssetService.java</span></div><h1>AssetService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.asset;
+
+import com.atomicnorth.hrm.tenant.domain.Employee;
+import com.atomicnorth.hrm.tenant.domain.asset.AssetMaster;
+import com.atomicnorth.hrm.tenant.domain.asset.EmpAssetAssignment;
+import com.atomicnorth.hrm.tenant.domain.employeeExit.EmpExitRequest;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.repository.EmployeeExit.EmpExitRequestRepository;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.repository.asset.AssetMasterRepository;
+import com.atomicnorth.hrm.tenant.repository.asset.EmpAssetAssignmentRepo;
+import com.atomicnorth.hrm.tenant.service.dto.asset.EmpAssetAssignmentDTO;
+import com.atomicnorth.hrm.util.FileStorageService;
+import lombok.AllArgsConstructor;
+import org.modelmapper.ModelMapper;
+import org.springframework.core.io.Resource;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.persistence.EntityNotFoundException;
+import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L34">@AllArgsConstructor</span>
+public class AssetService {
+
+    private final EmpExitRequestRepository exitRequestRepository;
+    private final EmployeeRepository employeeRepository;
+    private final EmpAssetAssignmentRepo assetAssignmentRepo;
+    private final AssetMasterRepository assetMasterRepository;
+    private final ModelMapper modelMapper;
+    private final FileStorageService fileStorageService;
+
+    public List&lt;EmpAssetAssignmentDTO&gt; getAssetListByEmployee(Integer employeeId,  HttpServletRequest request) {
+<span class="nc" id="L45">        EmpExitRequest empExitRequest = exitRequestRepository.findTop1ByEmployeeIdOrderByIdDesc(employeeId)</span>
+<span class="nc" id="L46">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;No request found for this employee.&quot;));</span>
+<span class="nc" id="L47">        Employee employee = employeeRepository.findByEmployeeId(employeeId).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Employee not found.&quot;));</span>
+<span class="nc" id="L48">        List&lt;EmpAssetAssignment&gt; assetAssignments = assetAssignmentRepo.findByEmployeeId(employeeId);</span>
+<span class="nc" id="L49">        List&lt;Integer&gt; assetIds = assetAssignments.stream().map(EmpAssetAssignment::getAssetId).collect(Collectors.toList());</span>
+<span class="nc" id="L50">        List&lt;AssetMaster&gt; assets = assetMasterRepository.findByAssetIdInAndAssetCategories_CategoryMaster_CategoryName(assetIds, &quot;Asset&quot;);</span>
+<span class="nc" id="L51">        Map&lt;Integer, EmpAssetAssignment&gt; assetAssignmentMap = assetAssignments.stream().collect(Collectors.toMap(EmpAssetAssignment::getAssetId, a -&gt; a));</span>
+<span class="nc" id="L52">        String baseUrl = request.getScheme() + &quot;://&quot; + request.getServerName() + &quot;:&quot; + request.getServerPort();</span>
+
+<span class="nc" id="L54">        return assets.stream().map(asset -&gt; {</span>
+<span class="nc" id="L55">            EmpAssetAssignmentDTO dto = new EmpAssetAssignmentDTO();</span>
+<span class="nc" id="L56">            dto.setExitRequestNumber(empExitRequest.getExitRequestNumber());</span>
+<span class="nc" id="L57">            dto.setAssetClearanceStatus(empExitRequest.getAssetClearanceStatus());</span>
+<span class="nc" id="L58">            dto.setLastWorkingDate(empExitRequest.getLastWorkingDate());</span>
+<span class="nc" id="L59">            dto.setStatus(empExitRequest.getStatus());</span>
+<span class="nc" id="L60">            dto.setEmployeeName(employee.getFullName() + &quot; (&quot; + employee.getEmployeeNumber() + &quot;)&quot;);</span>
+<span class="nc" id="L61">            dto.setAssetName(asset.getAssetName());</span>
+<span class="nc" id="L62">            dto.setAssetCode(asset.getAssetCode());</span>
+
+<span class="nc" id="L64">            EmpAssetAssignment assignment = assetAssignmentMap.get(asset.getAssetId());</span>
+<span class="nc bnc" id="L65" title="All 2 branches missed.">            if (assignment != null) {</span>
+<span class="nc" id="L66">                dto.setId(assignment.getId());</span>
+<span class="nc" id="L67">                dto.setClearanceStatus(assignment.getClearanceStatus());</span>
+<span class="nc" id="L68">                dto.setRemark(assignment.getRemark());</span>
+<span class="nc" id="L69">                dto.setReason(assignment.getReason());</span>
+<span class="nc" id="L70">                dto.setReturnDate(assignment.getReturnDate());</span>
+<span class="nc" id="L71">                dto.setAssignedDate(assignment.getAssignedDate());</span>
+<span class="nc bnc" id="L72" title="All 4 branches missed.">                if (assignment.getClearanceAttachment() != null &amp;&amp; !assignment.getClearanceAttachment().isBlank()) {</span>
+<span class="nc" id="L73">                    String path = assignment.getClearanceAttachment();</span>
+<span class="nc" id="L74">                    String fileNameWithPrefix = path.substring(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1);</span>
+<span class="nc" id="L75">                    int firstUnderscore = fileNameWithPrefix.indexOf(&quot;_&quot;);</span>
+<span class="nc bnc" id="L76" title="All 2 branches missed.">                    String cleanFileName = (firstUnderscore != -1)</span>
+<span class="nc" id="L77">                            ? fileNameWithPrefix.substring(firstUnderscore + 1)</span>
+<span class="nc" id="L78">                            : fileNameWithPrefix;</span>
+<span class="nc" id="L79">                    dto.setClearanceAttachment(baseUrl + &quot;/api/assignments/download/&quot; + cleanFileName);</span>
+                }
+            }
+<span class="nc" id="L82">            return dto;</span>
+<span class="nc" id="L83">        }).collect(Collectors.toList());</span>
+    }
+
+    @Transactional
+    public List&lt;EmpAssetAssignmentDTO&gt; saveClearance(List&lt;EmpAssetAssignmentDTO&gt; request, Map&lt;String, MultipartFile&gt; fileMap) throws IOException {
+<span class="nc" id="L88">        List&lt;EmpAssetAssignment&gt; assetAssignments = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L90" title="All 2 branches missed.">        for (EmpAssetAssignmentDTO dto : request) {</span>
+            EmpAssetAssignment assignment;
+<span class="nc bnc" id="L92" title="All 2 branches missed.">            if (dto.getId() != null) {</span>
+<span class="nc" id="L93">                assignment = assetAssignmentRepo.findById(dto.getId()).orElse(new EmpAssetAssignment());</span>
+            } else {
+<span class="nc" id="L95">                assignment = new EmpAssetAssignment();</span>
+            }
+<span class="nc" id="L97">            assignment.setClearanceStatus(dto.getClearanceStatus());</span>
+<span class="nc" id="L98">            assignment.setRemark(dto.getRemark());</span>
+<span class="nc" id="L99">            assignment.setReason(dto.getReason());</span>
+<span class="nc" id="L100">            assignment.setReturnDate(dto.getReturnDate());</span>
+<span class="nc bnc" id="L101" title="All 2 branches missed.">            if (fileMap != null) {</span>
+<span class="nc" id="L102">                MultipartFile file = fileMap.get(&quot;files[&quot; + dto.getId() + &quot;]&quot;);</span>
+<span class="nc bnc" id="L103" title="All 4 branches missed.">                if (file != null &amp;&amp; !file.isEmpty()) {</span>
+<span class="nc" id="L104">                    String path = fileStorageService.storeFile(file, &quot;asset_clearance&quot;);</span>
+<span class="nc" id="L105">                    assignment.setClearanceAttachment(path);</span>
+                }
+            }
+
+<span class="nc" id="L109">            assetAssignments.add(assignment);</span>
+<span class="nc" id="L110">        }</span>
+<span class="nc" id="L111">        List&lt;EmpAssetAssignment&gt; saved = assetAssignmentRepo.saveAll(assetAssignments);</span>
+<span class="nc" id="L112">        return saved.stream().map(x -&gt; modelMapper.map(x, EmpAssetAssignmentDTO.class)).collect(Collectors.toList());</span>
+    }
+
+    public Map&lt;String, Object&gt; downloadFile(Integer assignmentId) throws IOException {
+<span class="nc" id="L116">        EmpAssetAssignment assignment = assetAssignmentRepo.findById(assignmentId).orElseThrow(() -&gt; new EntityNotFoundException(&quot;No record found for the given input.&quot;));</span>
+<span class="nc" id="L117">        String filePath = assignment.getClearanceAttachment();</span>
+<span class="nc bnc" id="L118" title="All 4 branches missed.">        if (filePath == null || filePath.isBlank()) {</span>
+<span class="nc" id="L119">            throw new IllegalArgumentException(&quot;No clearance file found for asset ID: &quot; + assignmentId);</span>
+        }
+<span class="nc" id="L121">        Resource resource = fileStorageService.loadFile(filePath);</span>
+<span class="nc bnc" id="L122" title="All 4 branches missed.">        if (!resource.exists() || !resource.isReadable()) {</span>
+<span class="nc" id="L123">            throw new IOException(&quot;File not found or not readable: &quot; + filePath);</span>
+        }
+<span class="nc" id="L125">        String contentType = Files.probeContentType(Paths.get(filePath));</span>
+<span class="nc bnc" id="L126" title="All 2 branches missed.">        if (contentType == null) {</span>
+<span class="nc" id="L127">            contentType = &quot;application/pdf&quot;;</span>
+        }
+<span class="nc" id="L129">        Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L130">        result.put(&quot;resource&quot;, resource);</span>
+<span class="nc" id="L131">        result.put(&quot;contentType&quot;, contentType);</span>
+<span class="nc" id="L132">        return result;</span>
+    }
+
+    @Transactional
+    public EmpExitRequest approveClearance(Integer employeeId) {
+<span class="nc" id="L137">        List&lt;EmpAssetAssignment&gt; assetAssignments = assetAssignmentRepo.findByEmployeeId(employeeId);</span>
+<span class="nc bnc" id="L138" title="All 6 branches missed.">        if (!assetAssignments.stream().allMatch(x -&gt; x.getClearanceStatus() != null &amp;&amp; !x.getClearanceStatus().isBlank())) {</span>
+<span class="nc" id="L139">            throw new IllegalArgumentException(&quot;All assets must have a valid clearance status.&quot;);</span>
+        }
+<span class="nc" id="L141">        EmpExitRequest empExitRequest = exitRequestRepository.findTop1ByEmployeeIdOrderByIdDesc(employeeId)</span>
+<span class="nc" id="L142">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;No exit request found for this employee&quot;));</span>
+<span class="nc" id="L143">        empExitRequest.setAssetClearanceStatus(&quot;Approved&quot;);</span>
+<span class="nc" id="L144">        empExitRequest.setLastUpdatedBy(String.valueOf(SessionHolder.getUserLoginDetail().getUsername()));</span>
+<span class="nc" id="L145">        empExitRequest.setLastUpdatedDate(Instant.now());</span>
+<span class="nc" id="L146">        return exitRequestRepository.save(empExitRequest);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProjectDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.dto.project</a> &gt; <span class="el_source">ProjectDTO.java</span></div><h1>ProjectDTO.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.dto.project;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.Data;
+
+import java.util.Date;
+import java.util.List;
+
+<span class="nc bnc" id="L9" title="All 222 branches missed.">@Data</span>
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class ProjectDTO {
+
+<span class="nc" id="L13">    private Integer projectRfNum;</span>
+
+<span class="nc" id="L15">    private String projectId;</span>
+
+<span class="nc" id="L17">    private String projectName;</span>
+
+<span class="nc" id="L19">    private String projectDesc;</span>
+
+<span class="nc" id="L21">    private Date creationDate;</span>
+
+<span class="nc" id="L23">    private String projectOwner;</span>
+
+<span class="nc" id="L25">    private String projectType;</span>
+
+<span class="nc" id="L27">    private String projectStatus;</span>
+
+
+<span class="nc" id="L30">    private Integer holidayRfNum; // &lt;-- Newly added field</span>
+
+
+<span class="nc" id="L33">    private Date startDate;</span>
+
+<span class="nc" id="L35">    private Date endDate;</span>
+
+<span class="nc" id="L37">    private Date actualStartDate;</span>
+
+<span class="nc" id="L39">    private Date actualEndDate;</span>
+
+<span class="nc" id="L41">    private Date scheduledStartDate;</span>
+
+<span class="nc" id="L43">    private Date scheduledEndDate;</span>
+
+<span class="nc" id="L45">    private String timsheetApprover;</span>
+
+<span class="nc" id="L47">    private String projectLocation;</span>
+
+<span class="nc" id="L49">    private String projectCategory;</span>
+
+<span class="nc" id="L51">    private Integer siteId;</span>
+
+<span class="nc" id="L53">    private Integer countryId;</span>
+
+<span class="nc" id="L55">    private Integer currencyId;</span>
+
+<span class="nc" id="L57">    private Double billingHoursInADay;</span>
+
+<span class="nc" id="L59">    private String lastUpdatedBy;</span>
+
+<span class="nc" id="L61">    private String createdBy;</span>
+
+<span class="nc" id="L63">    private Date lastUpdatedOn;</span>
+
+<span class="nc" id="L65">    private List&lt;TaskStoryDTO&gt; taskList;</span>
+<span class="nc" id="L66">    private List&lt;ProjectMilestoneDTO&gt; projectMilestoneList;</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

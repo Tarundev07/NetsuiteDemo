@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SalaryElementGroupService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service</a> &gt; <span class="el_source">SalaryElementGroupService.java</span></div><h1>SalaryElementGroupService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service;
+
+import com.atomicnorth.hrm.tenant.domain.SalaryElement;
+import com.atomicnorth.hrm.tenant.domain.SalaryElementGroup;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.SalaryElementGroupRepository;
+import com.atomicnorth.hrm.tenant.repository.SalaryElementRepository;
+import com.atomicnorth.hrm.tenant.repository.company.SetUpCompanyRepository;
+import com.atomicnorth.hrm.tenant.service.dto.SalaryElementDTO;
+import com.atomicnorth.hrm.tenant.service.dto.SalaryElementGroupDTO;
+import com.atomicnorth.hrm.util.Enum.SequenceType;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import javax.persistence.EntityNotFoundException;
+import javax.persistence.criteria.Predicate;
+import javax.transaction.Transactional;
+import java.lang.reflect.Field;
+import java.text.ParseException;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L37">public class SalaryElementGroupService {</span>
+
+    @Autowired
+    private SalaryElementGroupRepository salaryElementGroupRepository;
+
+    @Autowired
+    private SetUpCompanyRepository setUpCompanyRepository;
+    @Autowired
+    private SalaryElementRepository salaryElementRepository;
+    @Autowired
+    private SequenceGeneratorService generatorService;
+
+    @Transactional
+    public SalaryElementGroupDTO createSalaryElementGroup(SalaryElementGroupDTO salaryElementGroupDTO) throws ParseException {
+<span class="nc" id="L51">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L52">        SalaryElementGroup salaryElementGroup = mapToEntity(salaryElementGroupDTO);</span>
+<span class="nc" id="L53">        salaryElementGroup.setCreatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L54">        salaryElementGroup.setCreatedDate(LocalDate.now());</span>
+<span class="nc" id="L55">        salaryElementGroup.setIsActive(salaryElementGroupDTO.getIsActive());</span>
+<span class="nc bnc" id="L56" title="All 2 branches missed.">        if (salaryElementGroupDTO.getCompany() != null) {</span>
+<span class="nc" id="L57">            salaryElementGroup.setCompanyName(setUpCompanyRepository.findCompanyNameById(salaryElementGroupDTO.getCompany())</span>
+<span class="nc" id="L58">                    .orElse(&quot;Unknown Company&quot;));</span>
+        }
+<span class="nc" id="L60">        SalaryElementGroup savedSalaryElementGroup = salaryElementGroupRepository.save(salaryElementGroup);</span>
+<span class="nc" id="L61">        return mapToDTO(savedSalaryElementGroup);</span>
+    }
+
+    @Transactional
+    public SalaryElementGroupDTO updateSalaryElementGroup(Long id, SalaryElementGroupDTO salaryElementGroupDTO) {
+<span class="nc" id="L66">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L67">        SalaryElementGroup existingSalaryElementGroup = salaryElementGroupRepository.findById(id)</span>
+<span class="nc" id="L68">                .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Salary ELement Group with ID &quot; + id + &quot; not found&quot;));</span>
+        // Retain the original created details
+<span class="nc" id="L70">        existingSalaryElementGroup.getSalaryElements().size(); // Load Salary Element to avoid lazy loading issues</span>
+<span class="nc" id="L71">        existingSalaryElementGroup.setGroupName(salaryElementGroupDTO.getGroupName());</span>
+        //existingSalaryElementGroup.setGroupCode(salaryElementGroupDTO.getGroupCode());
+<span class="nc" id="L73">        existingSalaryElementGroup.setDescription(salaryElementGroupDTO.getDescription());</span>
+<span class="nc" id="L74">        existingSalaryElementGroup.setUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L75">        existingSalaryElementGroup.setUpdatedDate(LocalDate.now());</span>
+<span class="nc" id="L76">        existingSalaryElementGroup.setIsActive(salaryElementGroupDTO.getIsActive());</span>
+<span class="nc bnc" id="L77" title="All 2 branches missed.">        if (!Objects.equals(existingSalaryElementGroup.getCompany(), salaryElementGroupDTO.getCompany())) {</span>
+<span class="nc" id="L78">            existingSalaryElementGroup.setCompanyName(setUpCompanyRepository.findCompanyNameById(salaryElementGroupDTO.getCompany())</span>
+<span class="nc" id="L79">                    .orElse(&quot;Unknown Company&quot;));</span>
+        }
+<span class="nc" id="L81">        existingSalaryElementGroup.setCompany(salaryElementGroupDTO.getCompany());</span>
+<span class="nc bnc" id="L82" title="All 4 branches missed.">        if (salaryElementGroupDTO.getSalaryElements() != null &amp;&amp; !salaryElementGroupDTO.getSalaryElements().isEmpty()) {</span>
+            // List of existing Salary Element
+<span class="nc" id="L84">            List&lt;SalaryElement&gt; existingSalaryElements = existingSalaryElementGroup.getSalaryElements();</span>
+            // Map existing Salary Element by element type for quick lookup
+<span class="nc" id="L86">            Set&lt;Integer&gt; existingKeys = existingSalaryElements.stream()</span>
+<span class="nc" id="L87">                    .map(SalaryElement::getElementType)</span>
+<span class="nc" id="L88">                    .collect(Collectors.toSet());</span>
+            // Check for new salary Element (id == null)
+<span class="nc bnc" id="L90" title="All 2 branches missed.">            for (SalaryElementDTO salaryElementDTO : salaryElementGroupDTO.getSalaryElements()) {</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">                if (salaryElementDTO.getElementId() == null) {</span>
+                    // Generate unique key for the new Salary Element
+<span class="nc" id="L93">                    Integer newElementKey = salaryElementDTO.getElementType();</span>
+                    // If key already exists in the existing Salary Element, throw an exception
+<span class="nc bnc" id="L95" title="All 2 branches missed.">                    if (existingKeys.contains(newElementKey)) {</span>
+<span class="nc" id="L96">                        throw new IllegalArgumentException(</span>
+<span class="nc" id="L97">                                &quot;Salary Element with Element Type '&quot; + salaryElementDTO.getElementType() + &quot;' already exists.&quot;</span>
+                        );
+                    }
+                }
+<span class="nc" id="L101">            }</span>
+            // Update or add Salary Element
+<span class="nc" id="L103">            Map&lt;Long, SalaryElement&gt; existingSalaryElementMap = existingSalaryElements.stream()</span>
+<span class="nc" id="L104">                    .collect(Collectors.toMap(SalaryElement::getElementId, salaryElement -&gt; salaryElement));</span>
+<span class="nc bnc" id="L105" title="All 2 branches missed.">            for (SalaryElementDTO salaryElementDTO : salaryElementGroupDTO.getSalaryElements()) {</span>
+<span class="nc bnc" id="L106" title="All 4 branches missed.">                if (salaryElementDTO.getElementId() != null &amp;&amp; existingSalaryElementMap.containsKey(salaryElementDTO.getElementId())) {</span>
+                    // Update existing Salary Element
+<span class="nc" id="L108">                    SalaryElement existingsalaryElement = existingSalaryElementMap.get(salaryElementDTO.getElementId());</span>
+<span class="nc" id="L109">                    existingsalaryElement.setElementType(salaryElementDTO.getElementType());</span>
+<span class="nc bnc" id="L110" title="All 2 branches missed.">                    existingsalaryElement.setIsActive(salaryElementGroupDTO.getIsActive() ? salaryElementDTO.getIsActive() : false);</span>
+<span class="nc" id="L111">                    existingsalaryElement.setUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L112">                    existingsalaryElement.setUpdatedDate(LocalDate.now());</span>
+<span class="nc bnc" id="L113" title="All 2 branches missed.">                } else if (salaryElementDTO.getElementId() == null) {</span>
+                    // Add new Salary Element
+<span class="nc" id="L115">                    SalaryElement newSalaryElement = mapSalaryElementToEntity(salaryElementDTO);</span>
+<span class="nc" id="L116">                    newSalaryElement.setAddedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L117">                    newSalaryElement.setAddedAt(LocalDate.now());</span>
+<span class="nc bnc" id="L118" title="All 2 branches missed.">                    newSalaryElement.setIsActive(salaryElementGroupDTO.getIsActive() ? salaryElementDTO.getIsActive() : false);</span>
+<span class="nc" id="L119">                    newSalaryElement.setSalaryElementGroup(existingSalaryElementGroup);</span>
+<span class="nc" id="L120">                    existingSalaryElements.add(newSalaryElement);</span>
+                }
+<span class="nc" id="L122">            }</span>
+        }
+<span class="nc" id="L124">        SalaryElementGroup updatedSalaryElementGroup = salaryElementGroupRepository.save(existingSalaryElementGroup);</span>
+<span class="nc" id="L125">        return mapToDTO(updatedSalaryElementGroup);</span>
+    }
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public List&lt;SalaryElementGroupDTO&gt; findAllSalaryElementGroup(
+            String searchField,
+            String searchKeyword,
+            String sortBy,
+            String sortDir,
+            int page,
+            int size
+    ) {
+<span class="nc" id="L137">        Specification&lt;SalaryElementGroup&gt; spec = (root, query, cb) -&gt; {</span>
+<span class="nc" id="L138">            List&lt;Predicate&gt; predicates = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L140" title="All 4 branches missed.">            if (StringUtils.hasText(searchField) &amp;&amp; StringUtils.hasText(searchKeyword)) {</span>
+<span class="nc" id="L141">                String normalizedSearchValue = searchKeyword.trim();</span>
+
+                try {
+<span class="nc" id="L144">                    Field field = SalaryElementGroup.class.getDeclaredField(searchField);</span>
+<span class="nc" id="L145">                    Class&lt;?&gt; fieldType = field.getType();</span>
+
+<span class="nc bnc" id="L147" title="All 4 branches missed.">                    if (fieldType.equals(Boolean.class) || fieldType.equals(boolean.class)) {</span>
+<span class="nc" id="L148">                        String lowerVal = normalizedSearchValue.toLowerCase();</span>
+                        Boolean value;
+
+<span class="nc bnc" id="L151" title="All 2 branches missed.">                        if (lowerVal.matches(&quot;a|ac|act|acti|activ|active.*|true&quot;)) {</span>
+<span class="nc" id="L152">                            value = true;</span>
+<span class="nc bnc" id="L153" title="All 2 branches missed.">                        } else if (lowerVal.matches(&quot;i|in|ina|inac|inact|inacti|inactive.*|false&quot;)) {</span>
+<span class="nc" id="L154">                            value = false;</span>
+                        } else {
+<span class="nc" id="L156">                            throw new RuntimeException(&quot;Invalid value for boolean field: &quot; + searchKeyword);</span>
+                        }
+
+<span class="nc" id="L159">                        predicates.add(cb.equal(root.get(searchField), value));</span>
+<span class="nc bnc" id="L160" title="All 2 branches missed.">                    } else if (fieldType.equals(String.class)) {</span>
+<span class="nc" id="L161">                        predicates.add(cb.like(</span>
+<span class="nc" id="L162">                                cb.lower(root.get(searchField)),</span>
+<span class="nc" id="L163">                                &quot;%&quot; + normalizedSearchValue.toLowerCase() + &quot;%&quot;</span>
+                        ));
+
+<span class="nc bnc" id="L166" title="All 6 branches missed.">                    } else if (Number.class.isAssignableFrom(fieldType) || fieldType.equals(long.class) || fieldType.equals(int.class)) {</span>
+<span class="nc" id="L167">                        predicates.add(cb.equal(root.get(searchField), Long.valueOf(normalizedSearchValue)));</span>
+                    }
+
+<span class="nc" id="L170">                } catch (NoSuchFieldException e) {</span>
+<span class="nc" id="L171">                    throw new RuntimeException(&quot;Invalid search field: &quot; + searchField, e);</span>
+<span class="nc" id="L172">                }</span>
+            }
+
+<span class="nc" id="L175">            return cb.and(predicates.toArray(new Predicate[0]));</span>
+        };
+
+        Sort sort;
+        try {
+<span class="nc" id="L180">            sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc" id="L181">        } catch (IllegalArgumentException e) {</span>
+<span class="nc" id="L182">            throw new RuntimeException(&quot;Invalid sort direction: &quot; + sortDir);</span>
+<span class="nc" id="L183">        }</span>
+
+<span class="nc" id="L185">        Pageable pageable = PageRequest.of(Math.max(0, page - 1), size, sort);</span>
+
+<span class="nc" id="L187">        Page&lt;SalaryElementGroup&gt; salaryElementGroups = salaryElementGroupRepository.findAll(spec, pageable);</span>
+
+<span class="nc" id="L189">        return salaryElementGroups</span>
+<span class="nc" id="L190">                .stream()</span>
+<span class="nc" id="L191">                .map(this::mapToDTO)</span>
+<span class="nc" id="L192">                .collect(Collectors.toList());</span>
+    }
+
+
+    @Transactional
+    public Optional&lt;SalaryElementGroupDTO&gt; getSalaryElementGroupById(Long id) {
+<span class="nc" id="L198">        return salaryElementGroupRepository.findById(id)</span>
+<span class="nc" id="L199">                .map(this::mapToDTO);</span>
+    }
+
+    @Transactional
+    public void deleteSalaryElementGroupById(Long id) {
+<span class="nc" id="L204">        SalaryElementGroup salaryElementGroup = salaryElementGroupRepository.findById(id)</span>
+<span class="nc" id="L205">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Salary Element Group with ID &quot; + id + &quot; not found&quot;));</span>
+        // Soft delete Salary Element group
+<span class="nc" id="L207">        salaryElementGroup.setIsActive(false);</span>
+        // Soft delete associated Salary Element
+<span class="nc" id="L209">        salaryElementGroup.getSalaryElements().forEach(salaryElement -&gt; salaryElement.setIsActive(false));</span>
+<span class="nc" id="L210">        salaryElementGroupRepository.save(salaryElementGroup);</span>
+<span class="nc" id="L211">    }</span>
+
+    private SalaryElementGroupDTO mapToDTO(SalaryElementGroup salaryElementGroup) {
+<span class="nc" id="L214">        SalaryElementGroupDTO dto = new SalaryElementGroupDTO();</span>
+<span class="nc" id="L215">        dto.setGroupId(salaryElementGroup.getGroupId());</span>
+<span class="nc" id="L216">        dto.setGroupCode(salaryElementGroup.getGroupCode());</span>
+<span class="nc" id="L217">        dto.setGroupName(salaryElementGroup.getGroupName());</span>
+<span class="nc" id="L218">        dto.setDescription(salaryElementGroup.getDescription());</span>
+<span class="nc" id="L219">        dto.setCompany(salaryElementGroup.getCompany());</span>
+<span class="nc" id="L220">        dto.setCreatedDate(salaryElementGroup.getCreatedDate());</span>
+<span class="nc" id="L221">        dto.setCreatedBy(salaryElementGroup.getCreatedBy());</span>
+<span class="nc" id="L222">        dto.setUpdatedDate(salaryElementGroup.getUpdatedDate());</span>
+<span class="nc" id="L223">        dto.setUpdatedBy(salaryElementGroup.getUpdatedBy());</span>
+<span class="nc" id="L224">        dto.setIsActive(salaryElementGroup.getIsActive());</span>
+<span class="nc" id="L225">        dto.setCompanyName(salaryElementGroup.getCompanyName());</span>
+<span class="nc bnc" id="L226" title="All 2 branches missed.">        if (salaryElementGroup.getSalaryElements() != null) {</span>
+<span class="nc" id="L227">            dto.setSalaryElements(salaryElementGroup.getSalaryElements().stream().map(this::mapSalaryElementToDTO).collect(Collectors.toList()));</span>
+        }
+<span class="nc" id="L229">        return dto;</span>
+    }
+
+    private SalaryElementDTO mapSalaryElementToDTO(SalaryElement salaryElement) {
+<span class="nc" id="L233">        SalaryElementDTO dto = new SalaryElementDTO();</span>
+<span class="nc" id="L234">        dto.setElementId(salaryElement.getElementId());</span>
+<span class="nc" id="L235">        dto.setElementType(salaryElement.getElementType());</span>
+<span class="nc" id="L236">        dto.setAddedBy(salaryElement.getAddedBy());</span>
+<span class="nc" id="L237">        dto.setAddedAt(salaryElement.getAddedAt());</span>
+<span class="nc" id="L238">        dto.setUpdatedBy(salaryElement.getUpdatedBy());</span>
+<span class="nc" id="L239">        dto.setUpdatedDate(salaryElement.getUpdatedDate());</span>
+<span class="nc" id="L240">        dto.setIsActive(salaryElement.getIsActive());</span>
+<span class="nc" id="L241">        return dto;</span>
+    }
+
+    private SalaryElementGroup mapToEntity(SalaryElementGroupDTO dto) {
+<span class="nc" id="L245">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L246">        SalaryElementGroup salaryElementGroup = new SalaryElementGroup();</span>
+<span class="nc" id="L247">        salaryElementGroup.setGroupCode(generatorService.generateSequence(SequenceType.SALARY_ELEMENT.toString(), null));</span>
+<span class="nc" id="L248">        salaryElementGroup.setGroupName(dto.getGroupName());</span>
+<span class="nc" id="L249">        salaryElementGroup.setDescription(dto.getDescription());</span>
+<span class="nc" id="L250">        salaryElementGroup.setCompany(dto.getCompany());</span>
+<span class="nc" id="L251">        salaryElementGroup.setCreatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L252">        salaryElementGroup.setCreatedDate(LocalDate.now());</span>
+<span class="nc" id="L253">        salaryElementGroup.setIsActive(dto.getIsActive());</span>
+<span class="nc bnc" id="L254" title="All 2 branches missed.">        if (dto.getSalaryElements() != null) {</span>
+<span class="nc" id="L255">            salaryElementGroup.setSalaryElements(dto.getSalaryElements().stream().map(this::mapSalaryElementToEntity)</span>
+<span class="nc" id="L256">                    .peek(salaryElement -&gt; salaryElement.setSalaryElementGroup(salaryElementGroup))</span>
+<span class="nc" id="L257">                    .collect(Collectors.toList()));</span>
+        }
+<span class="nc" id="L259">        return salaryElementGroup;</span>
+    }
+
+    private SalaryElement mapSalaryElementToEntity(SalaryElementDTO dto) {
+<span class="nc" id="L263">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L264">        SalaryElement salaryElement = new SalaryElement();</span>
+<span class="nc" id="L265">        salaryElement.setElementType(dto.getElementType());</span>
+<span class="nc" id="L266">        salaryElement.setAddedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L267">        salaryElement.setAddedAt(LocalDate.now());</span>
+<span class="nc" id="L268">        salaryElement.setIsActive(dto.getIsActive());</span>
+<span class="nc" id="L269">        return salaryElement;</span>
+    }
+
+    public List&lt;SalaryElementGroup&gt; findAllActiveSalaryElementGroup() {
+<span class="nc" id="L273">        return salaryElementGroupRepository.findByIsActiveTrueOrderByGroupNameAsc();</span>
+    }
+
+    @Transactional
+    public void deleteSalaryElementById(Long groupId, Long elementId) {
+<span class="nc" id="L278">        SalaryElementGroup salaryElementGroup = salaryElementGroupRepository</span>
+<span class="nc" id="L279">                .findById(groupId).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Salary Element Group with id &quot; + groupId + &quot; not found.&quot;));</span>
+<span class="nc" id="L280">        SalaryElement salaryElement = salaryElementGroup.getSalaryElements().stream().filter(x -&gt; x.getElementId().equals(elementId))</span>
+<span class="nc" id="L281">                .findFirst().orElseThrow(() -&gt; new EntityNotFoundException(&quot;Salary Element not found for id &quot; + elementId));</span>
+<span class="nc" id="L282">        salaryElementGroup.getSalaryElements().remove(salaryElement);</span>
+<span class="nc" id="L283">        salaryElementGroupRepository.save(salaryElementGroup);</span>
+<span class="nc" id="L284">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

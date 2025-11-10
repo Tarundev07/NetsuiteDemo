@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserDivisionMasterController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.division</a> &gt; <span class="el_source">UserDivisionMasterController.java</span></div><h1>UserDivisionMasterController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.division;
+
+import com.atomicnorth.hrm.tenant.service.division.UserDivisionMasterService;
+import com.atomicnorth.hrm.tenant.service.dto.division.UserDivisionMasterDTO;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.persistence.EntityNotFoundException;
+import javax.validation.Valid;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping(&quot;/api/user-division-master&quot;)
+public class UserDivisionMasterController {
+
+    private final UserDivisionMasterService userDivisionMasterService;
+
+<span class="nc" id="L25">    public UserDivisionMasterController(UserDivisionMasterService userDivisionMasterService) {</span>
+<span class="nc" id="L26">        this.userDivisionMasterService = userDivisionMasterService;</span>
+<span class="nc" id="L27">    }</span>
+
+
+    @PostMapping
+    public ResponseEntity&lt;ApiResponse&lt;UserDivisionMasterDTO&gt;&gt; saveOrUpdateDivision(
+            @Valid @RequestBody UserDivisionMasterDTO divisionDTO) {
+
+        try {
+<span class="nc" id="L35">            UserDivisionMasterDTO savedDto = userDivisionMasterService.saveOrUpdate(divisionDTO);</span>
+<span class="nc" id="L36">            ApiResponse&lt;UserDivisionMasterDTO&gt; response = new ApiResponse&lt;&gt;(</span>
+                    savedDto,
+                    true,
+                    &quot;DIVISION-SAVE-SUCCESS&quot;,
+                    &quot;Success&quot;
+            );
+<span class="nc" id="L42">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+
+<span class="nc" id="L44">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L45">            ApiResponse&lt;UserDivisionMasterDTO&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;DIVISION-SAVE-FAILURE&quot;,
+                    &quot;Warning&quot;,
+<span class="nc" id="L50">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L52">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+
+<span class="nc" id="L54">        } catch (Exception ex) {</span>
+<span class="nc" id="L55">            ApiResponse&lt;UserDivisionMasterDTO&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;DIVISION-SAVE-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L60">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L62">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getAllUserDivisionsData&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getAllUserDivisionsData(
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(defaultValue = &quot;divisionId&quot;) String sortColumn,
+            @RequestParam(defaultValue = &quot;desc&quot;) String sortDirection,
+            @RequestParam(required = false) String searchColumn,
+            @RequestParam(required = false) String searchValue
+    ) {
+        try {
+<span class="nc" id="L76">            Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.fromString(sortDirection), sortColumn);</span>
+<span class="nc" id="L77">            Map&lt;String, Object&gt; divisions = userDivisionMasterService.getAllUserDivisions(pageable, searchColumn, searchValue, sortColumn, sortDirection);</span>
+
+<span class="nc" id="L79">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    divisions, true, &quot;DIVISIONS-RETRIEVED-SUCCESS&quot;, &quot;Information&quot;
+            );
+
+<span class="nc" id="L83">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+
+<span class="nc" id="L85">        } catch (Exception ex) {</span>
+<span class="nc" id="L86">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+<span class="nc" id="L87">                    null, false, &quot;DIVISIONS-RETRIEVED-FAILURE&quot;, &quot;Error&quot;, List.of(ex.getMessage())</span>
+            );
+<span class="nc" id="L89">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/division/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;UserDivisionMasterDTO&gt;&gt; getUserDivisionById(@PathVariable Long id) {
+        try {
+<span class="nc" id="L96">            UserDivisionMasterDTO dto = userDivisionMasterService.getUserDivisionById(id);</span>
+
+<span class="nc" id="L98">            ApiResponse&lt;UserDivisionMasterDTO&gt; response = new ApiResponse&lt;&gt;(</span>
+                    dto, true, &quot;DIVISION-FOUND&quot;, &quot;Information&quot;
+            );
+<span class="nc" id="L101">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L102">        } catch (EntityNotFoundException e) {</span>
+<span class="nc" id="L103">            ApiResponse&lt;UserDivisionMasterDTO&gt; response = new ApiResponse&lt;&gt;(</span>
+<span class="nc" id="L104">                    null, false, &quot;DIVISION-NOT-FOUND&quot;, &quot;Error&quot;, List.of(e.getMessage())</span>
+            );
+<span class="nc" id="L106">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+        }
+    }
+
+    @GetMapping(&quot;/findDivisionIdAndName&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; getEmpGradeNameAndId() {
+        try {
+<span class="nc" id="L113">            List&lt;Map&lt;String, Object&gt;&gt; employees = this.userDivisionMasterService.findDivisionIdAndName();</span>
+<span class="nc bnc" id="L114" title="All 2 branches missed.">            if (employees.isEmpty()) {</span>
+<span class="nc" id="L115">                return new ResponseEntity&lt;&gt;(</span>
+                        new ApiResponse&lt;&gt;(null, false, &quot;EMP_DIVISION_DETAILS_NOT_FOUND&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L117">                                Collections.singletonList(&quot;No Division details found.&quot;)),</span>
+                        HttpStatus.OK);
+            }
+<span class="nc" id="L120">            return ResponseEntity.ok(</span>
+                    new ApiResponse&lt;&gt;(employees, true, &quot;EMP_DIVISION_DETAILS_FETCHED&quot;, &quot;SUCCESS&quot;));
+<span class="nc" id="L122">        } catch (Exception e) {</span>
+<span class="nc" id="L123">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;EMP_DIVISION_DETAILS_FETCH_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L125">                            Collections.singletonList(e.getMessage())),</span>
+                    HttpStatus.OK);
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

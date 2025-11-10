@@ -1,0 +1,482 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmpExitRequestService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.employeeExit</a> &gt; <span class="el_source">EmpExitRequestService.java</span></div><h1>EmpExitRequestService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.employeeExit;
+
+import com.atomicnorth.hrm.exception.ResourceNotFoundException;
+import com.atomicnorth.hrm.tenant.domain.ApplicationSequence;
+import com.atomicnorth.hrm.tenant.domain.Employee;
+import com.atomicnorth.hrm.tenant.domain.employeeExit.*;
+import com.atomicnorth.hrm.tenant.repository.ApplicationSequenceRepository;
+import com.atomicnorth.hrm.tenant.repository.EmployeeExit.EmpExitApprovalRepository;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.repository.EmployeeExit.EmpExitRequestRepository;
+import com.atomicnorth.hrm.tenant.service.dto.employeeExit.*;
+import com.atomicnorth.hrm.tenant.web.rest.employeeExit.EmpExitRequestController;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.annotation.PostConstruct;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.stream.Collectors;
+
+
+@Service
+<span class="nc" id="L40">public class EmpExitRequestService {</span>
+
+<span class="nc" id="L42">    private final Logger log = LoggerFactory.getLogger(EmpExitRequestController.class);</span>
+
+    @Autowired
+    private EmpExitRequestRepository empExitRequestRepository;
+
+    @Autowired
+    private ModelMapper modelMapper;
+
+    @Autowired
+    private EmployeeRepository employeeRepository;
+
+    @Autowired
+    private EmpExitApprovalRepository approvalRepository;
+
+    @Autowired
+    private ApplicationSequenceRepository sequenceRepository;
+
+    @Autowired private EmpExitApprovalService approvalService;
+    @Autowired private EmpExitFinanceClearanceService financeService;
+    @Autowired private EmpExitAdminClearanceService adminService;
+    @Autowired private EmpExitKtHandoverService ktService;
+    @Autowired private EmpExitInterviewService interviewService;
+    @Autowired private EmpExitFullFinalSettlementService settlementService;
+
+    @PostConstruct
+    public void configureModelMapper() {
+        // Skip mapping of ID fields for child entities to avoid &quot;identifier altered&quot; issue
+<span class="nc" id="L69">        modelMapper.typeMap(EmpExitFullFinalSettlementDTO.class, EmpExitFullFinalSettlement.class)</span>
+<span class="nc" id="L70">                .addMappings(mapper -&gt; {</span>
+<span class="nc" id="L71">                    mapper.skip(EmpExitFullFinalSettlement::setId);</span>
+<span class="nc" id="L72">                    mapper.skip(EmpExitFullFinalSettlement::setNetAmount);</span>
+<span class="nc" id="L73">                });</span>
+
+<span class="nc" id="L75">        modelMapper.typeMap(EmpExitFinanceClearanceDTO.class, EmpExitFinanceClearance.class)</span>
+<span class="nc" id="L76">                .addMappings(mapper -&gt; mapper.skip(EmpExitFinanceClearance::setId));</span>
+
+<span class="nc" id="L78">        modelMapper.typeMap(EmpExitAdminClearanceDTO.class, EmpExitAdminClearance.class)</span>
+<span class="nc" id="L79">                .addMappings(mapper -&gt; mapper.skip(EmpExitAdminClearance::setId));</span>
+
+<span class="nc" id="L81">        modelMapper.typeMap(EmpExitKtHandoverDTO.class, EmpExitKtHandover.class)</span>
+<span class="nc" id="L82">                .addMappings(mapper -&gt; mapper.skip(EmpExitKtHandover::setId));</span>
+
+<span class="nc" id="L84">        modelMapper.typeMap(EmpExitInterviewDTO.class, EmpExitInterview.class)</span>
+<span class="nc" id="L85">                .addMappings(mapper -&gt; mapper.skip(EmpExitInterview::setId));</span>
+<span class="nc" id="L86">    }</span>
+
+    @Transactional
+    public EmpExitRequestDTO saveorUpdateEmployeeExit(EmpExitRequestDTO dto) {
+        EmpExitRequest entity;
+<span class="nc bnc" id="L91" title="All 4 branches missed.">        boolean isNew = (dto.getId() == null || dto.getId() &lt;= 0);</span>
+<span class="nc" id="L92">        boolean triggerApproval = false; // Flag to check if approval flow should run</span>
+<span class="nc" id="L93">        Employee employee = employeeRepository.findByEmployeeId(dto.getEmployeeId())</span>
+<span class="nc" id="L94">                .orElseThrow(() -&gt; new RuntimeException(&quot;Employee not found&quot;));</span>
+<span class="nc bnc" id="L95" title="All 2 branches missed.">        if (!isNew) {</span>
+<span class="nc" id="L96">            entity = empExitRequestRepository.findById(dto.getId())</span>
+<span class="nc" id="L97">                    .orElseThrow(() -&gt; new RuntimeException(&quot;Exit request not found&quot;));</span>
+            // Check status change from Draft → Pending
+<span class="nc bnc" id="L99" title="All 2 branches missed.">            if (&quot;Draft&quot;.equalsIgnoreCase(entity.getStatus()) &amp;&amp;</span>
+<span class="nc bnc" id="L100" title="All 2 branches missed.">                    &quot;Pending&quot;.equalsIgnoreCase(dto.getStatus()) &amp;&amp;</span>
+<span class="nc bnc" id="L101" title="All 2 branches missed.">                    Boolean.TRUE.equals(dto.getApprovalRequired())) {</span>
+<span class="nc" id="L102">                triggerApproval = true;</span>
+            }
+        } else {
+<span class="nc" id="L105">            entity = new EmpExitRequest();</span>
+<span class="nc" id="L106">            dto.setEmployeeName(employee.getFullName());</span>
+<span class="nc" id="L107">            dto.setEmail(employee.getWorkEmail());</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">            dto.setDesignation(employee.getDesignation() != null ? employee.getDesignation().getDesignationName() : null);</span>
+<span class="nc bnc" id="L109" title="All 2 branches missed.">            dto.setDepartment(employee.getDepartment() != null ? employee.getDepartment().getDname() : null);</span>
+
+<span class="nc bnc" id="L111" title="All 2 branches missed.">            if (employee.getReportingManager() != null) {</span>
+<span class="nc" id="L112">                Employee reportingManager = employeeRepository.findByEmployeeId(employee.getReportingManagerId()).orElse(null);</span>
+<span class="nc bnc" id="L113" title="All 2 branches missed.">                dto.setReportingManager(reportingManager != null ? reportingManager.getFullName() : null);</span>
+            }
+<span class="nc bnc" id="L115" title="All 2 branches missed.">            if (employee.getHrManagerId() != null) {</span>
+<span class="nc" id="L116">                Employee hrManager = employeeRepository.findByEmployeeId(employee.getHrManagerId()).orElse(null);</span>
+<span class="nc bnc" id="L117" title="All 2 branches missed.">                dto.setHrManager(hrManager != null ? hrManager.getFullName() : null);</span>
+            }
+<span class="nc" id="L119">            dto.setDateOfJoining(employee.getEffectiveStartDate());</span>
+<span class="nc" id="L120">            dto.setNoticePeriod(employee.getNoticeDays());</span>
+<span class="nc" id="L121">            dto.setExitRequestNumber(generateExitRequestNumber(dto.getEmployeeId()));</span>
+
+            // For new create, approval triggers if not Draft
+<span class="nc bnc" id="L124" title="All 2 branches missed.">            if (!&quot;Draft&quot;.equalsIgnoreCase(dto.getStatus()) &amp;&amp;</span>
+<span class="nc bnc" id="L125" title="All 2 branches missed.">                    Boolean.TRUE.equals(dto.getApprovalRequired())) {</span>
+<span class="nc" id="L126">                triggerApproval = true;</span>
+            }
+        }
+<span class="nc" id="L129">        modelMapper.map(dto, entity);</span>
+<span class="nc" id="L130">        EmpExitRequest savedEntity = empExitRequestRepository.save(entity);</span>
+<span class="nc" id="L131">        log.info(&quot;Exit request saved with ID: {}&quot;, savedEntity.getId());</span>
+<span class="nc bnc" id="L132" title="All 2 branches missed.">        if (dto.getNoticePeriod() != null) {</span>
+<span class="nc" id="L133">            employee.setNoticeDays(dto.getNoticePeriod());</span>
+<span class="nc" id="L134">            employeeRepository.save(employee);</span>
+<span class="nc" id="L135">            log.info(&quot;Employee notice period updated for Employee ID: {}&quot;, employee.getEmployeeId());</span>
+        }
+<span class="nc bnc" id="L137" title="All 2 branches missed.">        if (triggerApproval) {</span>
+<span class="nc" id="L138">            processApprovalFlow(savedEntity.getId());</span>
+        }
+<span class="nc" id="L140">        return dto;</span>
+    }
+
+
+    private void processApprovalFlow(Integer exitRequestId) {
+<span class="nc" id="L145">        log.info(&quot;Approval required, triggering workflows for ExitRequest: {}&quot;, exitRequestId);</span>
+<span class="nc bnc" id="L146" title="All 2 branches missed.">        if (!approvalService.existsByExitRequestId(exitRequestId)) {</span>
+<span class="nc" id="L147">            approvalService.createApproval(exitRequestId, 813);</span>
+        }
+<span class="nc bnc" id="L149" title="All 2 branches missed.">        if (!financeService.existsByExitRequestId(exitRequestId)) {</span>
+<span class="nc" id="L150">            financeService.createFinanceClearance(exitRequestId);</span>
+        }
+<span class="nc bnc" id="L152" title="All 2 branches missed.">        if (!adminService.existsByExitRequestId(exitRequestId)) {</span>
+<span class="nc" id="L153">            adminService.createAdminClearance(exitRequestId);</span>
+        }
+<span class="nc bnc" id="L155" title="All 2 branches missed.">        if (!ktService.existsByExitRequestId(exitRequestId)) {</span>
+<span class="nc" id="L156">            ktService.createKtHandover(exitRequestId);</span>
+        }
+<span class="nc bnc" id="L158" title="All 2 branches missed.">        if (!interviewService.existsByExitRequestId(exitRequestId)) {</span>
+<span class="nc" id="L159">            interviewService.createInterview(exitRequestId);</span>
+        }
+<span class="nc bnc" id="L161" title="All 2 branches missed.">        if (!settlementService.existsByExitRequestId(exitRequestId)) {</span>
+<span class="nc" id="L162">            settlementService.createSettlement(exitRequestId);</span>
+        }
+<span class="nc" id="L164">    }</span>
+
+
+    @Transactional
+    public String generateExitRequestNumber(Integer employeeId) {
+<span class="nc" id="L169">        Employee employee = employeeRepository.findByEmployeeId(employeeId)</span>
+<span class="nc" id="L170">                .orElseThrow(() -&gt; new RuntimeException(&quot;Employee not found for ID: &quot; + employeeId));</span>
+
+<span class="nc" id="L172">        String empNumber = employee.getEmployeeNumber(); // e.g., ANPL1006</span>
+<span class="nc" id="L173">        String datePart = LocalDate.now().format(DateTimeFormatter.ofPattern(&quot;ddMMyy&quot;));</span>
+<span class="nc" id="L174">        String sequenceKey = String.format(&quot;SR_%s_%s&quot;, empNumber, datePart);</span>
+
+<span class="nc" id="L176">        ApplicationSequence sequence = sequenceRepository.findByType(sequenceKey)</span>
+<span class="nc" id="L177">                .orElseGet(() -&gt; {</span>
+<span class="nc" id="L178">                    ApplicationSequence newSeq = new ApplicationSequence();</span>
+<span class="nc" id="L179">                    newSeq.setType(sequenceKey);</span>
+<span class="nc" id="L180">                    newSeq.setCurrentNumber(0);</span>
+<span class="nc" id="L181">                    newSeq.setIncrement(1);</span>
+<span class="nc" id="L182">                    newSeq.setPrefix(&quot;SR&quot;);</span>
+<span class="nc" id="L183">                    newSeq.setStartNumber(1);</span>
+<span class="nc" id="L184">                    sequenceRepository.save(newSeq);</span>
+<span class="nc" id="L185">                    return newSeq;</span>
+                });
+
+<span class="nc" id="L188">        int nextNumber = sequence.getCurrentNumber() + sequence.getIncrement();</span>
+<span class="nc" id="L189">        sequence.setCurrentNumber(nextNumber);</span>
+<span class="nc" id="L190">        sequenceRepository.save(sequence);</span>
+
+<span class="nc" id="L192">        return String.format(&quot;SR-%s-%s-%04d&quot;, empNumber, datePart, nextNumber);</span>
+    }
+
+    @Transactional
+    public EmpExitRequestDTO getExitFormData(Integer employeeId) {
+<span class="nc" id="L197">        Employee employee = employeeRepository.findByEmployeeId(employeeId).orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Employee not found with ID: &quot; + employeeId));</span>
+<span class="nc" id="L198">        EmpExitRequest request = empExitRequestRepository.findFirstByEmployeeId(employeeId).orElse(null);</span>
+
+<span class="nc bnc" id="L200" title="All 2 branches missed.">        EmpExitRequestDTO dto = (request != null) ? modelMapper.map(request, EmpExitRequestDTO.class) : new EmpExitRequestDTO();</span>
+
+<span class="nc" id="L202">        dto.setEmployeeId(employee.getEmployeeId());</span>
+<span class="nc" id="L203">        dto.setEmployeeName(employee.getFullName() + &quot; (&quot; + employee.getEmployeeNumber() + &quot;)&quot;);</span>
+<span class="nc" id="L204">        dto.setEmail(employee.getWorkEmail());</span>
+<span class="nc bnc" id="L205" title="All 2 branches missed.">        dto.setDesignation( employee.getDesignation() != null ? employee.getDesignation().getDesignationName() : &quot;Unknown Designation&quot;);</span>
+<span class="nc bnc" id="L206" title="All 2 branches missed.">        dto.setDepartment(employee.getDepartment() != null ? employee.getDepartment().getDname() : &quot;Unknown Department&quot;);</span>
+<span class="nc bnc" id="L207" title="All 2 branches missed.">        dto.setReportingManager(employee.getReportingManagerId() != null ? employee.getReportingManager().getFullName() : &quot;Unknown Reporting Manager&quot;);</span>
+<span class="nc bnc" id="L208" title="All 2 branches missed.">        if (employee.getHrManagerId() != null) {</span>
+<span class="nc" id="L209">            Employee hrManager = employeeRepository.findByEmployeeId(employee.getHrManagerId()).orElse(null);</span>
+<span class="nc bnc" id="L210" title="All 2 branches missed.">            dto.setHrManager(hrManager != null ? hrManager.getFullName() : &quot;Unknown HR&quot;);</span>
+        }
+<span class="nc" id="L212">        dto.setDateOfJoining(employee.getEffectiveStartDate());</span>
+<span class="nc" id="L213">        dto.setNoticePeriod(employee.getNoticeDays());</span>
+
+<span class="nc" id="L215">        return dto;</span>
+    }
+
+    @Transactional
+    public ApiResponse&lt;Map&lt;String, Object&gt;&gt; getApprovals(Long employeeId, String searchField, String searchKeyword,
+                                                         String sortField, String sortDirection, int page, int size) {
+<span class="nc" id="L221">        Pageable pageable = PageRequest.of(page, size);</span>
+<span class="nc" id="L222">        Page&lt;EmpExitApproval&gt; approvals = approvalRepository.findByApproverId(Math.toIntExact(employeeId), pageable);</span>
+<span class="nc" id="L223">        List&lt;EmpExitApprovalDTO&gt; approvalDtos = approvals.getContent().stream()</span>
+<span class="nc" id="L224">                .map(this::convertToDTO)</span>
+<span class="nc" id="L225">                .collect(Collectors.toList());</span>
+<span class="nc bnc" id="L226" title="All 8 branches missed.">        if (searchField != null &amp;&amp; !searchField.isBlank() &amp;&amp; searchKeyword != null &amp;&amp; !searchKeyword.isBlank()) {</span>
+<span class="nc" id="L227">            approvalDtos = searchByColumn(approvalDtos, searchField, searchKeyword);</span>
+        }
+<span class="nc bnc" id="L229" title="All 4 branches missed.">        if (sortField != null &amp;&amp; !sortField.isBlank()) {</span>
+            Comparator&lt;EmpExitApprovalDTO&gt; comparator;
+<span class="nc bnc" id="L231" title="All 6 branches missed.">            switch (sortField) {</span>
+                case &quot;exitRequestNumber&quot;:
+<span class="nc" id="L233">                    comparator = Comparator.comparing(EmpExitApprovalDTO::getExitRequestNumber, Comparator.nullsLast(String::compareToIgnoreCase));</span>
+<span class="nc" id="L234">                    break;</span>
+                case &quot;employeeName&quot;:
+<span class="nc" id="L236">                    comparator = Comparator.comparing(EmpExitApprovalDTO::getEmployeeName, Comparator.nullsLast(String::compareToIgnoreCase));</span>
+<span class="nc" id="L237">                    break;</span>
+                case &quot;department&quot;:
+<span class="nc" id="L239">                    comparator = Comparator.comparing(EmpExitApprovalDTO::getDepartment, Comparator.nullsLast(String::compareToIgnoreCase));</span>
+<span class="nc" id="L240">                    break;</span>
+                case &quot;reportingManager&quot;:
+<span class="nc" id="L242">                    comparator = Comparator.comparing(EmpExitApprovalDTO::getReportingManager, Comparator.nullsLast(String::compareToIgnoreCase));</span>
+<span class="nc" id="L243">                    break;</span>
+                case &quot;approvalStatus&quot;:
+<span class="nc" id="L245">                    comparator = Comparator.comparing(EmpExitApprovalDTO::getApprovalStatus, Comparator.nullsLast(String::compareToIgnoreCase));</span>
+<span class="nc" id="L246">                    break;</span>
+                default:
+<span class="nc" id="L248">                    comparator = Comparator.comparing(EmpExitApprovalDTO::getId, Comparator.nullsLast(Integer::compareTo));</span>
+            }
+<span class="nc bnc" id="L250" title="All 2 branches missed.">            if (&quot;desc&quot;.equalsIgnoreCase(sortDirection)) {</span>
+<span class="nc" id="L251">                comparator = comparator.reversed();</span>
+            }
+<span class="nc" id="L253">            approvalDtos.sort(comparator);</span>
+        }
+
+<span class="nc" id="L256">        Map&lt;String, Object&gt; data = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L257">        data.put(&quot;data&quot;, approvalDtos);</span>
+<span class="nc" id="L258">        data.put(&quot;totalItems&quot;, approvals.getTotalElements());</span>
+<span class="nc" id="L259">        data.put(&quot;totalPages&quot;, approvals.getTotalPages());</span>
+<span class="nc" id="L260">        data.put(&quot;pageSize&quot;, size);</span>
+<span class="nc" id="L261">        data.put(&quot;currentPage&quot;, page + 1);</span>
+
+<span class="nc" id="L263">        ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;();</span>
+<span class="nc" id="L264">        response.setData(data);</span>
+<span class="nc" id="L265">        response.setSuccess(true);</span>
+<span class="nc" id="L266">        response.setResponseCode(&quot;APPROVAL_LIST_FETCHED_SUCCESS&quot;);</span>
+<span class="nc" id="L267">        response.setResponseType(&quot;Success&quot;);</span>
+<span class="nc" id="L268">        response.setErrors(null);</span>
+<span class="nc" id="L269">        return response;</span>
+    }
+    public List&lt;EmpExitApprovalDTO&gt; searchByColumn(List&lt;EmpExitApprovalDTO&gt; approvalDtos, String column, String value) {
+<span class="nc" id="L272">        return approvalDtos.stream()</span>
+<span class="nc" id="L273">                .filter(dto -&gt; {</span>
+<span class="nc bnc" id="L274" title="All 15 branches missed.">                    switch (column) {</span>
+                        case &quot;employeeName&quot;:
+<span class="nc bnc" id="L276" title="All 2 branches missed.">                            return dto.getEmployeeName() != null &amp;&amp;</span>
+<span class="nc bnc" id="L277" title="All 2 branches missed.">                                    dto.getEmployeeName().toLowerCase().contains(value.toLowerCase());</span>
+                        case &quot;email&quot;:
+<span class="nc bnc" id="L279" title="All 2 branches missed.">                            return dto.getEmail() != null &amp;&amp;</span>
+<span class="nc bnc" id="L280" title="All 2 branches missed.">                                    dto.getEmail().toLowerCase().contains(value.toLowerCase());</span>
+                        case &quot;designation&quot;:
+<span class="nc bnc" id="L282" title="All 2 branches missed.">                            return dto.getDesignation() != null &amp;&amp;</span>
+<span class="nc bnc" id="L283" title="All 2 branches missed.">                                    dto.getDesignation().toLowerCase().contains(value.toLowerCase());</span>
+                        case &quot;department&quot;:
+<span class="nc bnc" id="L285" title="All 2 branches missed.">                            return dto.getDepartment() != null &amp;&amp;</span>
+<span class="nc bnc" id="L286" title="All 2 branches missed.">                                    dto.getDepartment().toLowerCase().contains(value.toLowerCase());</span>
+                        case &quot;reportingManager&quot;:
+<span class="nc bnc" id="L288" title="All 2 branches missed.">                            return dto.getReportingManager() != null &amp;&amp;</span>
+<span class="nc bnc" id="L289" title="All 2 branches missed.">                                    dto.getReportingManager().toLowerCase().contains(value.toLowerCase());</span>
+                        case &quot;hrManager&quot;:
+<span class="nc bnc" id="L291" title="All 2 branches missed.">                            return dto.getHrManager() != null &amp;&amp;</span>
+<span class="nc bnc" id="L292" title="All 2 branches missed.">                                    dto.getHrManager().toLowerCase().contains(value.toLowerCase());</span>
+                        case &quot;exitRequestNumber&quot;:
+<span class="nc bnc" id="L294" title="All 2 branches missed.">                            return dto.getExitRequestNumber() != null &amp;&amp;</span>
+<span class="nc bnc" id="L295" title="All 2 branches missed.">                                    dto.getExitRequestNumber().toLowerCase().contains(value.toLowerCase());</span>
+                        case &quot;exitInitiateDate&quot;:
+<span class="nc bnc" id="L297" title="All 2 branches missed.">                            return dto.getExitInitiateDate() != null &amp;&amp;</span>
+<span class="nc bnc" id="L298" title="All 2 branches missed.">                                    dto.getExitInitiateDate().toString().equals(value);</span>
+                        case &quot;dateOfJoining&quot;:
+<span class="nc bnc" id="L300" title="All 2 branches missed.">                            return dto.getDateOfJoining() != null &amp;&amp;</span>
+<span class="nc bnc" id="L301" title="All 2 branches missed.">                                    dto.getDateOfJoining().toString().equals(value);</span>
+                        case &quot;status&quot;:
+<span class="nc bnc" id="L303" title="All 2 branches missed.">                            return dto.getStatus() != null &amp;&amp;</span>
+<span class="nc bnc" id="L304" title="All 2 branches missed.">                                    dto.getStatus().toLowerCase().contains(value.toLowerCase());</span>
+                        case &quot;approvalStatus&quot;:
+<span class="nc bnc" id="L306" title="All 2 branches missed.">                            return dto.getApprovalStatus() != null &amp;&amp;</span>
+<span class="nc bnc" id="L307" title="All 2 branches missed.">                                    dto.getApprovalStatus().toLowerCase().contains(value.toLowerCase());</span>
+                        case &quot;exitReason&quot;:
+<span class="nc bnc" id="L309" title="All 2 branches missed.">                            return dto.getExitReason() != null &amp;&amp;</span>
+<span class="nc bnc" id="L310" title="All 2 branches missed.">                                    dto.getExitReason().toLowerCase().contains(value.toLowerCase());</span>
+                        case &quot;approvalDate&quot;:
+<span class="nc bnc" id="L312" title="All 2 branches missed.">                            return dto.getApprovalDate() != null &amp;&amp;</span>
+<span class="nc bnc" id="L313" title="All 2 branches missed.">                                    dto.getApprovalDate().toString().equalsIgnoreCase(value);</span>
+                        case &quot;remarks&quot;:
+<span class="nc bnc" id="L315" title="All 2 branches missed.">                            return dto.getRemarks() != null &amp;&amp;</span>
+<span class="nc bnc" id="L316" title="All 2 branches missed.">                                    dto.getRemarks().toLowerCase().contains(value.toLowerCase());</span>
+                        default:
+<span class="nc" id="L318">                            return true;</span>
+                    }
+                })
+<span class="nc" id="L321">                .collect(Collectors.toList());</span>
+    }
+
+
+    @Transactional
+    private EmpExitApprovalDTO convertToDTO(EmpExitApproval approval) {
+<span class="nc" id="L327">        EmpExitApprovalDTO dto = new EmpExitApprovalDTO();</span>
+<span class="nc" id="L328">        dto.setId(approval.getId());</span>
+<span class="nc" id="L329">        dto.setApproverId(approval.getApproverId());</span>
+<span class="nc" id="L330">        dto.setExitRequestId(approval.getExitRequestId());</span>
+
+<span class="nc bnc" id="L332" title="All 2 branches missed.">        if (approval.getExitRequestId() != null) {</span>
+<span class="nc" id="L333">            EmpExitRequest exitRequest = empExitRequestRepository.findById(approval.getExitRequestId())</span>
+<span class="nc" id="L334">                    .orElseThrow(() -&gt; new RuntimeException(&quot;Exit request not found&quot;));</span>
+<span class="nc" id="L335">            dto.setExitRequestNumber(exitRequest.getExitRequestNumber());</span>
+<span class="nc" id="L336">            dto.setEmployeeId(exitRequest.getEmployeeId());</span>
+<span class="nc" id="L337">            dto.setExitInitiateDate(exitRequest.getEffectiveFrom());</span>
+<span class="nc" id="L338">            dto.setExitReason(exitRequest.getExitReason());</span>
+<span class="nc" id="L339">            dto.setLastWorkingDate(exitRequest.getLastWorkingDate());</span>
+<span class="nc" id="L340">            dto.setEffectiveFrom(exitRequest.getEffectiveFrom());</span>
+<span class="nc" id="L341">            dto.setCreatedOn(exitRequest.getCreatedDate());</span>
+        }
+
+<span class="nc" id="L344">        dto.setEmployeeName(employeeRepository</span>
+<span class="nc" id="L345">                .findEmployeeFullNameById(Long.valueOf(approval.getExitRequest().getEmployeeId()))</span>
+<span class="nc" id="L346">                .orElse(&quot;Unknown Employee&quot;));</span>
+
+<span class="nc" id="L348">        employeeRepository.findByEmployeeId(approval.getExitRequest().getEmployeeId()).ifPresent(employee -&gt; {</span>
+<span class="nc bnc" id="L349" title="All 2 branches missed.">            dto.setDepartment(employee.getDepartment() != null ? employee.getDepartment().getDname() : null);</span>
+
+<span class="nc bnc" id="L351" title="All 2 branches missed.">            if (employee.getHrManagerId() != null) {</span>
+<span class="nc" id="L352">                Employee hrManager = employeeRepository.findByEmployeeId(employee.getHrManagerId()).orElse(null);</span>
+<span class="nc bnc" id="L353" title="All 2 branches missed.">                dto.setHrManager(hrManager != null ? hrManager.getFullName() : null);</span>
+            }
+<span class="nc bnc" id="L355" title="All 2 branches missed.">            if (employee.getReportingManagerId() != null) {</span>
+<span class="nc" id="L356">                Employee rManager = employeeRepository.findByEmployeeId(employee.getReportingManagerId()).orElse(null);</span>
+<span class="nc bnc" id="L357" title="All 2 branches missed.">                dto.setReportingManager(rManager != null ? rManager.getFullName() : null);</span>
+            }
+<span class="nc" id="L359">        });</span>
+
+<span class="nc" id="L361">        dto.setApprovalStatus(approval.getApprovalStatus());</span>
+<span class="nc" id="L362">        dto.setApprovalDate(approval.getApprovalDate());</span>
+<span class="nc" id="L363">        dto.setRemarks(approval.getRemarks());</span>
+
+<span class="nc" id="L365">        return dto;</span>
+    }
+
+    private EmpExitApprovalDTO convertToApprovalDTO(EmpExitApproval approval) {
+<span class="nc" id="L369">        EmpExitApprovalDTO dto = new EmpExitApprovalDTO();</span>
+
+        // Basic approval details
+<span class="nc" id="L372">        dto.setId(approval.getId());</span>
+<span class="nc" id="L373">        dto.setApproverId(approval.getApproverId());</span>
+<span class="nc" id="L374">        dto.setExitRequestId(approval.getExitRequest().getId());</span>
+<span class="nc" id="L375">        dto.setExitRequestNumber(approval.getExitRequest().getExitRequestNumber());</span>
+<span class="nc" id="L376">        dto.setExitInitiateDate(approval.getExitRequest().getEffectiveFrom());</span>
+
+        // Employee basic info from ExitRequest
+<span class="nc" id="L379">        Integer employeeId = approval.getExitRequest().getEmployeeId();</span>
+<span class="nc" id="L380">        dto.setEmployeeId(employeeId);</span>
+
+        // Fetch employee details from repository
+<span class="nc" id="L383">        employeeRepository.findByEmployeeId(employeeId).ifPresent(employee -&gt; {</span>
+<span class="nc" id="L384">            dto.setEmployeeName(employee.getFullName());</span>
+<span class="nc" id="L385">            dto.setEmail(employee.getWorkEmail());</span>
+<span class="nc bnc" id="L386" title="All 2 branches missed.">            dto.setDesignation(employee.getDesignation() != null ? employee.getDesignation().getDesignationName() : null);</span>
+<span class="nc bnc" id="L387" title="All 2 branches missed.">            dto.setDepartment(employee.getDepartment() != null ? employee.getDepartment().getDname() : null);</span>
+<span class="nc bnc" id="L388" title="All 2 branches missed.">            if (employee.getReportingManagerId() != null) {</span>
+<span class="nc" id="L389">                Employee rManager = employeeRepository.findByEmployeeId(employee.getReportingManagerId()).orElse(null);</span>
+<span class="nc bnc" id="L390" title="All 2 branches missed.">                dto.setReportingManager(rManager != null ? rManager.getFullName() : null);</span>
+            }
+
+<span class="nc bnc" id="L393" title="All 2 branches missed.">            if (employee.getHrManagerId() != null) {</span>
+<span class="nc" id="L394">                Employee hrManager = employeeRepository.findByEmployeeId(employee.getHrManagerId()).orElse(null);</span>
+<span class="nc bnc" id="L395" title="All 2 branches missed.">                dto.setHrManager(hrManager != null ? hrManager.getFullName() : null);</span>
+            }
+
+<span class="nc" id="L398">            dto.setDateOfJoining(employee.getEffectiveStartDate());</span>
+<span class="nc" id="L399">            dto.setNoticePeriod(employee.getNoticeDays());</span>
+<span class="nc" id="L400">        });</span>
+
+        // Exit request related details
+<span class="nc" id="L403">        dto.setApprovalRequired(approval.getExitRequest().getApprovalRequired());</span>
+<span class="nc" id="L404">        dto.setEffectiveFrom(approval.getExitRequest().getEffectiveFrom());</span>
+<span class="nc" id="L405">        dto.setExitType(approval.getExitRequest().getExitType());</span>
+<span class="nc" id="L406">        dto.setExitReason(approval.getExitRequest().getExitReason());</span>
+<span class="nc" id="L407">        dto.setLastWorkingDate(approval.getExitRequest().getLastWorkingDate());</span>
+<span class="nc" id="L408">        dto.setRequestMeeting(approval.getExitRequest().getRequestMeeting());</span>
+<span class="nc" id="L409">        dto.setEligibleToRehire(approval.getExitRequest().getEligibleToRehire());</span>
+<span class="nc" id="L410">        dto.setRequestBuyout(approval.getExitRequest().getRequestBuyout());</span>
+<span class="nc" id="L411">        dto.setEmpRemarks(approval.getExitRequest().getRemarks());</span>
+<span class="nc" id="L412">        dto.setStatus(approval.getExitRequest().getStatus());</span>
+<span class="nc" id="L413">        dto.setAttachment(approval.getExitRequest().getAttachment());</span>
+
+        // Approval-specific fields
+<span class="nc" id="L416">        dto.setApprovalStatus(approval.getApprovalStatus());</span>
+<span class="nc" id="L417">        dto.setApprovalDate(approval.getApprovalDate());</span>
+<span class="nc" id="L418">        dto.setRemarks(approval.getRemarks());</span>
+
+<span class="nc" id="L420">        return dto;</span>
+    }
+
+    @Transactional
+    public EmpExitApprovalDTO getEmployeeExitById(Integer id) {
+<span class="nc" id="L425">        return approvalRepository.findByExitRequestId(id)</span>
+<span class="nc" id="L426">                .map(this::convertToApprovalDTO)</span>
+<span class="nc" id="L427">                .orElse(null);</span>
+    }
+
+    @Transactional
+    public EmpExitApprovalDTO reviewExitRequest(Integer id, EmpExitApprovalDTO requestDto) {
+
+<span class="nc" id="L433">        EmpExitApproval approval = approvalRepository.findByExitRequestId(id)</span>
+<span class="nc" id="L434">                .orElseThrow(() -&gt; new RuntimeException(&quot;Exit approval record not found&quot;));</span>
+
+<span class="nc bnc" id="L436" title="All 2 branches missed.">        if (requestDto.getApprovalStatus() != null) {</span>
+<span class="nc" id="L437">            approval.setApprovalStatus(requestDto.getApprovalStatus());</span>
+<span class="nc" id="L438">            approval.setApprovalDate(LocalDate.now());</span>
+        }
+<span class="nc bnc" id="L440" title="All 2 branches missed.">        if (requestDto.getRemarks() != null) {</span>
+<span class="nc" id="L441">            approval.setRemarks(requestDto.getRemarks());</span>
+        }
+
+<span class="nc bnc" id="L444" title="All 2 branches missed.">        if (approval.getExitRequestId() != null) {</span>
+<span class="nc" id="L445">            EmpExitRequest exitRequest = empExitRequestRepository.findById(approval.getExitRequestId())</span>
+<span class="nc" id="L446">                    .orElseThrow(() -&gt; new RuntimeException(&quot;Exit request not found&quot;));</span>
+
+<span class="nc" id="L448">            List&lt;String&gt; statuses = Arrays.asList(</span>
+<span class="nc" id="L449">                    exitRequest.getAssetClearanceStatus(),</span>
+<span class="nc" id="L450">                    exitRequest.getFinanceClearanceStatus(),</span>
+<span class="nc" id="L451">                    exitRequest.getKtHandoverStatus(),</span>
+<span class="nc" id="L452">                    exitRequest.getAdminClearanceStatus(),</span>
+<span class="nc" id="L453">                    exitRequest.getExitInterviewStatus(),</span>
+<span class="nc" id="L454">                    exitRequest.getFullFinalStatus()</span>
+            );
+<span class="nc bnc" id="L456" title="All 2 branches missed.">            if (statuses.stream().allMatch(s -&gt; &quot;Approved&quot;.equalsIgnoreCase(s))) {</span>
+<span class="nc" id="L457">                exitRequest.setStatus(&quot;Approved&quot;);</span>
+<span class="nc bnc" id="L458" title="All 2 branches missed.">            } else if (statuses.stream().anyMatch(s -&gt; &quot;Rejected&quot;.equalsIgnoreCase(s))) {</span>
+<span class="nc" id="L459">                exitRequest.setStatus(&quot;Rejected&quot;);</span>
+<span class="nc bnc" id="L460" title="All 2 branches missed.">            } else if (statuses.stream().anyMatch(s -&gt; &quot;On Hold&quot;.equalsIgnoreCase(s))) {</span>
+<span class="nc" id="L461">                exitRequest.setStatus(&quot;On Hold&quot;);</span>
+            } else {
+<span class="nc" id="L463">                exitRequest.setStatus(&quot;Pending&quot;);</span>
+            }
+
+<span class="nc" id="L466">            exitRequest.setRequestMeeting(requestDto.getRequestMeeting());</span>
+<span class="nc" id="L467">            exitRequest.setEligibleToRehire(requestDto.getEligibleToRehire());</span>
+<span class="nc" id="L468">            exitRequest.setLastWorkingDate(requestDto.getLastWorkingDate());</span>
+<span class="nc" id="L469">            exitRequest.setManagerRemark(requestDto.getRemarks());</span>
+
+<span class="nc" id="L471">            empExitRequestRepository.save(exitRequest);</span>
+        }
+
+<span class="nc" id="L474">        EmpExitApproval savedApproval = approvalRepository.save(approval);</span>
+<span class="nc bnc" id="L475" title="All 2 branches missed.">        if (&quot;Approved&quot;.equalsIgnoreCase(requestDto.getApprovalStatus())) {</span>
+<span class="nc" id="L476">            processApprovalFlow(savedApproval.getExitRequestId());</span>
+        }
+<span class="nc" id="L478">        return modelMapper.map(savedApproval, EmpExitApprovalDTO.class);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

@@ -1,0 +1,356 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CustomerResource.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.customers</a> &gt; <span class="el_source">CustomerResource.java</span></div><h1>CustomerResource.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.customers;
+
+
+import com.atomicnorth.hrm.tenant.domain.customers.CustomerSite;
+import com.atomicnorth.hrm.tenant.service.customers.CustomerService;
+import com.atomicnorth.hrm.tenant.service.dto.customers.CustomerAccountDTO;
+import com.atomicnorth.hrm.tenant.service.dto.customers.CustomerDTO;
+import com.atomicnorth.hrm.tenant.service.dto.customers.CustomerNamesDtos;
+import com.atomicnorth.hrm.tenant.service.dto.customers.CustomerSiteDTO;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.web.bind.annotation.*;
+
+import javax.persistence.EntityNotFoundException;
+import javax.validation.Valid;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping(&quot;/api/customers&quot;)
+@EnableTransactionManagement
+<span class="nc" id="L29">public class CustomerResource {</span>
+
+    @Autowired
+    private CustomerService customerService;
+
+
+    @GetMapping(&quot;/getAllData&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getCustomerSiteList(
+            @RequestParam(defaultValue = &quot;1&quot;) int page,  // Starts from 1
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(defaultValue = &quot;creationDate&quot;, required = false) String sortBy,
+            @RequestParam(defaultValue = &quot;desc&quot;, required = false) String sortDir,
+            @RequestParam(required = false) String searchColumn,
+            @RequestParam(required = false) String searchValue
+    ) {
+        try {
+<span class="nc bnc" id="L45" title="All 2 branches missed.">            if (page &lt; 1) {</span>
+<span class="nc" id="L46">                throw new IllegalArgumentException(&quot;Page index must be 1 or greater.&quot;);</span>
+            }
+
+<span class="nc" id="L49">            Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc" id="L50">            Map&lt;String, Object&gt; customerSiteList = customerService.getPaginatedCustomerSites(pageable, searchColumn, searchValue);</span>
+
+<span class="nc" id="L52">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    customerSiteList,
+                    true,
+                    &quot;CUSTOMER-SITE-LIST-SUCCESS&quot;,
+                    &quot;Success&quot;
+            );
+<span class="nc" id="L58">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+
+<span class="nc" id="L60">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L61">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;CUSTOMER-SITE-LIST-FAILURE&quot;,
+                    &quot;Warning&quot;,
+<span class="nc" id="L66">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L68">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+<span class="nc" id="L69">        } catch (Exception ex) {</span>
+<span class="nc" id="L70">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;CUSTOMER-SITE-LIST-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L75">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L77">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @PostMapping(&quot;/saveOrUpdate&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;CustomerDTO&gt;&gt; saveOrUpdateCustomer(@Valid @RequestBody CustomerDTO dto) {
+        try {
+<span class="nc bnc" id="L84" title="All 2 branches missed.">            boolean isUpdate = dto.getCustomerId() != null;</span>
+<span class="nc" id="L85">            CustomerDTO savedDto = customerService.saveOrUpdate(dto);</span>
+<span class="nc bnc" id="L86" title="All 2 branches missed.">            String message = isUpdate ? &quot;Customer updated successfully&quot; : &quot;Customer created successfully&quot;;</span>
+<span class="nc bnc" id="L87" title="All 2 branches missed.">            String code = isUpdate ? &quot;UPDATE-SUCCESS&quot; : &quot;CREATE-SUCCESS&quot;;</span>
+<span class="nc" id="L88">            ApiResponse&lt;CustomerDTO&gt; response = new ApiResponse&lt;&gt;(savedDto, true, code, message);</span>
+<span class="nc" id="L89">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L90">        } catch (Exception ex) {</span>
+<span class="nc" id="L91">            ApiResponse&lt;CustomerDTO&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;SAVE-OR-UPDATE-FAILED&quot;, &quot;Error while saving/updating customer&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L92">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/findById&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;CustomerDTO&gt;&gt; getCustomerById(
+            @RequestParam Integer customerId) {
+        try {
+<span class="nc" id="L100">            CustomerDTO customer = customerService.getCustomerById(customerId);</span>
+<span class="nc" id="L101">            ApiResponse&lt;CustomerDTO&gt; response = new ApiResponse&lt;&gt;(customer, true, &quot;CUSTOMER-FETCH-SUCCESS&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L102">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L103">        } catch (EntityNotFoundException e) {</span>
+<span class="nc" id="L104">            ApiResponse&lt;CustomerDTO&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;CUSTOMER-NOT-FOUND&quot;, e.getMessage());</span>
+<span class="nc" id="L105">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L106">        } catch (Exception e) {</span>
+<span class="nc" id="L107">            ApiResponse&lt;CustomerDTO&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;CUSTOMER-FETCH-FAILURE&quot;, &quot;Failure&quot;, Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L108">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getAllCustomerNames&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;CustomerNamesDtos&gt;&gt;&gt; getAllCustomer() {
+        try {
+<span class="nc" id="L115">            List&lt;CustomerNamesDtos&gt; customers = customerService.getAllCustomersNameAndId();</span>
+<span class="nc" id="L116">            ApiResponse&lt;List&lt;CustomerNamesDtos&gt;&gt; response = new ApiResponse&lt;&gt;(customers, true, &quot;CUSTOMER-LIST-SUCCESS&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L117">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L118">        } catch (Exception e) {</span>
+<span class="nc" id="L119">            ApiResponse&lt;List&lt;CustomerNamesDtos&gt;&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;CUSTOMER-LIST-FAILURE&quot;, &quot;Failure&quot;, Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L120">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+        }
+    }
+
+    @GetMapping(&quot;/findAll&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; getAllCustomers(
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;customerId&quot;, required = false) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;, required = false) String sortDir,
+            @RequestParam(value = &quot;searchValue&quot;, required = false) String searchValue,
+            @RequestParam(value = &quot;searchColumn&quot;, required = false) String searchColumn
+    ) {
+        try {
+<span class="nc" id="L134">            Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc bnc" id="L135" title="All 2 branches missed.">            if (&quot;countryName&quot;.equals(sortBy)) {</span>
+<span class="nc" id="L136">                sort = Sort.by(Sort.Direction.fromString(sortDir), &quot;country.countryName&quot;);</span>
+<span class="nc bnc" id="L137" title="All 2 branches missed.">            } else if (&quot;cityName&quot;.equals(sortBy)) {</span>
+<span class="nc" id="L138">                sort = Sort.by(Sort.Direction.fromString(sortDir), &quot;city.cityName&quot;);</span>
+<span class="nc bnc" id="L139" title="All 2 branches missed.">            } else if (&quot;stateName&quot;.equals(sortBy)) {</span>
+<span class="nc" id="L140">                sort = Sort.by(Sort.Direction.fromString(sortDir), &quot;state.stateName&quot;);</span>
+<span class="nc bnc" id="L141" title="All 2 branches missed.">            } else if (&quot;salesRepresentativeName&quot;.equals(sortBy)) {</span>
+<span class="nc" id="L142">                sort = Sort.by(Sort.Direction.fromString(sortDir), &quot;salesRepresentative.firstName&quot;);</span>
+            }
+<span class="nc" id="L144">            Pageable pageable = PageRequest.of(page - 1, size, sort);</span>
+<span class="nc" id="L145">            Map&lt;String, Object&gt; allCustomers = customerService.getAllCustomers(pageable, searchColumn, searchValue);</span>
+<span class="nc" id="L146">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(allCustomers, true, &quot;CUSTOMER_LIST_FETCHED_SUCCESS&quot;, &quot;Success&quot;));</span>
+<span class="nc" id="L147">        } catch (Exception e) {</span>
+<span class="nc" id="L148">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;CUSTOMER_LIST_FETCHED_ERROR&quot;, &quot;Error&quot;, Collections.singletonList(&quot;Error fetching customer list: &quot; + e.getMessage())));</span>
+        }
+    }
+
+    @GetMapping(&quot;/customerSite/{siteId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;CustomerSite&gt;&gt; getCustomerSite(
+            @PathVariable Integer siteId
+    ) {
+        try {
+<span class="nc" id="L157">            CustomerSite customerSiteDTO = customerService.findCustomerSiteBySiteId(siteId);</span>
+            ApiResponse&lt;CustomerSite&gt; response;
+<span class="nc bnc" id="L159" title="All 2 branches missed.">            if (customerSiteDTO != null) {</span>
+<span class="nc" id="L160">                response = new ApiResponse&lt;&gt;(customerSiteDTO, true, &quot;SITE-FOUND&quot;, &quot;Success&quot;);</span>
+            } else {
+<span class="nc" id="L162">                response = new ApiResponse&lt;&gt;(null, false, &quot;SITE-NOT-FOUND&quot;, &quot;Failure&quot;);</span>
+            }
+<span class="nc" id="L164">            return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+<span class="nc" id="L165">        } catch (Exception e) {</span>
+<span class="nc" id="L166">            ApiResponse&lt;CustomerSite&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;SITE-RETRIEVAL-ERROR&quot;, &quot;Error&quot;, Collections.singletonList(&quot;An error occurred while retrieving the customer site.&quot;));</span>
+<span class="nc" id="L167">            return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+        }
+    }
+    @PostMapping(&quot;/saveOrUpdateCustomerAccount&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;CustomerAccountDTO&gt;&gt; saveOrUpdateCustomerAccounts(@Valid @RequestBody CustomerAccountDTO dto) {
+        try {
+<span class="nc bnc" id="L173" title="All 2 branches missed.">            boolean isUpdate = dto.getAccountId() != null;</span>
+<span class="nc" id="L174">            CustomerAccountDTO savedDto = customerService.saveOrUpdateCustomerAccount(dto);</span>
+<span class="nc bnc" id="L175" title="All 2 branches missed.">            String message = isUpdate ? &quot;Customer account updated successfully&quot; : &quot;Customer account created successfully&quot;;</span>
+<span class="nc bnc" id="L176" title="All 2 branches missed.">            String code = isUpdate ? &quot;UPDATE-SUCCESS&quot; : &quot;CREATE-SUCCESS&quot;;</span>
+<span class="nc" id="L177">            ApiResponse&lt;CustomerAccountDTO&gt; response = new ApiResponse&lt;&gt;(savedDto, true, code, message);</span>
+<span class="nc" id="L178">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L179">        } catch (Exception ex) {</span>
+<span class="nc" id="L180">            ApiResponse&lt;CustomerAccountDTO&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;SAVE-OR-UPDATE-FAILED&quot;, &quot;Error while saving/updating customer&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L181">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+    @GetMapping(&quot;/findByAccountId&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;CustomerAccountDTO&gt;&gt; getCustomerAccountsById(
+            @RequestParam Integer accountId) {
+        try {
+<span class="nc" id="L188">            CustomerAccountDTO customer = customerService.getCustomerByAccountId(accountId);</span>
+<span class="nc" id="L189">            ApiResponse&lt;CustomerAccountDTO&gt; response = new ApiResponse&lt;&gt;(customer, true, &quot;CUSTOMER-ACCOUNT-FETCH-SUCCESS&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L190">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L191">        } catch (EntityNotFoundException e) {</span>
+<span class="nc" id="L192">            ApiResponse&lt;CustomerAccountDTO&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;CUSTOMER-ACCOUNT-NOT-FOUND&quot;, e.getMessage());</span>
+<span class="nc" id="L193">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L194">        } catch (Exception e) {</span>
+<span class="nc" id="L195">            ApiResponse&lt;CustomerAccountDTO&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;CUSTOMER-ACCOUNT-FETCH-FAILURE&quot;, &quot;Failure&quot;, Collections.singletonList(&quot;Error fetching customer account  &quot;+ e.getMessage()));</span>
+<span class="nc" id="L196">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getAllCustomersAccount&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; getAllCustomerAccounts(
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;accountId&quot;, required = false) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;, required = false) String sortDir,
+            @RequestParam(value = &quot;searchValue&quot;, required = false) String searchValue,
+            @RequestParam(value = &quot;searchColumn&quot;, required = false) String searchColumn
+    ) {
+        try {
+<span class="nc" id="L210">            Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc bnc" id="L211" title="All 2 branches missed.">            if (&quot;countryName&quot;.equals(sortBy)) {</span>
+<span class="nc" id="L212">                sort = Sort.by(Sort.Direction.fromString(sortDir), &quot;country.countryName&quot;);</span>
+<span class="nc bnc" id="L213" title="All 2 branches missed.">            } else if (&quot;cityName&quot;.equals(sortBy)) {</span>
+<span class="nc" id="L214">                sort = Sort.by(Sort.Direction.fromString(sortDir), &quot;city.cityName&quot;);</span>
+<span class="nc bnc" id="L215" title="All 2 branches missed.">            } else if (&quot;stateName&quot;.equals(sortBy)) {</span>
+<span class="nc" id="L216">                sort = Sort.by(Sort.Direction.fromString(sortDir), &quot;state.stateName&quot;);</span>
+<span class="nc bnc" id="L217" title="All 2 branches missed.">            } else if (&quot;customerName&quot;.equals(sortBy)) {</span>
+<span class="nc" id="L218">                sort = Sort.by(Sort.Direction.fromString(sortDir), &quot;customer.customerName&quot;);</span>
+            }
+<span class="nc" id="L220">            Pageable pageable = PageRequest.of(page - 1, size, sort);</span>
+<span class="nc" id="L221">            Map&lt;String, Object&gt; allCustomers = customerService.getAllCustomerAccount(pageable, searchColumn, searchValue);</span>
+<span class="nc" id="L222">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(allCustomers, true, &quot;CUSTOMER_ACCOUNT_LIST_FETCHED_SUCCESS&quot;, &quot;Success&quot;));</span>
+<span class="nc" id="L223">        } catch (Exception e) {</span>
+<span class="nc" id="L224">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;CUSTOMER_ACCOUNT_LIST_FETCHED_ERROR&quot;, &quot;Error&quot;, Collections.singletonList(&quot;Error fetching customer account list: &quot; + e.getMessage())));</span>
+        }
+    }
+    @PostMapping(&quot;/saveOrUpdateCustomerSites&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;CustomerSiteDTO&gt;&gt;&gt; saveOrUpdateCustomerSites(@Valid @RequestBody List&lt;CustomerSiteDTO&gt; dtoList) {
+        try {
+<span class="nc bnc" id="L230" title="All 2 branches missed.">            boolean isUpdate = dtoList.stream().anyMatch(dto -&gt; dto.getSiteId() != null);</span>
+<span class="nc" id="L231">            List&lt;CustomerSiteDTO&gt; savedDtoList = customerService.saveOrUpdateCustomerSites(dtoList);</span>
+<span class="nc bnc" id="L232" title="All 2 branches missed.">            String message = isUpdate ? &quot;Customer sites updated successfully&quot; : &quot;Customer sites created successfully&quot;;</span>
+<span class="nc bnc" id="L233" title="All 2 branches missed.">            String code = isUpdate ? &quot;UPDATE-SUCCESS&quot; : &quot;CREATE-SUCCESS&quot;;</span>
+<span class="nc" id="L234">            ApiResponse&lt;List&lt;CustomerSiteDTO&gt;&gt; response = new ApiResponse&lt;&gt;(savedDtoList, true, code, message);</span>
+<span class="nc" id="L235">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L236">        } catch (Exception ex) {</span>
+<span class="nc" id="L237">            ApiResponse&lt;List&lt;CustomerSiteDTO&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;SAVE-OR-UPDATE-FAILED&quot;, &quot;Error while saving/updating customer sites&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L238">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+    @GetMapping(&quot;/getAllCustomersSite&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; getAllCustomerSites(
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;siteId&quot;, required = false) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;, required = false) String sortDir,
+            @RequestParam(value = &quot;searchValue&quot;, required = false) String searchValue,
+            @RequestParam(value = &quot;searchColumn&quot;, required = false) String searchColumn
+    ) {
+        try {
+<span class="nc" id="L251">            Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc bnc" id="L252" title="All 2 branches missed.">            if (&quot;countryName&quot;.equals(sortBy)) {</span>
+<span class="nc" id="L253">                sort = Sort.by(Sort.Direction.fromString(sortDir), &quot;country.countryName&quot;);</span>
+<span class="nc bnc" id="L254" title="All 2 branches missed.">            } else if (&quot;cityName&quot;.equals(sortBy)) {</span>
+<span class="nc" id="L255">                sort = Sort.by(Sort.Direction.fromString(sortDir), &quot;city.cityName&quot;);</span>
+<span class="nc bnc" id="L256" title="All 2 branches missed.">            } else if (&quot;stateName&quot;.equals(sortBy)) {</span>
+<span class="nc" id="L257">                sort = Sort.by(Sort.Direction.fromString(sortDir), &quot;state.stateName&quot;);</span>
+<span class="nc bnc" id="L258" title="All 2 branches missed.">            } else if (&quot;accountName&quot;.equals(sortBy)) {</span>
+<span class="nc" id="L259">                sort = Sort.by(Sort.Direction.fromString(sortDir), &quot;customerAccount.accountName&quot;);</span>
+            }
+<span class="nc" id="L261">            Pageable pageable = PageRequest.of(page - 1, size, sort);</span>
+<span class="nc" id="L262">            Map&lt;String, Object&gt; allSites = customerService.getAllCustomerSites(pageable, searchColumn, searchValue);</span>
+<span class="nc" id="L263">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(allSites, true, &quot;CUSTOMER_SITE_LIST_FETCHED_SUCCESS&quot;, &quot;Success&quot;));</span>
+<span class="nc" id="L264">        } catch (Exception e) {</span>
+<span class="nc" id="L265">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;CUSTOMER_Site_LIST_FETCHED_ERROR&quot;, &quot;Error&quot;, Collections.singletonList(&quot;Error fetching customer site list: &quot; + e.getMessage())));</span>
+        }
+    }
+    @GetMapping(&quot;/findBySiteId&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;CustomerSiteDTO&gt;&gt; getCustomerSitesById(
+            @RequestParam Integer siteId) {
+        try {
+<span class="nc" id="L272">            CustomerSiteDTO customer = customerService.getCustomerBySiteId(siteId);</span>
+<span class="nc" id="L273">            ApiResponse&lt;CustomerSiteDTO&gt; response = new ApiResponse&lt;&gt;(customer, true, &quot;CUSTOMER-SITE-FETCH-SUCCESS&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L274">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L275">        } catch (EntityNotFoundException e) {</span>
+<span class="nc" id="L276">            ApiResponse&lt;CustomerSiteDTO&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;CUSTOMER-SITE-NOT-FOUND&quot;, e.getMessage());</span>
+<span class="nc" id="L277">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L278">        } catch (Exception e) {</span>
+<span class="nc" id="L279">            ApiResponse&lt;CustomerSiteDTO&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;CUSTOMER-SITE-FETCH-FAILURE&quot;, &quot;Failure&quot;, Collections.singletonList(&quot;Error fetching customer site  &quot;+ e.getMessage()));</span>
+<span class="nc" id="L280">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+        }
+    }
+    @GetMapping(&quot;findCustomerDataByProjectId/{projectId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; findCustomerDataByProjectId(@PathVariable Integer projectId) {
+        try {
+<span class="nc" id="L286">            Map&lt;String, Object&gt; customerDataByProjectId = customerService.findCustomerDataByProjectId(projectId);</span>
+<span class="nc" id="L287">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(customerDataByProjectId, true, &quot;CUSTOMER-DATA-FETCH-SUCCESS&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L288">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L289">        } catch (Exception e) {</span>
+<span class="nc" id="L290">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;CUSTOMER-DATA-FETCH-FAILURE&quot;, &quot;ERROR&quot;, Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L291">            return ResponseEntity.ok(response);</span>
+        }
+    }
+    @GetMapping(&quot;/getByCustomerId&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getCustomersById(
+            @RequestParam Integer customerId,
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(required = false) String searchValue,
+            @RequestParam(required = false) String searchColumn,
+            @RequestParam(defaultValue = &quot;accountId&quot;) String sortBy,
+            @RequestParam(defaultValue = &quot;asc&quot;) String sortDir) {
+
+        try {
+<span class="nc bnc" id="L305" title="All 2 branches missed.">            Sort sort = sortDir.equalsIgnoreCase(&quot;asc&quot;) ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();</span>
+<span class="nc" id="L306">            Pageable pageable = PageRequest.of(page - 1, size, sort);</span>
+
+<span class="nc" id="L308">            Map&lt;String, Object&gt; customers = customerService.getAccountsByCustomerId(customerId, pageable, searchColumn, searchValue);</span>
+
+<span class="nc" id="L310">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(customers, true, &quot;CUSTOMER-ACCOUNT-FETCH-SUCCESS&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L311">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L312">        } catch (EntityNotFoundException e) {</span>
+<span class="nc" id="L313">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;CUSTOMER-ACCOUNT-NOT-FOUND&quot;, &quot;Failure&quot;, Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L314">            return ResponseEntity.ok(response); // Return 200 OK with error details as per your ApiResponse structure</span>
+<span class="nc" id="L315">        } catch (Exception e) {</span>
+<span class="nc" id="L316">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;CUSTOMER-ACCOUNT-FETCH-FAILURE&quot;, &quot;Failure&quot;,</span>
+<span class="nc" id="L317">                    Collections.singletonList(&quot;Error fetching customer account &quot; + e.getMessage()));</span>
+<span class="nc" id="L318">            return ResponseEntity.ok(response); // Return 200 OK with error details as per your ApiResponse structure</span>
+        }
+    }
+    @GetMapping(&quot;/getAllAccountByCustomerId&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getCustomersByAccountId(
+            @RequestParam Integer accountId,
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(required = false) String searchValue,
+            @RequestParam(required = false) String searchColumn,
+            @RequestParam(defaultValue = &quot;siteId&quot;) String sortBy,
+            @RequestParam(defaultValue = &quot;desc&quot;) String sortDir) {
+
+        try {
+<span class="nc bnc" id="L332" title="All 2 branches missed.">            Sort sort = sortDir.equalsIgnoreCase(&quot;asc&quot;) ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();</span>
+
+<span class="nc" id="L334">            Pageable pageable = PageRequest.of(page - 1, size, sort);</span>
+<span class="nc" id="L335">            Map&lt;String, Object&gt; customers = customerService.getCustomersByAccountId(accountId, pageable, searchColumn, searchValue);</span>
+<span class="nc" id="L336">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(customers, true, &quot;CUSTOMER-FETCH-SUCCESS&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L337">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L338">        } catch (Exception e) {</span>
+<span class="nc" id="L339">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;CUSTOMER-FETCH-FAILURE&quot;, &quot;Failure&quot;,</span>
+<span class="nc" id="L340">                    Collections.singletonList(&quot;Error fetching customer account &quot; + e.getMessage()));</span>
+<span class="nc" id="L341">            return ResponseEntity.ok(response);</span>
+        }
+    }
+
+    @GetMapping(&quot;/customerDropdownList&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; getCustomerDropdownList() {
+        try {
+<span class="nc" id="L348">            List&lt;Map&lt;String, Object&gt;&gt; customerDropdownList = customerService.getCustomerDropdownList();</span>
+<span class="nc" id="L349">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(customerDropdownList, true, &quot;CUSTOMER_LIST_FETCHED_SUCCESS&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L350">        } catch (Exception e) {</span>
+<span class="nc" id="L351">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;CUSTOMER_LIST_FETCHED_ERROR&quot;, &quot;ERROR&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

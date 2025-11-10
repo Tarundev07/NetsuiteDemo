@@ -1,0 +1,474 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AttendanceMoafService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.attendance</a> &gt; <span class="el_source">AttendanceMoafService.java</span></div><h1>AttendanceMoafService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.attendance;
+
+import com.atomicnorth.hrm.tenant.domain.Employee;
+import com.atomicnorth.hrm.tenant.domain.approvalflow.WorkflowRequest;
+import com.atomicnorth.hrm.tenant.domain.attendance.AttendanceMoaf;
+import com.atomicnorth.hrm.tenant.helper.Constant;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.repository.attendance.AttendanceMoafRepo;
+import com.atomicnorth.hrm.tenant.repository.attendance.SupraShiftRepo;
+import com.atomicnorth.hrm.tenant.service.EmployeeService;
+import com.atomicnorth.hrm.tenant.service.SequenceGeneratorService;
+import com.atomicnorth.hrm.tenant.service.approvalflow.ApprovalFlowService;
+import com.atomicnorth.hrm.tenant.service.dto.attendance.AttendanceMoafDTO;
+import com.atomicnorth.hrm.tenant.service.dto.logs.ErrorDetails;
+import com.atomicnorth.hrm.tenant.service.dto.logs.LogRequest;
+import com.atomicnorth.hrm.tenant.service.logs.LoggingService;
+import com.atomicnorth.hrm.tenant.service.roles.RoleAndPermissionsService;
+import com.atomicnorth.hrm.tenant.service.util.Utility;
+import com.atomicnorth.hrm.util.Enum.SequenceType;
+import com.atomicnorth.hrm.util.commonClass.PaginatedResponse;
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.Path;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+import javax.transaction.Transactional;
+import java.lang.reflect.Field;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L63">public class AttendanceMoafService {</span>
+
+<span class="nc" id="L65">    SimpleDateFormat sdf2 = new SimpleDateFormat(&quot;yyyy-MM-dd&quot;);</span>
+    @Autowired
+    private AttendanceMoafRepo attendanceMoafRepo;
+    @Autowired
+    private EmployeeService employeeService;
+    @Autowired
+    private Utility utility;
+    @Autowired
+    private SupraShiftRepo supraShiftRepo;
+    @Autowired
+    private EmployeeRepository employeeRepository;
+    @Autowired
+    private ModelMapper modelMapper;
+    @Autowired
+    private LoggingService loggingService;
+    @Autowired
+    private ViewAttendanceService viewAttendanceService;
+
+    @Autowired
+    private ApprovalFlowService approvalFlowService;
+    @Autowired
+    private  SequenceGeneratorService sequenceGeneratorService;
+    @Autowired
+    private  RoleAndPermissionsService roleAndPermissionsService;
+
+    public Map&lt;String, List&lt;String&gt;&gt; getUserShiftTimeMap(String startDate, String endDate, String username) {
+<span class="nc" id="L91">        Map&lt;String, List&lt;String&gt;&gt; tempMap = new LinkedHashMap&lt;String, List&lt;String&gt;&gt;();</span>
+        try {
+<span class="nc" id="L93">            List&lt;Map&lt;String, Object&gt;&gt; assignedShifts = supraShiftRepo.findShiftDetailsByUsername(username);</span>
+<span class="nc" id="L94">            List&lt;Date&gt; allDaysBetween = utility.getDaysBetweenDates(sdf2.parse(startDate), sdf2.parse(endDate));</span>
+<span class="nc bnc" id="L95" title="All 2 branches missed.">            for (Date d : allDaysBetween) {</span>
+<span class="nc" id="L96">                List&lt;String&gt; tempList = new ArrayList&lt;String&gt;();</span>
+<span class="nc" id="L97">                tempList.add(&quot;NA&quot;);</span>
+<span class="nc" id="L98">                tempList.add(&quot;09:00&quot;);</span>
+<span class="nc" id="L99">                tempList.add(&quot;18:00&quot;);</span>
+<span class="nc" id="L100">                tempList.add(&quot;N&quot;);</span>
+<span class="nc" id="L101">                tempList.add(&quot;NA&quot;);</span>
+<span class="nc" id="L102">                tempMap.put(sdf2.format(d), tempList);</span>
+<span class="nc" id="L103">            }</span>
+<span class="nc bnc" id="L104" title="All 2 branches missed.">            for (Map&lt;String, Object&gt; m : assignedShifts) {</span>
+<span class="nc" id="L105">                String dS = String.valueOf(m.get(&quot;SHIFT_START_DATE&quot;));</span>
+<span class="nc" id="L106">                Date dStart = sdf2.parse(dS);</span>
+<span class="nc" id="L107">                String dE = String.valueOf(m.get(&quot;SHIFT_END_DATE&quot;));</span>
+<span class="nc" id="L108">                Date dEnd = sdf2.parse(dE);</span>
+<span class="nc bnc" id="L109" title="All 2 branches missed.">                for (Date d : allDaysBetween) {</span>
+<span class="nc bnc" id="L110" title="All 8 branches missed.">                    if ((d.after(dStart) &amp;&amp; d.before(dEnd)) || (dS.equals(sdf2.format(d))) || (dE.equals(sdf2.format(d)))) {</span>
+<span class="nc" id="L111">                        List&lt;String&gt; tempList = new ArrayList&lt;String&gt;();</span>
+<span class="nc" id="L112">                        tempList.add(String.valueOf(m.get(&quot;SHIFT_ID&quot;)));</span>
+<span class="nc" id="L113">                        tempList.add(String.valueOf(m.get(&quot;GENERAL_START_TIME&quot;)));</span>
+<span class="nc" id="L114">                        tempList.add(String.valueOf(m.get(&quot;GENERAL_END_TIME&quot;)));</span>
+<span class="nc" id="L115">                        tempList.add(String.valueOf(m.get(&quot;DATE_CHANGE_FLAG&quot;)));</span>
+<span class="nc" id="L116">                        tempList.add(String.valueOf(m.get(&quot;USER_BIOMETRIC_ID&quot;)));</span>
+<span class="nc" id="L117">                        tempMap.put(sdf2.format(d), tempList);</span>
+                    }
+<span class="nc" id="L119">                }</span>
+<span class="nc" id="L120">            }</span>
+<span class="nc" id="L121">        } catch (Exception e) {</span>
+<span class="nc" id="L122">            e.printStackTrace();</span>
+<span class="nc" id="L123">        }</span>
+<span class="nc" id="L124">        return tempMap;</span>
+    }
+
+    @Transactional
+    public PaginatedResponse&lt;AttendanceMoafDTO&gt; fetchUserMoafPendingRequest(String status, LocalDate firstDate, LocalDate lastDate, Set&lt;Integer&gt; divisions, Set&lt;Long&gt; departments, Set&lt;Integer&gt; reportingManagers, Set&lt;Integer&gt; employeesId, int page, int size, String sortBy, String sortOrder, String searchColumn, String searchValue) throws ParseException {
+<span class="nc" id="L129">        UserLoginDetail user = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L130">        List&lt;AttendanceMoaf&gt; attendanceData = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L131">        List&lt;Employee&gt; employees = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L132" title="All 6 branches missed.">        if (divisions != null &amp;&amp; !divisions.isEmpty() &amp;&amp;</span>
+<span class="nc bnc" id="L133" title="All 4 branches missed.">                departments != null &amp;&amp; !departments.isEmpty() &amp;&amp;</span>
+<span class="nc bnc" id="L134" title="All 4 branches missed.">                reportingManagers != null &amp;&amp; !reportingManagers.isEmpty() &amp;&amp;</span>
+<span class="nc bnc" id="L135" title="All 2 branches missed.">                employeesId != null &amp;&amp; !employeesId.isEmpty()) {</span>
+
+<span class="nc" id="L137">            employees = employeeRepository.findByDivisionIdInAndDepartmentIdInAndReportingManagerIdInAndEmployeeIdInAndIsActive(</span>
+                    divisions, departments, reportingManagers, employeesId, &quot;Y&quot;);
+
+        } else {
+<span class="nc" id="L141">            Set&lt;Employee&gt; allFiltered = new HashSet&lt;&gt;();</span>
+
+<span class="nc bnc" id="L143" title="All 4 branches missed.">            if (divisions != null &amp;&amp; !divisions.isEmpty()) {</span>
+<span class="nc" id="L144">                allFiltered.addAll(employeeRepository.findByDivisionIdInAndIsActive(divisions, &quot;Y&quot;));</span>
+            }
+
+<span class="nc bnc" id="L147" title="All 4 branches missed.">            if (departments != null &amp;&amp; !departments.isEmpty()) {</span>
+<span class="nc" id="L148">                allFiltered.addAll(employeeRepository.findByDepartmentIdInAndIsActive(departments, &quot;Y&quot;));</span>
+            }
+<span class="nc bnc" id="L150" title="All 4 branches missed.">            if (reportingManagers != null &amp;&amp; !reportingManagers.isEmpty()) {</span>
+<span class="nc" id="L151">                 allFiltered.addAll(employeeRepository.findByReportingManagerIdIn(reportingManagers));</span>
+            }
+
+<span class="nc bnc" id="L154" title="All 4 branches missed.">            if (employeesId != null &amp;&amp; !employeesId.isEmpty()) {</span>
+<span class="nc" id="L155">                allFiltered.addAll(employeeRepository.findByEmployeeIdInAndIsActive(employeesId, &quot;Y&quot;));</span>
+            }
+
+<span class="nc" id="L158">            employees.addAll(allFiltered);</span>
+        }
+<span class="nc" id="L160">        Set&lt;Integer&gt; employeeIds = employees.stream()</span>
+<span class="nc" id="L161">                .map(Employee::getEmployeeId)</span>
+<span class="nc" id="L162">                .collect(Collectors.toSet());</span>
+<span class="nc bnc" id="L163" title="All 2 branches missed.">        if (employeesId != null) {</span>
+<span class="nc" id="L164">            employeeIds.addAll(employeesId);</span>
+        }
+<span class="nc bnc" id="L166" title="All 2 branches missed.">        if (!employeeIds.isEmpty()) {</span>
+<span class="nc" id="L167">            attendanceData = attendanceMoafRepo.findByEmployee_EmployeeIdInAndMoafDateBetweenAndStatus(employeeIds, firstDate, lastDate, status);</span>
+        } else {
+<span class="nc" id="L169">            attendanceData = attendanceMoafRepo.findByMoafDateBetweenAndStatus(firstDate, lastDate, status);</span>
+        }
+
+<span class="nc" id="L172">        String lookupMeaning = employeeService.getLookupMeaning(&quot;STANDARD_WORK_HOURS&quot;, &quot;DEFAULT_SHIFT_HOURS&quot;, &quot;9:00&quot;);</span>
+<span class="nc" id="L173">        int functionId = roleAndPermissionsService.fetchFunctionId(Constant.FUNCTION_APPROVE_ATTENDANCE);</span>
+<span class="nc" id="L174">        List&lt;WorkflowRequest&gt; visibleRequests = approvalFlowService.getVisibleRequestsForUser(user.getEmpId(), functionId);</span>
+
+<span class="nc" id="L176">        Set&lt;String&gt; visibleRequestNumbers = visibleRequests.stream().map(WorkflowRequest::getRequestNumber).collect(Collectors.toSet());</span>
+
+<span class="nc" id="L178">        Map&lt;String, WorkflowRequest&gt; requestMap = visibleRequests.stream().collect(Collectors.toMap(WorkflowRequest::getRequestNumber, req-&gt; req));</span>
+
+<span class="nc" id="L180">        attendanceData = attendanceData.stream().filter(lr -&gt; visibleRequestNumbers.contains(String.valueOf(lr.getRequestNumber()))).collect(Collectors.toList());</span>
+<span class="nc" id="L181">        List&lt;AttendanceMoafDTO&gt; moafDTOList = attendanceData.stream().map(moaf -&gt; {</span>
+<span class="nc" id="L182">            AttendanceMoafDTO dto = new AttendanceMoafDTO();</span>
+<span class="nc" id="L183">            dto.setEmployeeId(moaf.getEmployeeId());</span>
+<span class="nc" id="L184">            dto.setMoafDate(moaf.getMoafDate());</span>
+<span class="nc" id="L185">            dto.setDirection(moaf.getDirection());</span>
+<span class="nc" id="L186">            dto.setInTime(moaf.getInTime());</span>
+<span class="nc" id="L187">            dto.setOutTime(moaf.getOutTime());</span>
+<span class="nc" id="L188">            dto.setCreatedOn(LocalDateTime.ofInstant(moaf.getCreatedDate(), ZoneId.systemDefault()));</span>
+<span class="nc" id="L189">            dto.setReason(moaf.getReason());</span>
+<span class="nc" id="L190">            dto.setRequestNumber(moaf.getRequestNumber());</span>
+<span class="nc" id="L191">            WorkflowRequest request = requestMap.get(String.valueOf(moaf.getRequestNumber()));</span>
+<span class="nc bnc" id="L192" title="All 2 branches missed.">            if (request != null) {</span>
+<span class="nc" id="L193">                dto.setStatus(request.getUserStatus());</span>
+            } else {
+<span class="nc" id="L195">                dto.setStatus(&quot;N/A&quot;);</span>
+            }
+<span class="nc" id="L197">            dto.setFormRfNum(moaf.getFormRfNum());</span>
+<span class="nc" id="L198">            dto.setCategory(moaf.getCategory());</span>
+<span class="nc" id="L199">            dto.setEmployeeName(moaf.getEmployee().getFirstName() + &quot; &quot; + moaf.getEmployee().getLastName() + &quot; (&quot; + moaf.getEmployee().getEmployeeNumber() + &quot;)&quot;);</span>
+<span class="nc" id="L200">            viewAttendanceService.calculateHours(moaf.getInTime(), moaf.getOutTime(), dto, lookupMeaning);</span>
+<span class="nc" id="L201">            return dto;</span>
+<span class="nc" id="L202">        }).collect(Collectors.toList());</span>
+
+<span class="nc bnc" id="L204" title="All 4 branches missed.">        if (searchColumn != null &amp;&amp; searchValue != null) {</span>
+            try {
+<span class="nc" id="L206">                Field field = AttendanceMoafDTO.class.getDeclaredField(searchColumn);</span>
+<span class="nc" id="L207">                field.setAccessible(true);</span>
+
+<span class="nc" id="L209">                moafDTOList = moafDTOList.stream().filter(dto -&gt; {</span>
+                    try {
+<span class="nc" id="L211">                        Object fieldValue = field.get(dto);</span>
+<span class="nc bnc" id="L212" title="All 4 branches missed.">                        return fieldValue != null &amp;&amp; fieldValue.toString().toLowerCase().contains(searchValue.toLowerCase());</span>
+<span class="nc" id="L213">                    } catch (IllegalAccessException e) {</span>
+<span class="nc" id="L214">                        throw new RuntimeException(&quot;Error accessing field: &quot; + searchColumn, e);</span>
+                    }
+<span class="nc" id="L216">                }).collect(Collectors.toList());</span>
+<span class="nc" id="L217">            } catch (NoSuchFieldException e) {</span>
+<span class="nc" id="L218">                throw new RuntimeException(&quot;Invalid search field: &quot; + searchColumn);</span>
+<span class="nc" id="L219">            }</span>
+        }
+
+<span class="nc bnc" id="L222" title="All 4 branches missed.">        if (sortBy != null &amp;&amp; !sortBy.isEmpty()) {</span>
+            try {
+<span class="nc" id="L224">                Field field = AttendanceMoafDTO.class.getDeclaredField(sortBy);</span>
+<span class="nc" id="L225">                field.setAccessible(true);</span>
+
+<span class="nc" id="L227">                Comparator&lt;AttendanceMoafDTO&gt; comparator = (o1, o2) -&gt; {</span>
+                    try {
+<span class="nc" id="L229">                        Object value1 = field.get(o1);</span>
+<span class="nc" id="L230">                        Object value2 = field.get(o2);</span>
+
+<span class="nc bnc" id="L232" title="All 4 branches missed.">                        if (value1 == null || value2 == null) return 0;</span>
+<span class="nc bnc" id="L233" title="All 4 branches missed.">                        if (value1 instanceof String &amp;&amp; value2 instanceof String) {</span>
+<span class="nc" id="L234">                            return ((String) value1).compareToIgnoreCase((String) value2);</span>
+<span class="nc bnc" id="L235" title="All 4 branches missed.">                        } else if (value1 instanceof Comparable &amp;&amp; value2 instanceof Comparable) {</span>
+<span class="nc" id="L236">                            return ((Comparable) value1).compareTo(value2);</span>
+                        }
+<span class="nc" id="L238">                        return 0;</span>
+<span class="nc" id="L239">                    } catch (IllegalAccessException e) {</span>
+<span class="nc" id="L240">                        throw new RuntimeException(&quot;Error accessing field: &quot; + sortBy, e);</span>
+                    }
+                };
+
+<span class="nc bnc" id="L244" title="All 2 branches missed.">                if (&quot;desc&quot;.equalsIgnoreCase(sortOrder)) {</span>
+<span class="nc" id="L245">                    comparator = comparator.reversed();</span>
+                }
+
+<span class="nc" id="L248">                moafDTOList.sort(comparator);</span>
+<span class="nc" id="L249">            } catch (NoSuchFieldException e) {</span>
+<span class="nc" id="L250">                throw new RuntimeException(&quot;Invalid sorting field: &quot; + sortBy);</span>
+<span class="nc" id="L251">            }</span>
+        }
+
+        // Implement pagination
+<span class="nc" id="L255">        Pageable pageable = PageRequest.of(page - 1, size);</span>
+<span class="nc" id="L256">        int startIndex = (int) pageable.getOffset();</span>
+<span class="nc" id="L257">        int endIndex = Math.min(startIndex + pageable.getPageSize(), moafDTOList.size());</span>
+<span class="nc" id="L258">        List&lt;AttendanceMoafDTO&gt; paginatedList = moafDTOList.subList(startIndex, endIndex);</span>
+<span class="nc" id="L259">        Page&lt;AttendanceMoafDTO&gt; paginatedPage = new PageImpl&lt;&gt;(paginatedList, pageable, moafDTOList.size());</span>
+<span class="nc" id="L260">        PaginatedResponse&lt;AttendanceMoafDTO&gt; paginatedResponse = new PaginatedResponse&lt;&gt;();</span>
+<span class="nc" id="L261">        paginatedResponse.setPaginationData(paginatedPage.getContent());</span>
+<span class="nc" id="L262">        paginatedResponse.setTotalPages(paginatedPage.getTotalPages());</span>
+<span class="nc" id="L263">        paginatedResponse.setTotalElements((int) paginatedPage.getTotalElements());</span>
+<span class="nc" id="L264">        paginatedResponse.setPageSize(size);</span>
+<span class="nc" id="L265">        paginatedResponse.setCurrentPage(page);</span>
+
+<span class="nc" id="L267">        return paginatedResponse;</span>
+    }
+
+    public String updateMOAFRequest(Integer[] moafIds, String status,String[] requestNumbers) {
+<span class="nc" id="L271">        UserLoginDetail userLoginDetail = SessionHolder.getUserLoginDetail();</span>
+        try {
+<span class="nc bnc" id="L273" title="All 2 branches missed.">            for (String  requestNumber : requestNumbers) {</span>
+<span class="nc" id="L274">                Optional&lt;AttendanceMoaf&gt; optionalMoaf = attendanceMoafRepo.findByRequestNumber(requestNumber);</span>
+<span class="nc bnc" id="L275" title="All 2 branches missed.">                if (optionalMoaf.isPresent()) {</span>
+<span class="nc" id="L276">                    boolean isApproved = approvalFlowService.updateStatus(requestNumber, status);</span>
+<span class="nc" id="L277">                    AttendanceMoaf moaf = optionalMoaf.get();</span>
+<span class="nc bnc" id="L278" title="All 4 branches missed.">                    if (isApproved &amp;&amp; status.equalsIgnoreCase(&quot;Approved&quot;)) {</span>
+<span class="nc" id="L279">                        moaf.setStatus(status);</span>
+<span class="nc" id="L280">                        moaf.setLastUpdatedDate(Instant.now());</span>
+<span class="nc" id="L281">                        moaf.setLastUpdatedBy(String.valueOf(userLoginDetail.getEmpId()));</span>
+<span class="nc" id="L282">                        attendanceMoafRepo.save(moaf);</span>
+<span class="nc bnc" id="L283" title="All 2 branches missed.">                    } else if(status.equalsIgnoreCase(&quot;Rejected&quot;)){</span>
+<span class="nc" id="L284">                        moaf.setStatus(status);</span>
+<span class="nc" id="L285">                        moaf.setLastUpdatedDate(Instant.now());</span>
+<span class="nc" id="L286">                        moaf.setLastUpdatedBy(String.valueOf(userLoginDetail.getEmpId()));</span>
+<span class="nc" id="L287">                        attendanceMoafRepo.save(moaf);</span>
+                    }
+                    else {
+<span class="nc" id="L290">                        return &quot;Approval Request Updated for RequestNumber &quot; + requestNumber;</span>
+                    }
+<span class="nc" id="L292">                } else {</span>
+<span class="nc" id="L293">                    return &quot;Request Number &quot; + requestNumber + &quot; not found.&quot;;</span>
+                }
+            }
+<span class="nc" id="L296">            return &quot;MOAF status updated to &quot; + status + &quot; successfully.&quot;;</span>
+<span class="nc" id="L297">        } catch (Exception e) {</span>
+<span class="nc" id="L298">            e.printStackTrace();</span>
+<span class="nc" id="L299">            return &quot;Unauthorized operation. Connect with HR.&quot;;</span>
+        }
+    }
+
+
+    public Optional&lt;AttendanceMoaf&gt; findAttendanceExistingRecords(AttendanceMoafDTO attendanceMoafDTO) {
+<span class="nc" id="L305">        return attendanceMoafRepo.findByEmployeeIdAndMoafDateAndStatus(</span>
+<span class="nc" id="L306">                attendanceMoafDTO.getEmployeeId(),</span>
+<span class="nc" id="L307">                attendanceMoafDTO.getMoafDate(), &quot;Pending&quot;</span>
+        );
+    }
+
+    @Transactional
+    public AttendanceMoafDTO saveUpdateMoaf(AttendanceMoafDTO attendanceMoafDTO) {
+<span class="nc" id="L313">        UserLoginDetail userLoginDetail = SessionHolder.getUserLoginDetail();</span>
+        try {
+<span class="nc" id="L315">            attendanceMoafDTO.setRequestNumber(sequenceGeneratorService.generateSequenceWithYear(SequenceType.ATTENDANCE.toString(), null));</span>
+<span class="nc" id="L316">            AttendanceMoaf attendanceMoaf = modelMapper.map(attendanceMoafDTO, AttendanceMoaf.class);</span>
+<span class="nc bnc" id="L317" title="All 2 branches missed.">            if (attendanceMoafDTO.getFormRfNum() != null) {</span>
+<span class="nc" id="L318">                attendanceMoaf.setLastUpdatedBy(String.valueOf(userLoginDetail.getEmpId()));</span>
+<span class="nc" id="L319">                attendanceMoaf.setLastUpdatedDate(Instant.now());</span>
+            } else {
+<span class="nc" id="L321">                attendanceMoaf.setCreatedBy(String.valueOf(userLoginDetail.getEmpId()));</span>
+<span class="nc" id="L322">                attendanceMoaf.setCreatedDate(Instant.now());</span>
+            }
+<span class="nc" id="L324">            AttendanceMoaf savedMoaf = attendanceMoafRepo.save(attendanceMoaf);</span>
+<span class="nc" id="L325">            int functionId = roleAndPermissionsService.fetchFunctionId(Constant.FUNCTION_APPROVE_ATTENDANCE);</span>
+<span class="nc" id="L326">            approvalFlowService.addRequest(functionId, savedMoaf.getEmployeeId(), String.valueOf(savedMoaf.getRequestNumber()));</span>
+<span class="nc" id="L327">            return mapToAttendanceMoafDTO(savedMoaf);</span>
+<span class="nc" id="L328">        } catch (Exception e) {</span>
+<span class="nc" id="L329">            e.printStackTrace();</span>
+<span class="nc" id="L330">            ErrorDetails error = new ErrorDetails();</span>
+<span class="nc" id="L331">            error.setFunctionName(&quot;saveUpdateMoaf&quot;);</span>
+<span class="nc" id="L332">            error.setClassName(&quot;YourClassName&quot;); // replace with actual class name</span>
+<span class="nc" id="L333">            error.setModuleCode(&quot;MOAF&quot;);</span>
+<span class="nc" id="L334">            error.setUserId(String.valueOf(userLoginDetail.getEmpId()));</span>
+<span class="nc" id="L335">            LogRequest logRequest = new LogRequest();</span>
+<span class="nc" id="L336">            logRequest.setError(error);</span>
+<span class="nc" id="L337">            logRequest.setMessage(&quot;Error occurred while saving/updating MOAF&quot;);</span>
+<span class="nc" id="L338">            loggingService.customLogExceptionToThirdParty(e, logRequest);</span>
+        }
+<span class="nc" id="L340">        return attendanceMoafDTO;</span>
+    }
+
+    public Map&lt;String, Object&gt; getAllMoafDetails(Pageable pageable, String searchField, String searchKeyword, Integer employeeId) {
+        Page&lt;AttendanceMoaf&gt; attendanceMoaf;
+<span class="nc bnc" id="L345" title="All 2 branches missed.">        if (&quot;employeeNumber&quot;.equalsIgnoreCase(searchField)) {</span>
+<span class="nc" id="L346">            attendanceMoaf = attendanceMoafRepo.findByEmployee_EmployeeNumberContainingIgnoreCaseAndEmployeeId(searchKeyword, employeeId, pageable);</span>
+<span class="nc bnc" id="L347" title="All 2 branches missed.">        } else if (&quot;employeeName&quot;.equalsIgnoreCase(searchField)) {</span>
+<span class="nc" id="L348">            attendanceMoaf = attendanceMoafRepo.findByEmployee_FirstNameContainingIgnoreCaseAndEmployeeId(searchKeyword, employeeId, pageable);</span>
+<span class="nc bnc" id="L349" title="All 8 branches missed.">        } else if (searchField != null &amp;&amp; searchKeyword != null &amp;&amp; !searchKeyword.trim().isEmpty() &amp;&amp; !searchField.trim().isEmpty()) {</span>
+<span class="nc" id="L350">            Specification&lt;AttendanceMoaf&gt; spec = searchByColumn(searchField, searchKeyword, employeeId);</span>
+<span class="nc" id="L351">            attendanceMoaf = attendanceMoafRepo.findAll(spec, pageable);</span>
+<span class="nc" id="L352">        } else {</span>
+<span class="nc" id="L353">            attendanceMoaf = attendanceMoafRepo.findByEmployeeId(employeeId, pageable);</span>
+        }
+<span class="nc" id="L355">        List&lt;AttendanceMoafDTO&gt; dtoList = attendanceMoaf.getContent().stream()</span>
+<span class="nc" id="L356">                .map(this::mapToAttendanceMoafDTO)</span>
+<span class="nc" id="L357">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L359">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L360">        response.put(&quot;result&quot;, dtoList);</span>
+<span class="nc" id="L361">        response.put(&quot;currentPage&quot;, attendanceMoaf.getNumber() + 1);</span>
+<span class="nc" id="L362">        response.put(&quot;pageSize&quot;, attendanceMoaf.getSize());</span>
+<span class="nc" id="L363">        response.put(&quot;totalItems&quot;, attendanceMoaf.getTotalElements());</span>
+<span class="nc" id="L364">        response.put(&quot;totalPages&quot;, attendanceMoaf.getTotalPages());</span>
+<span class="nc" id="L365">        return response;</span>
+    }
+
+    public static Specification&lt;AttendanceMoaf&gt; searchByColumn(String column, String value, Integer employeeId) {
+<span class="nc" id="L369">        return (Root&lt;AttendanceMoaf&gt; root, CriteriaQuery&lt;?&gt; query, CriteriaBuilder cb) -&gt; {</span>
+            Predicate searchPredicate;
+<span class="nc" id="L371">            Path&lt;?&gt; path = root.get(column);</span>
+<span class="nc" id="L372">            DateTimeFormatter dtf = DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd&quot;);</span>
+<span class="nc" id="L373">            DateTimeFormatter dt = DateTimeFormatter.ofPattern(&quot;HH:mm&quot;);</span>
+<span class="nc bnc" id="L374" title="All 2 branches missed.">            if (path.getJavaType().equals(String.class)) {</span>
+<span class="nc" id="L375">                searchPredicate = cb.like(cb.lower(root.get(column)), &quot;%&quot; + value.toLowerCase() + &quot;%&quot;);</span>
+<span class="nc bnc" id="L376" title="All 2 branches missed.">            } else if (path.getJavaType().equals(LocalDate.class)) {</span>
+                try {
+<span class="nc" id="L378">                    LocalDate parsedDate = LocalDate.parse(value); // expects yyyy-MM-dd</span>
+<span class="nc" id="L379">                    searchPredicate = cb.equal(root.get(column), parsedDate);</span>
+<span class="nc" id="L380">                } catch (DateTimeParseException e) {</span>
+<span class="nc" id="L381">                    throw new RuntimeException(&quot;Invalid LocalDate format for field: &quot; + column + &quot;. Expected yyyy-MM-dd&quot;, e);</span>
+<span class="nc" id="L382">                }</span>
+
+<span class="nc bnc" id="L384" title="All 2 branches missed.">            }else if (path.getJavaType().equals(LocalDateTime.class)) {</span>
+                try {
+                    LocalTime parsedTime;
+<span class="nc" id="L387">                    DateTimeFormatter[] formatters = {</span>
+<span class="nc" id="L388">                            DateTimeFormatter.ofPattern(&quot;HH&quot;),</span>
+<span class="nc" id="L389">                            DateTimeFormatter.ofPattern(&quot;HH:mm&quot;),</span>
+<span class="nc" id="L390">                            DateTimeFormatter.ofPattern(&quot;HH:mm:ss&quot;)</span>
+                    };
+<span class="nc" id="L392">                    parsedTime = null;</span>
+<span class="nc bnc" id="L393" title="All 2 branches missed.">                    for (DateTimeFormatter formatter : formatters) {</span>
+                        try {
+<span class="nc" id="L395">                            parsedTime = LocalTime.parse(value, formatter);</span>
+<span class="nc" id="L396">                            break;</span>
+<span class="nc" id="L397">                        } catch (DateTimeParseException ignored) {</span>
+                        }
+                    }
+
+<span class="nc bnc" id="L401" title="All 2 branches missed.">                    if (parsedTime == null) {</span>
+<span class="nc" id="L402">                        throw new RuntimeException(&quot;Invalid time format for field: &quot; + column + &quot;. Expected HH, HH:mm, or HH:mm:ss&quot;);</span>
+                    }
+<span class="nc" id="L404">                    Expression&lt;String&gt; timeOnly = cb.function(&quot;TIME&quot;, String.class, root.get(column));</span>
+                    String pattern;
+<span class="nc bnc" id="L406" title="All 2 branches missed.">                    if (value.length() == 2) {</span>
+<span class="nc" id="L407">                        pattern = parsedTime.format(DateTimeFormatter.ofPattern(&quot;HH&quot;)) + &quot;:%&quot;;</span>
+<span class="nc bnc" id="L408" title="All 2 branches missed.">                    } else if (value.length() &lt;= 5) {</span>
+<span class="nc" id="L409">                        pattern = parsedTime.format(DateTimeFormatter.ofPattern(&quot;HH:mm&quot;)) + &quot;:%&quot;;</span>
+                    } else {
+<span class="nc" id="L411">                        pattern = parsedTime.format(DateTimeFormatter.ofPattern(&quot;HH:mm:ss&quot;));</span>
+                    }
+<span class="nc bnc" id="L413" title="All 2 branches missed.">                    if (pattern.contains(&quot;%&quot;)) {</span>
+<span class="nc" id="L414">                        searchPredicate = cb.like(timeOnly, pattern);</span>
+                    } else {
+<span class="nc" id="L416">                        searchPredicate = cb.equal(timeOnly, pattern);</span>
+                    }
+
+<span class="nc" id="L419">                } catch (Exception e) {</span>
+<span class="nc" id="L420">                    throw new RuntimeException(&quot;Error parsing time for field: &quot; + column, e);</span>
+<span class="nc" id="L421">                }</span>
+            }
+            else {
+<span class="nc" id="L424">                searchPredicate = cb.equal(root.get(column), value);</span>
+            }
+<span class="nc" id="L426">            Predicate employeeIdPredicate = cb.equal(root.get(&quot;employeeId&quot;), employeeId);</span>
+<span class="nc" id="L427">            return cb.and(searchPredicate, employeeIdPredicate);</span>
+        };
+    }
+
+
+    private AttendanceMoafDTO mapToAttendanceMoafDTO(AttendanceMoaf attendanceMoaf) {
+<span class="nc" id="L433">        AttendanceMoafDTO attendanceMoafDTO = new AttendanceMoafDTO();</span>
+<span class="nc" id="L434">        attendanceMoafDTO.setEmployeeId(attendanceMoaf.getEmployeeId());</span>
+<span class="nc" id="L435">        attendanceMoafDTO.setFormRfNum(attendanceMoaf.getFormRfNum());</span>
+<span class="nc" id="L436">        attendanceMoafDTO.setMoafDate(attendanceMoaf.getMoafDate());</span>
+<span class="nc" id="L437">        attendanceMoafDTO.setDirection(attendanceMoaf.getDirection());</span>
+<span class="nc" id="L438">        attendanceMoafDTO.setInTime(attendanceMoaf.getInTime());</span>
+<span class="nc" id="L439">        attendanceMoafDTO.setOutTime(attendanceMoaf.getOutTime());</span>
+<span class="nc" id="L440">        attendanceMoafDTO.setStatus(attendanceMoaf.getStatus());</span>
+<span class="nc" id="L441">        attendanceMoafDTO.setReason(attendanceMoaf.getReason());</span>
+<span class="nc" id="L442">        attendanceMoafDTO.setCategory(attendanceMoaf.getCategory());</span>
+<span class="nc" id="L443">        attendanceMoafDTO.setCreatedOn(LocalDateTime.ofInstant(attendanceMoaf.getCreatedDate(), ZoneId.systemDefault()));</span>
+<span class="nc" id="L444">        attendanceMoafDTO.setLastModifiedOn(LocalDateTime.ofInstant(attendanceMoaf.getLastUpdatedDate(), ZoneId.systemDefault()));</span>
+<span class="nc" id="L445">        attendanceMoafDTO.setCreatedBy(attendanceMoaf.getCreatedBy());</span>
+<span class="nc" id="L446">        attendanceMoafDTO.setLastModifiedBy(attendanceMoaf.getLastUpdatedBy());</span>
+<span class="nc" id="L447">        attendanceMoafDTO.setRequestNumber(attendanceMoaf.getRequestNumber());</span>
+
+        // Employee emp = attendanceMoaf.getEmployee();
+<span class="nc" id="L450">        Employee employee = employeeRepository.findByEmployeeId(attendanceMoaf.getEmployeeId())</span>
+<span class="nc" id="L451">                .orElse(null);</span>
+
+<span class="nc bnc" id="L453" title="All 2 branches missed.">        if (employee != null) {</span>
+<span class="nc" id="L454">            attendanceMoafDTO.setEmployeeNumber(</span>
+<span class="nc bnc" id="L455" title="All 2 branches missed.">                    employee.getEmployeeNumber() != null ? employee.getEmployeeNumber() : &quot;Unknown&quot;</span>
+            );
+<span class="nc" id="L457">            attendanceMoafDTO.setEmployeeName(</span>
+<span class="nc bnc" id="L458" title="All 2 branches missed.">                    employee.getFullName() != null ? employee.getFullName() : &quot;Unknown&quot;</span>
+            );
+        } else {
+<span class="nc" id="L461">            attendanceMoafDTO.setEmployeeNumber(&quot;Unknown&quot;);</span>
+<span class="nc" id="L462">            attendanceMoafDTO.setEmployeeName(&quot;Unknown&quot;);</span>
+        }
+<span class="nc" id="L464">        return attendanceMoafDTO;</span>
+    }
+
+    public Map&lt;String, Object&gt; getMoafDetailsByFormRfNum(Integer formRfNum) {
+<span class="nc" id="L468">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L469">        Optional&lt;AttendanceMoaf&gt; attendanceMoaf = attendanceMoafRepo.findByFormRfNum(formRfNum);</span>
+<span class="nc" id="L470">        response.put(&quot;result&quot;, attendanceMoaf);</span>
+<span class="nc" id="L471">        return response;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

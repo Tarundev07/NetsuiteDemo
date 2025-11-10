@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AttendanceMoafController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.attendance</a> &gt; <span class="el_source">AttendanceMoafController.java</span></div><h1>AttendanceMoafController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.attendance;
+
+import com.atomicnorth.hrm.tenant.domain.attendance.AttendanceMoaf;
+import com.atomicnorth.hrm.tenant.service.attendance.AttendanceMoafService;
+import com.atomicnorth.hrm.tenant.service.dto.attendance.AttendanceMoafDTO;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import com.atomicnorth.hrm.util.commonClass.PaginatedResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import javax.validation.Valid;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+
+@RequestMapping(&quot;/api/moaf&quot;)
+@RestController
+<span class="nc" id="L36">public class AttendanceMoafController {</span>
+
+    @Autowired
+    private AttendanceMoafService attendanceMoafService;
+
+    @GetMapping(&quot;/getUsersPendingMOAFRequest&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;PaginatedResponse&lt;AttendanceMoafDTO&gt;&gt;&gt; getUsersPendingMOAFRequestNew(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = true) LocalDate firstDate,
+            @RequestParam(required = true) LocalDate lastDate,
+            @RequestParam(required = false) Set&lt;Integer&gt; divisions,
+            @RequestParam(required = false) Set&lt;Long&gt; department,
+            @RequestParam(required = false) Set&lt;Integer&gt; reportingManagers,
+            @RequestParam(required = false) Set&lt;Integer&gt; employeesIds,
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(defaultValue = &quot;asc&quot;) String sortOrder,
+            @RequestParam(required = false) String searchColumn,  // New parameter
+            @RequestParam(required = false) String searchValue   // New parameter
+    ) {
+        try {
+<span class="nc" id="L58">            Date startDate = java.sql.Date.valueOf(firstDate);</span>
+<span class="nc" id="L59">            LocalDateTime lastDateTime = lastDate.atTime(LocalTime.MAX);</span>
+<span class="nc" id="L60">            Date endDate = Date.from(lastDateTime.atZone(ZoneId.systemDefault()).toInstant());</span>
+<span class="nc" id="L61">            PaginatedResponse&lt;AttendanceMoafDTO&gt; paginatedMoafData = attendanceMoafService.fetchUserMoafPendingRequest(</span>
+                    status, firstDate, lastDate, divisions, department, reportingManagers, employeesIds,
+                    page, size, sortBy, sortOrder, searchColumn, searchValue
+            );
+
+<span class="nc" id="L66">            ApiResponse&lt;PaginatedResponse&lt;AttendanceMoafDTO&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    paginatedMoafData, true, &quot;PENDING-MOAF-REQUESTS-RETRIEVED-SUCCESSFULLY&quot;, &quot;Information&quot;
+            );
+
+<span class="nc" id="L70">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L71">        } catch (Exception ex) {</span>
+<span class="nc" id="L72">            ApiResponse&lt;PaginatedResponse&lt;AttendanceMoafDTO&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null, false, &quot;PENDING-MOAF-REQUESTS-RETRIEVAL-FAILED&quot;, &quot;Error&quot;,
+<span class="nc" id="L74">                    List.of(ex.getMessage(), &quot;Please contact support.&quot;)</span>
+            );
+
+<span class="nc" id="L77">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @PostMapping(&quot;/updateMOAFData&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;String&gt;&gt; approveBulkMOAFData(
+            @RequestParam(value = &quot;moafids&quot;, required = true) Integer[] moafids,
+            @RequestParam(value = &quot;status&quot;, required = true) String status,
+            @RequestParam(value = &quot;requestNumbers&quot;, required = true) String[] requestNumbers) {
+        try {
+<span class="nc" id="L87">            String message = attendanceMoafService.updateMOAFRequest(moafids, status,requestNumbers);</span>
+<span class="nc" id="L88">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(message, true, &quot;MOAF_UPDATED_SUCCESS&quot;, &quot;Success&quot;));</span>
+<span class="nc" id="L89">        } catch (Exception e) {</span>
+<span class="nc" id="L90">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;MOAF_UPDATED_ERROR&quot;, &quot;Error&quot;, Collections.singletonList(&quot;Error update moaf list.&quot;)));</span>
+        }
+    }
+
+    @PostMapping(&quot;/applyMoaf&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;AttendanceMoafDTO&gt;&gt; applyMoaf(@Valid @RequestBody AttendanceMoafDTO attendanceMoafDTO) {
+        try {
+<span class="nc bnc" id="L97" title="All 2 branches missed.">            if (attendanceMoafDTO.getFormRfNum() == null) {</span>
+<span class="nc" id="L98">                Optional&lt;AttendanceMoaf&gt; existingMoaf = attendanceMoafService.findAttendanceExistingRecords(attendanceMoafDTO);</span>
+<span class="nc bnc" id="L99" title="All 2 branches missed.">                if (existingMoaf.isPresent()) {</span>
+<span class="nc" id="L100">                    ApiResponse&lt;AttendanceMoafDTO&gt; existingBranchResponse = new ApiResponse&lt;&gt;(</span>
+                            attendanceMoafDTO,
+                            false,
+                            &quot;MOAF-ALREADY-EXISTS&quot;,
+                            &quot;Warning&quot;,
+<span class="nc" id="L105">                            Collections.singletonList(&quot;Moaf date &quot; + attendanceMoafDTO.getMoafDate() + &quot; already exists.&quot;)</span>
+                    );
+<span class="nc" id="L107">                    return ResponseEntity.status(HttpStatus.OK).body(existingBranchResponse);</span>
+                }
+            }
+<span class="nc" id="L110">            AttendanceMoafDTO attendanceMoaf = attendanceMoafService.saveUpdateMoaf(attendanceMoafDTO);</span>
+<span class="nc bnc" id="L111" title="All 2 branches missed.">            String responseCode = attendanceMoafDTO.getFormRfNum() == null</span>
+<span class="nc" id="L112">                    ? &quot;MOAF-CREATED-SUCCESS&quot;</span>
+<span class="nc" id="L113">                    : &quot;MOAF-UPDATED-SUCCESS&quot;;</span>
+<span class="nc" id="L114">            ApiResponse&lt;AttendanceMoafDTO&gt; response = new ApiResponse&lt;&gt;(</span>
+                    attendanceMoaf,
+                    true,
+                    responseCode,
+                    &quot;Information&quot;
+            );
+<span class="nc" id="L120">            return ResponseEntity.status(HttpStatus.CREATED).body(response);</span>
+<span class="nc" id="L121">        } catch (Exception ex) {</span>
+<span class="nc" id="L122">            ApiResponse&lt;AttendanceMoafDTO&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;MOAF-CREATED-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L127">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L129">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getMoafDetails/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; getAllMoafDetails(
+            @PathVariable Integer id,
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;formRfNum&quot;, required = false) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;, required = false) String sortDir,
+            @RequestParam(value = &quot;searchKeyword&quot;, required = false) String searchKeyword,
+            @RequestParam(value = &quot;searchField&quot;, required = false) String searchField
+    ) {
+        try {
+<span class="nc" id="L144">            Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc bnc" id="L145" title="All 2 branches missed.">            if (&quot;employeeName&quot;.equals(sortBy)) {</span>
+<span class="nc" id="L146">                sort = Sort.by(Sort.Direction.fromString(sortDir), &quot;employee.firstName&quot;);</span>
+<span class="nc bnc" id="L147" title="All 2 branches missed.">            } else if (&quot;employeeNumber&quot;.equals(sortBy)) {</span>
+<span class="nc" id="L148">                sort = Sort.by(Sort.Direction.fromString(sortDir), &quot;employee.employeeNumber&quot;);</span>
+            }
+<span class="nc" id="L150">            Pageable pageable = PageRequest.of(page -1, size, sort);</span>
+<span class="nc" id="L151">            Map&lt;String, Object&gt; employeeMaofDetails = attendanceMoafService.getAllMoafDetails(pageable, searchField, searchKeyword, id);</span>
+<span class="nc" id="L152">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(employeeMaofDetails, true, &quot;MOAF_LIST_FETCHED_SUCCESS&quot;, &quot;Success&quot;));</span>
+<span class="nc" id="L153">        } catch (Exception e) {</span>
+<span class="nc" id="L154">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;MOAF_LIST_FETCHED_ERROR&quot;, &quot;Error&quot;, Collections.singletonList(&quot;Error fetching moaf list.&quot;)));</span>
+        }
+    }
+
+    @GetMapping(&quot;/getMoafDetailsByFormRfNum/{formRfNum}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; getMoafDetailsByFormRfNum(@PathVariable Integer formRfNum) {
+        try {
+<span class="nc" id="L161">            Map&lt;String, Object&gt; employeeMaofDetails = attendanceMoafService.getMoafDetailsByFormRfNum(formRfNum);</span>
+<span class="nc" id="L162">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(employeeMaofDetails, true, &quot;MOAF_LIST_FETCHED_SUCCESS&quot;, &quot;Success&quot;));</span>
+<span class="nc" id="L163">        } catch (Exception e) {</span>
+<span class="nc" id="L164">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;MOAF_LIST_FETCHED_ERROR&quot;, &quot;Error&quot;, Collections.singletonList(&quot;Error fetching moaf list.&quot;)));</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

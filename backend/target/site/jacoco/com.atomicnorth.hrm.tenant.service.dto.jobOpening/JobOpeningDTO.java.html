@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JobOpeningDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.dto.jobOpening</a> &gt; <span class="el_source">JobOpeningDTO.java</span></div><h1>JobOpeningDTO.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.dto.jobOpening;
+
+import lombok.Data;
+
+import javax.validation.constraints.*;
+import java.util.Date;
+
+<span class="nc bnc" id="L8" title="All 190 branches missed.">@Data</span>
+public class JobOpeningDTO {
+
+<span class="nc" id="L11">    private Integer jobOpeningId;</span>
+
+    @NotBlank(message = &quot;Job Title cannot be blank.&quot;)
+    @Size(max = 500, message = &quot;Job Title must not exceed 500 characters.&quot;)
+<span class="nc" id="L15">    private String jobTitle;</span>
+
+<span class="nc" id="L17">    private Integer designationId;</span>
+
+    @NotBlank(message = &quot;Status cannot be blank.&quot;)
+    @Pattern(regexp = &quot;Y|N&quot;, message = &quot;Status must be either 'Y' or 'N'.&quot;)
+<span class="nc" id="L21">    private String status;</span>
+
+    @NotNull(message = &quot;Posted on is required.&quot;)
+    @PastOrPresent(message = &quot;Posted on date cannot be future.&quot;)
+<span class="nc" id="L25">    private Date postedOn;</span>
+    @FutureOrPresent(message = &quot;Closes on date cannot be past. &quot;)
+    @NotNull(message = &quot;Closed on is required.&quot;)
+<span class="nc" id="L28">    private Date closesOn;</span>
+
+    @NotBlank(message = &quot;Employment Type cannot be blank.&quot;)
+    @Size(max = 50, message = &quot;Employment Type must not exceed 50 characters.&quot;)
+<span class="nc" id="L32">    private String employmentType;</span>
+
+<span class="nc" id="L34">    private Integer departmentId;</span>
+
+    @NotBlank(message = &quot;Location cannot be blank.&quot;)
+    @Size(max = 200, message = &quot;Location must not exceed 200 characters.&quot;)
+<span class="nc" id="L38">    private String location;</span>
+
+    @NotBlank(message = &quot;Publish On Website cannot be blank.&quot;)
+    @Pattern(regexp = &quot;Y|N&quot;, message = &quot;Publish On Website must be either 'Y' or 'N'.&quot;)
+<span class="nc" id="L42">    private String publishOnWebsite;</span>
+
+    @NotBlank(message = &quot;Description cannot be blank.&quot;)
+<span class="nc" id="L45">    private String description;</span>
+
+    @NotBlank(message = &quot;Currency cannot be blank.&quot;)
+    @Size(max = 10, message = &quot;Currency must not exceed 10 characters.&quot;)
+<span class="nc" id="L49">    private String currency;</span>
+
+    @NotBlank(message = &quot;Salary Paid Per cannot be blank.&quot;)
+    @Size(max = 50, message = &quot;Salary Paid Per must not exceed 50 characters.&quot;)
+<span class="nc" id="L53">    private String salaryPaidPer;</span>
+
+    @NotNull(message = &quot;Lower Range cannot be null.&quot;)
+    @DecimalMin(value = &quot;0.0&quot;, inclusive = true, message = &quot;Lower Range must be greater than or equal to 0.&quot;)
+<span class="nc" id="L57">    private Double lowerRange;</span>
+
+    @NotNull(message = &quot;Upper Range cannot be null.&quot;)
+    @DecimalMin(value = &quot;0.0&quot;, inclusive = true, message = &quot;Upper Range must be greater than or equal to 0.&quot;)
+<span class="nc" id="L61">    private Double upperRange;</span>
+
+    @NotBlank(message = &quot;Publish Salary Range cannot be blank.&quot;)
+    @Pattern(regexp = &quot;Y|N&quot;, message = &quot;Publish Salary Range must be either 'Y' or 'N'.&quot;)
+<span class="nc" id="L65">    private String publishSalaryRange;</span>
+
+<span class="nc" id="L67">    private Date creationDate;</span>
+<span class="nc" id="L68">    private String createdBy;</span>
+<span class="nc" id="L69">    private String lastUpdatedBy;</span>
+<span class="nc" id="L70">    private Date lastUpdatedDate;</span>
+<span class="nc" id="L71">    private String recordInfo;</span>
+<span class="nc" id="L72">    private String departmentName;</span>
+<span class="nc" id="L73">    private String designationName;</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

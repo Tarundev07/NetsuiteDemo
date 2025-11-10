@@ -1,0 +1,503 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TimeSheetApprovalService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.timesheet</a> &gt; <span class="el_source">TimeSheetApprovalService.java</span></div><h1>TimeSheetApprovalService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.timesheet;
+
+import com.atomicnorth.hrm.tenant.domain.Employee;
+import com.atomicnorth.hrm.tenant.domain.project.ProjectAllocation;
+import com.atomicnorth.hrm.tenant.domain.timeSheet.UserTaskMapping;
+import com.atomicnorth.hrm.tenant.helper.Constant;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.repository.project.ProjectAllocationRepository;
+import com.atomicnorth.hrm.tenant.repository.timeSheet.ActionHistoryRepository;
+import com.atomicnorth.hrm.tenant.repository.timeSheet.UserTaskMappingRepository;
+import com.atomicnorth.hrm.tenant.service.attendance.AttendanceMoafService;
+import com.atomicnorth.hrm.tenant.service.dto.leave.LeaveRequestDTO;
+import com.atomicnorth.hrm.tenant.service.dto.timeSheetDTO.UserTimesheetDTO;
+import com.atomicnorth.hrm.tenant.service.dto.timeSheetDTO.WeeklyTimesheetSummary;
+import com.atomicnorth.hrm.tenant.service.leave.ApplyLeaveService;
+import com.atomicnorth.hrm.util.ActivityLog;
+import com.atomicnorth.hrm.util.EmailUtility;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.persistence.EntityManager;
+import java.lang.reflect.Field;
+import java.math.BigDecimal;
+import java.sql.SQLException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@Service
+public class TimeSheetApprovalService {
+    private final EntityManager entityManager;
+    private final UserTaskMappingRepository userTaskMappingRepository;
+<span class="nc" id="L57">    private final Logger log = LoggerFactory.getLogger(TimeSheetApprovalService.class);</span>
+    @Autowired
+    ActivityLog activityLog;
+<span class="nc" id="L60">    SimpleDateFormat sdf = new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss&quot;);</span>
+    @Autowired
+    private EmailUtility emailUtility;
+    @Autowired
+    private ActionHistoryRepository actionHistoryRepository;
+    @Autowired
+    private AttendanceMoafService attendanceMoafService;
+    @Autowired
+    private EmployeeRepository employeeRepository;
+    @Value(&quot;${HR}&quot;)
+    private String HR;
+    @Autowired
+    private ProjectAllocationRepository projectAllocationRepository;
+    @Autowired
+    private ApplyLeaveService applyLeaveService;
+
+    @Autowired
+<span class="nc" id="L77">    public TimeSheetApprovalService(EntityManager entityManager, UserTaskMappingRepository userTaskMappingRepository) {</span>
+<span class="nc" id="L78">        this.entityManager = entityManager;</span>
+<span class="nc" id="L79">        this.userTaskMappingRepository = userTaskMappingRepository;</span>
+<span class="nc" id="L80">    }</span>
+
+    public boolean checkUserAuthorization(String username) {
+<span class="nc" id="L83">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+        try {
+<span class="nc bnc" id="L85" title="All 2 branches missed.">            if (username.equalsIgnoreCase(tokenHolder.getUsername().toString()))</span>
+<span class="nc" id="L86">                return true;</span>
+<span class="nc bnc" id="L87" title="All 4 branches missed.">            if ((tokenHolder.getAuthorities()).contains(String.valueOf(Constant.ACCESS_GROUP_PG_IN_ADMIN)) || (tokenHolder.getAuthorities()).contains(HR))</span>
+<span class="nc" id="L88">                return true;</span>
+            else
+<span class="nc" id="L90">                return userTaskMappingRepository.countByUsernameAndReportingPersonOrHrManager(username, String.valueOf(tokenHolder.getUsername()), String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L91">        } catch (Exception e) {</span>
+<span class="nc" id="L92">            e.printStackTrace();</span>
+<span class="nc" id="L93">            return false;</span>
+        }
+    }
+
+    @Transactional
+    public List&lt;Map&lt;String, Object&gt;&gt; getDataByPrjctUser(String startDate, String endDate, String username) {
+<span class="nc" id="L99">        List&lt;Map&lt;String, Object&gt;&gt; resultData = new ArrayList&lt;&gt;();</span>
+
+        try {
+<span class="nc" id="L102">            List&lt;Object[]&gt; attendanceDataList = userTaskMappingRepository.getUserTaskMappings(username, startDate, endDate);</span>
+<span class="nc bnc" id="L103" title="All 2 branches missed.">            for (Object[] attendanceData : attendanceDataList) {</span>
+<span class="nc" id="L104">                Map&lt;String, Object&gt; eachData = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L105">                double weekEffortOnTask = 0.0;</span>
+                // Populate basic data
+<span class="nc bnc" id="L107" title="All 2 branches missed.">                eachData.put(&quot;timeSheetId&quot;, attendanceData[0] != null ? attendanceData[0].toString() : &quot;&quot;);</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">                eachData.put(&quot;projectId&quot;, attendanceData[1] != null ? attendanceData[1].toString() : &quot;&quot;);</span>
+<span class="nc bnc" id="L109" title="All 2 branches missed.">                eachData.put(&quot;taskId&quot;, attendanceData[2] != null ? attendanceData[2].toString() : &quot;&quot;);</span>
+<span class="nc bnc" id="L110" title="All 2 branches missed.">                eachData.put(&quot;timesheetDate&quot;, attendanceData[3] != null ? attendanceData[3].toString() : &quot;&quot;);</span>
+<span class="nc bnc" id="L111" title="All 2 branches missed.">                eachData.put(&quot;effortInHours&quot;, attendanceData[4] != null ? attendanceData[4].toString() : &quot;&quot;);</span>
+<span class="nc bnc" id="L112" title="All 2 branches missed.">                eachData.put(&quot;timesheetStatus&quot;, attendanceData[5] != null ? attendanceData[5].toString() : &quot;&quot;);</span>
+<span class="nc bnc" id="L113" title="All 2 branches missed.">                eachData.put(&quot;remark&quot;, attendanceData[6] != null ? attendanceData[6].toString() : &quot;&quot;);</span>
+<span class="nc bnc" id="L114" title="All 2 branches missed.">                eachData.put(&quot;username&quot;, attendanceData[7] != null ? attendanceData[7].toString() : &quot;&quot;);</span>
+<span class="nc bnc" id="L115" title="All 2 branches missed.">                eachData.put(&quot;approverRemark&quot;, attendanceData[8] != null ? attendanceData[8].toString() : &quot;&quot;);</span>
+<span class="nc bnc" id="L116" title="All 2 branches missed.">                eachData.put(&quot;accountManagerRemark&quot;, attendanceData[9] != null ? attendanceData[9].toString() : &quot;&quot;);</span>
+<span class="nc bnc" id="L117" title="All 2 branches missed.">                eachData.put(&quot;billAbleEffortInHours&quot;, attendanceData[10] != null ? attendanceData[10].toString() : &quot;&quot;);</span>
+<span class="nc bnc" id="L118" title="All 2 branches missed.">                eachData.put(&quot;billableFlag&quot;, attendanceData[11] != null ? attendanceData[11].toString() : &quot;&quot;);</span>
+<span class="nc bnc" id="L119" title="All 2 branches missed.">                eachData.put(&quot;projectName&quot;, attendanceData[12] != null ? attendanceData[12].toString() : &quot;&quot;);</span>
+<span class="nc bnc" id="L120" title="All 2 branches missed.">                eachData.put(&quot;taskName&quot;, attendanceData[13] != null ? attendanceData[13].toString() : &quot;&quot;);</span>
+<span class="nc bnc" id="L121" title="All 2 branches missed.">                eachData.put(&quot;userFullName&quot;, attendanceData[14] != null ? attendanceData[14].toString() : &quot;&quot;);</span>
+                // Compute weekly effort
+<span class="nc bnc" id="L123" title="All 2 branches missed.">                weekEffortOnTask += attendanceData[4] != null</span>
+<span class="nc" id="L124">                        ? Double.parseDouble(attendanceData[4].toString())</span>
+<span class="nc" id="L125">                        : 0.0;</span>
+<span class="nc" id="L126">                eachData.put(&quot;usereffort&quot;, weekEffortOnTask);</span>
+<span class="nc bnc" id="L127" title="All 2 branches missed.">                eachData.put(&quot;remarkUser&quot;, &quot;NA&quot;.equalsIgnoreCase(String.valueOf(attendanceData[6]))</span>
+<span class="nc" id="L128">                        ? &quot;No comments available&quot;</span>
+<span class="nc" id="L129">                        : attendanceData[6]);</span>
+<span class="nc" id="L130">                resultData.add(eachData);</span>
+<span class="nc" id="L131">            }</span>
+<span class="nc" id="L132">        } catch (Exception e) {</span>
+<span class="nc" id="L133">            e.printStackTrace();</span>
+<span class="nc" id="L134">        }</span>
+<span class="nc" id="L135">        return resultData;</span>
+    }
+
+    @Transactional
+    public boolean updateTimesheetStatusUser(String startDate, String endDate, boolean result, String username, String appRmrk) throws ParseException, SQLException {
+<span class="nc" id="L140">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+
+<span class="nc" id="L142">        boolean status = false;</span>
+<span class="nc" id="L143">        String resultString = &quot;&quot;;</span>
+<span class="nc bnc" id="L144" title="All 2 branches missed.">        if (appRmrk.trim().isEmpty()) {</span>
+<span class="nc bnc" id="L145" title="All 2 branches missed.">            if (result)</span>
+<span class="nc" id="L146">                appRmrk = &quot;Ok&quot;;</span>
+            else
+<span class="nc" id="L148">                appRmrk = &quot;Invalid effort entry&quot;;</span>
+        }
+<span class="nc" id="L150">        SimpleDateFormat formats = new SimpleDateFormat(&quot;yyyy-MM-dd&quot;);</span>
+<span class="nc" id="L151">        Date parsed1 = formats.parse(startDate);</span>
+<span class="nc" id="L152">        java.sql.Date startDate1 = new java.sql.Date(parsed1.getTime());</span>
+
+<span class="nc" id="L154">        Date parsed2 = formats.parse(endDate);</span>
+<span class="nc" id="L155">        java.sql.Date endDate1 = new java.sql.Date(parsed2.getTime());</span>
+<span class="nc" id="L156">        DateTimeFormatter dt = DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd&quot;);</span>
+<span class="nc" id="L157">        LocalDate start = LocalDate.parse(startDate, dt);</span>
+<span class="nc" id="L158">        LocalDate end = LocalDate.parse(endDate, dt);</span>
+<span class="nc" id="L159">        Integer employeeId = userTaskMappingRepository.findByUsername(username).stream().findFirst().map(UserTaskMapping::getEmployeeId).orElse(null);</span>
+<span class="nc" id="L160">        boolean appliedLeaves = applyLeaveService.isLeaveAppliedForDateRange(employeeId, start, end, &quot;PENDING&quot;);</span>
+<span class="nc bnc" id="L161" title="All 2 branches missed.">        if (appliedLeaves) {</span>
+<span class="nc" id="L162">            throw new IllegalArgumentException(&quot;Leave approval is pending for one or more days.&quot;);</span>
+        }
+        try {
+<span class="nc bnc" id="L165" title="All 2 branches missed.">            if (result) {</span>
+<span class="nc" id="L166">                resultString = &quot;Approved&quot;;</span>
+<span class="nc" id="L167">                userTaskMappingRepository.updateUserTaskMappingStatus(resultString, sdf.format(new Date()), tokenHolder.getUsername().toString(), username, startDate1.toString(), endDate1.toString());</span>
+<span class="nc" id="L168">                insertIntoActionHistory(&quot;Approved&quot;, username, appRmrk, startDate1.toString(), endDate1.toString());</span>
+<span class="nc bnc" id="L169" title="All 2 branches missed.">                if (emailUtility.checkMailNotificationTrigger(Constant.EMAIL_EVENT_TS_APPROVAL)) {</span>
+<span class="nc" id="L170">                    String body = &quot;Your time sheet for week &quot; + startDate1 + &quot; to &quot; + endDate1 + &quot; has been approved.&quot;;</span>
+                }
+<span class="nc" id="L172">                activityLog.captureUserActivity(String.valueOf(Constant.MODULE_ID_TIMESHEET), username, &quot;TS_&quot; + startDate + &quot;_&quot; + endDate, String.valueOf(Constant.MODULE_ID_TIMESHEET), &quot;Timesheet approved for week &quot; + startDate + &quot; to &quot; + endDate, tokenHolder.getUsername().toString());</span>
+            } else {
+<span class="nc" id="L174">                resultString = &quot;Rejected&quot;;</span>
+                // GetQueryAPI.getQuery(TM39, resultString,sdf.format(new Date()),tokenHolder.getUsername().toString(),username,startDate1.toString(),endDate1.toString());
+<span class="nc" id="L176">                userTaskMappingRepository.updateUserTaskMappingStatusWithFalse(resultString, sdf.format(new Date()), tokenHolder.getUsername().toString(), username, startDate1.toString(), endDate1.toString());</span>
+<span class="nc" id="L177">                insertIntoActionHistory(&quot;Rejected&quot;, username, appRmrk, startDate1.toString(), endDate1.toString());</span>
+<span class="nc bnc" id="L178" title="All 2 branches missed.">                if (emailUtility.checkMailNotificationTrigger(Constant.EMAIL_EVENT_TS_REJECTION)) {</span>
+<span class="nc" id="L179">                    String body = &quot;Your time sheet for week &quot; + startDate1 + &quot; to &quot; + endDate1 + &quot; has been rejected.&quot;;</span>
+                    // doSendEmail(getUserMailId(username), &quot;Timesheet Rejected&quot;, body);
+                }
+<span class="nc" id="L182">                activityLog.captureUserActivity(String.valueOf(Constant.MODULE_ID_TIMESHEET), username, &quot;TS_&quot; + startDate + &quot;_&quot; + endDate, String.valueOf(Constant.MODULE_ID_TIMESHEET), &quot;Timesheet rejected for week &quot; + startDate + &quot; to &quot; + endDate, tokenHolder.getUsername().toString());</span>
+            }
+<span class="nc" id="L184">            status = true;</span>
+<span class="nc" id="L185">        } catch (Exception e) {</span>
+<span class="nc" id="L186">            e.printStackTrace();</span>
+<span class="nc" id="L187">        }</span>
+<span class="nc" id="L188">        return status;</span>
+    }
+
+    public Object insertIntoActionHistory(String actionType,
+                                          String username, String remark, String startDate, String endDate) throws SQLException, ParseException {
+<span class="nc" id="L193">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L194">        boolean status = false;</span>
+<span class="nc" id="L195">        SimpleDateFormat formats = new SimpleDateFormat(&quot;yyyy-MM-dd&quot;);</span>
+<span class="nc" id="L196">        SimpleDateFormat hhFormat = new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss&quot;);</span>
+
+<span class="nc" id="L198">        Date parsed1 = formats.parse(startDate);</span>
+<span class="nc" id="L199">        java.sql.Date startDate1 = new java.sql.Date(parsed1.getTime());</span>
+
+<span class="nc" id="L201">        Date parsed2 = formats.parse(endDate);</span>
+<span class="nc" id="L202">        java.sql.Date endDate1 = new java.sql.Date(parsed2.getTime());</span>
+        try {
+<span class="nc" id="L204">            return actionHistoryRepository.insertActionHistory(actionType, username, tokenHolder.getUsername().toString(), remark, hhFormat.format(new Date()), endDate1.toString(), startDate1.toString());</span>
+<span class="nc" id="L205">        } catch (Exception e) {</span>
+<span class="nc" id="L206">            e.printStackTrace();</span>
+        }
+<span class="nc" id="L208">        return status;</span>
+    }
+
+    public void removeSourceTSAttendanceLog(String startDate, String endDate, String username) {
+        try {
+<span class="nc" id="L213">            Map&lt;String, List&lt;String&gt;&gt; userShiftTimeMap = attendanceMoafService.getUserShiftTimeMap(startDate, endDate, username);</span>
+<span class="nc" id="L214">            String logTimeStart = startDate + &quot; &quot; + userShiftTimeMap.get(startDate).get(1);</span>
+<span class="nc" id="L215">            String logTimeEnd = endDate + &quot; &quot; + userShiftTimeMap.get(endDate).get(1);</span>
+<span class="nc bnc" id="L216" title="All 2 branches missed.">            if (&quot;Y&quot;.equalsIgnoreCase(userShiftTimeMap.get(endDate).get(3)))</span>
+<span class="nc" id="L217">                logTimeEnd = LocalDate.parse(endDate).plusDays(1).format(DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd&quot;)) + &quot; &quot; + userShiftTimeMap.get(endDate).get(2);</span>
+<span class="nc" id="L218">            actionHistoryRepository.deleteByEmpIdAndDeviceIdAndLogTimeRange(userShiftTimeMap.get(startDate).get(4), Constant.USER_ATTENDANCE_SOURCE_TIMESHEET, logTimeStart, logTimeEnd);</span>
+<span class="nc" id="L219">            actionHistoryRepository.deleteLogsByEmpIdAndDeviceIdAndLogTimeRange(userShiftTimeMap.get(startDate).get(4), Constant.USER_ATTENDANCE_SOURCE_TIMESHEET, logTimeStart, logTimeEnd);</span>
+<span class="nc" id="L220">        } catch (Exception e) {</span>
+<span class="nc" id="L221">            e.printStackTrace();</span>
+<span class="nc" id="L222">            log.error(&quot;Exception occured||Method:removeSourceTSAttendanceLog||Cause:&quot; + e.getMessage());</span>
+<span class="nc" id="L223">        }</span>
+<span class="nc" id="L224">    }</span>
+
+    public String saveUserTimesheet(UserTimesheetDTO timesheetBean) {
+<span class="nc" id="L227">        UserLoginDetail currentUser = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L228">        List&lt;UserTaskMapping&gt; updatedEntities = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L229">        List&lt;String&gt; failedIds = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L230">        List&lt;WeeklyTimesheetSummary&gt; skippedRecords = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L231">        SimpleDateFormat sdf2 = new SimpleDateFormat(&quot;yyyy-MM-dd&quot;);</span>
+<span class="nc" id="L232">        Date currentDate = new Date();</span>
+<span class="nc" id="L233">        LocalDateTime currentDateTime = LocalDateTime.now();</span>
+<span class="nc" id="L234">        Long username = currentUser.getUsername();</span>
+<span class="nc" id="L235">        DateTimeFormatter dt = DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd&quot;);</span>
+<span class="nc bnc" id="L236" title="All 2 branches missed.">        for (WeeklyTimesheetSummary row : timesheetBean.getBulkRequest()) {</span>
+            try {
+<span class="nc" id="L238">                String[] dates = row.getWeekDates().split(&quot; - &quot;);</span>
+<span class="nc" id="L239">                Date startDate = sdf2.parse(dates[0]);</span>
+<span class="nc" id="L240">                Date endDate = sdf2.parse(dates[1]);</span>
+<span class="nc" id="L241">                LocalDate start = LocalDate.parse(dates[0], dt);</span>
+<span class="nc" id="L242">                LocalDate end = LocalDate.parse(dates[1], dt);</span>
+<span class="nc" id="L243">                Integer employeeId = userTaskMappingRepository.findByUsername(row.getUsername()).stream().findFirst().map(UserTaskMapping::getEmployeeId).orElse(null);</span>
+<span class="nc" id="L244">                boolean appliedLeaves = applyLeaveService.isLeaveAppliedForDateRange(employeeId, start, end, &quot;PENDING&quot;);</span>
+<span class="nc bnc" id="L245" title="All 2 branches missed.">                if (appliedLeaves) {</span>
+<span class="nc" id="L246">                    skippedRecords.add(row);</span>
+<span class="nc" id="L247">                    continue;</span>
+                }
+<span class="nc" id="L249">                List&lt;UserTaskMapping&gt; tmsData = userTaskMappingRepository.findByTimesheetDateBetween(startDate, endDate);</span>
+<span class="nc bnc" id="L250" title="All 2 branches missed.">                for (UserTaskMapping data : tmsData) {</span>
+<span class="nc bnc" id="L251" title="All 2 branches missed.">                    if (timesheetBean.getStatus()) {</span>
+<span class="nc" id="L252">                        data.setTimesheetStatus(&quot;Approved&quot;);</span>
+<span class="nc bnc" id="L253" title="All 2 branches missed.">                        data.setBillableEffortInHours(data.getEffortInHours() != null ? Integer.parseInt(data.getEffortInHours()) : 0);</span>
+<span class="nc" id="L254">                        data.setBillableFlag(&quot;Y&quot;);</span>
+                    } else {
+<span class="nc" id="L256">                        data.setTimesheetStatus(&quot;Rejected&quot;);</span>
+<span class="nc" id="L257">                        data.setBillableEffortInHours(0);</span>
+<span class="nc" id="L258">                        data.setBillableFlag(&quot;N&quot;);</span>
+                    }
+<span class="nc" id="L260">                    data.setLastModifiedDate(currentDate);</span>
+<span class="nc" id="L261">                    data.setLastUpdateDate(currentDateTime);</span>
+<span class="nc" id="L262">                    data.setLastUpdatedBy(String.valueOf(username));</span>
+
+<span class="nc" id="L264">                    updatedEntities.add(data);</span>
+<span class="nc" id="L265">                }</span>
+<span class="nc" id="L266">            } catch (Exception e) {</span>
+<span class="nc" id="L267">                failedIds.add(String.valueOf(row.getTimesheetId()));</span>
+<span class="nc" id="L268">                log.error(&quot;Failed to update timesheet ID {}: {}&quot;, row.getTimesheetId(), e.getMessage(), e);</span>
+<span class="nc" id="L269">                throw new IllegalArgumentException(&quot;Some rows failed to update. Failed IDs: &quot; + String.join(&quot;, &quot;, failedIds));</span>
+<span class="nc" id="L270">            }</span>
+<span class="nc" id="L271">        }</span>
+
+<span class="nc bnc" id="L273" title="All 2 branches missed.">        if (!updatedEntities.isEmpty()) {</span>
+<span class="nc" id="L274">            userTaskMappingRepository.saveAll(updatedEntities);</span>
+        }
+<span class="nc bnc" id="L276" title="All 2 branches missed.">        if (!skippedRecords.isEmpty()) {</span>
+<span class="nc" id="L277">            return &quot;Timesheet updated partially. Skipped &quot; + skippedRecords.size() + &quot; rows due to pending leaves.&quot;;</span>
+        }
+<span class="nc" id="L279">        return &quot;Timesheet data updated successfully.&quot;;</span>
+    }
+
+    public Page&lt;Map&lt;String, Object&gt;&gt; getUsersDataUnderReportee(String username, String startDate, String endDate,
+                                                               String filterVar, String allReporteeFlag,
+                                                               String departments, String divisions,
+                                                               String reportingManagers, Pageable pageable) {
+<span class="nc" id="L286">        Page&lt;Map&lt;String, Object&gt;&gt; userPage = Page.empty();</span>
+        try {
+<span class="nc" id="L288">            UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L289">            List&lt;String&gt; loggedInUserGroups = Arrays.asList(tokenHolder.getAuthorities().split(&quot;,&quot;));</span>
+
+<span class="nc" id="L291">            log.info(&quot;loggedInUserGroupsGetAuthorities--{}&quot;, loggedInUserGroups);</span>
+<span class="nc" id="L292">            Page&lt;Object[]&gt; resultPage = Page.empty();</span>
+
+            // If filterVar is not 'All', fetch data for the specified filters
+<span class="nc bnc" id="L295" title="All 2 branches missed.">            if (!filterVar.equalsIgnoreCase(&quot;All&quot;)) {</span>
+<span class="nc" id="L296">                resultPage = actionHistoryRepository.findWeeklySummaryByUsernameAndDate(username, startDate, endDate,</span>
+                        filterVar, departments, divisions, reportingManagers, pageable);
+            }
+
+            // Convert the Object[] results to Map&lt;String, Object&gt;
+<span class="nc" id="L301">            List&lt;Map&lt;String, Object&gt;&gt; userList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L302" title="All 2 branches missed.">            for (Object[] row : resultPage.getContent()) {</span>
+<span class="nc" id="L303">                Map&lt;String, Object&gt; userMap = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L304" title="All 2 branches missed.">                userMap.put(&quot;username&quot;, row[0] != null ? row[0].toString() : &quot;&quot;);</span>
+<span class="nc bnc" id="L305" title="All 2 branches missed.">                userMap.put(&quot;usereffort&quot;, row[1] != null ? row[1] : 0);</span>
+<span class="nc bnc" id="L306" title="All 2 branches missed.">                userMap.put(&quot;userfName&quot;, row[2] != null ? row[2].toString() : &quot;&quot;);</span>
+<span class="nc bnc" id="L307" title="All 2 branches missed.">                userMap.put(&quot;usercode&quot;, row[3] != null ? row[3].toString() : &quot;&quot;);</span>
+<span class="nc bnc" id="L308" title="All 2 branches missed.">                userMap.put(&quot;rmManager&quot;, row[4] != null ? row[4].toString() : &quot;&quot;);</span>
+<span class="nc bnc" id="L309" title="All 2 branches missed.">                userMap.put(&quot;rmManagerName&quot;, row[5] != null ? row[5].toString() : &quot;&quot;);</span>
+<span class="nc bnc" id="L310" title="All 2 branches missed.">                userMap.put(&quot;approverRemark&quot;, row[6] != null ? row[6].toString() : &quot;&quot;);</span>
+<span class="nc bnc" id="L311" title="All 2 branches missed.">                userMap.put(&quot;status&quot;, row[7] != null ? row[7].toString() : &quot;&quot;);</span>
+<span class="nc bnc" id="L312" title="All 2 branches missed.">                userMap.put(&quot;weekDates&quot;, row[9] != null ? row[9].toString() : &quot;&quot;);</span>
+<span class="nc bnc" id="L313" title="All 2 branches missed.">                userMap.put(&quot;id&quot;, row[10] != null ? row[10].toString() : &quot;&quot;);</span>
+
+<span class="nc" id="L315">                userList.add(userMap);</span>
+<span class="nc" id="L316">            }</span>
+
+<span class="nc" id="L318">            userPage = new PageImpl&lt;&gt;(userList, pageable, resultPage.getTotalElements());</span>
+
+<span class="nc" id="L320">        } catch (Exception e) {</span>
+<span class="nc" id="L321">            log.error(&quot;Error fetching user data under reportee&quot;, e);</span>
+<span class="nc" id="L322">        }</span>
+
+<span class="nc" id="L324">        return userPage;</span>
+    }
+
+    @Transactional
+    public Map&lt;String, Object&gt; getTSByProject(Integer projectId, String startDate, String endDate, String status, String sortBy, String sortDir, String searchField, String searchKeyword, Pageable pageable) throws ParseException {
+<span class="nc" id="L329">        SimpleDateFormat sdf2 = new SimpleDateFormat(&quot;yyyy-MM-dd&quot;);</span>
+<span class="nc" id="L330">        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(&quot;dd-MM-yyyy&quot;);</span>
+<span class="nc" id="L331">        Date start = sdf2.parse(startDate);</span>
+<span class="nc" id="L332">        Date end = sdf2.parse(endDate);</span>
+<span class="nc" id="L333">        List&lt;ProjectAllocation&gt; allocations = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L334">        allocations.addAll(projectAllocationRepository.findByProjectRfNumAndStartDateLessThanEqualAndEndDateGreaterThanEqual(projectId, end, start));</span>
+<span class="nc" id="L335">        allocations.addAll(projectAllocationRepository.findByProjectRfNumAndStartDateGreaterThanEqualAndEndDateIsNull(projectId, start));</span>
+
+<span class="nc" id="L337">        List&lt;Integer&gt; allocatedEmployeeIds = allocations.stream().map(ProjectAllocation::getEmployeeId).collect(Collectors.toList());</span>
+
+<span class="nc" id="L339">        List&lt;UserTaskMapping&gt; tmsData = userTaskMappingRepository.findByEmployeeIdInAndTimesheetDateBetweenAndTimesheetStatusNot(allocatedEmployeeIds, start, end, &quot;Deleted&quot;);</span>
+<span class="nc bnc" id="L340" title="All 2 branches missed.">        if (status != null) {</span>
+<span class="nc bnc" id="L341" title="All 4 branches missed.">            if (!status.isBlank() &amp;&amp; !status.equalsIgnoreCase(&quot;all&quot;)) {</span>
+<span class="nc" id="L342">                tmsData = tmsData.stream().filter(ts -&gt; status.equalsIgnoreCase(ts.getTimesheetStatus())).collect(Collectors.toList());</span>
+            }
+        }
+
+<span class="nc" id="L346">        Map&lt;Integer, Map&lt;LocalDate, List&lt;UserTaskMapping&gt;&gt;&gt; grouped = tmsData.stream()</span>
+<span class="nc" id="L347">                .collect(Collectors.groupingBy(</span>
+                        UserTaskMapping::getEmployeeId,
+<span class="nc" id="L349">                        Collectors.groupingBy(ts -&gt; getWeekStart(ts.getTimesheetDate()))</span>
+                ));
+
+<span class="nc" id="L352">        List&lt;WeeklyTimesheetSummary&gt; summaries = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L353" title="All 2 branches missed.">        for (Map.Entry&lt;Integer, Map&lt;LocalDate, List&lt;UserTaskMapping&gt;&gt;&gt; empEntry : grouped.entrySet()) {</span>
+<span class="nc" id="L354">            Integer empId = empEntry.getKey();</span>
+<span class="nc bnc" id="L355" title="All 2 branches missed.">            for (Map.Entry&lt;LocalDate, List&lt;UserTaskMapping&gt;&gt; weekEntry : empEntry.getValue().entrySet()) {</span>
+<span class="nc" id="L356">                LocalDate weekStart = weekEntry.getKey();</span>
+<span class="nc" id="L357">                LocalDate weekEnd = weekStart.plusDays(6);</span>
+<span class="nc" id="L358">                List&lt;UserTaskMapping&gt; weekTs = weekEntry.getValue();</span>
+
+<span class="nc" id="L360">                BigDecimal totalEffort = weekTs.stream()</span>
+<span class="nc" id="L361">                        .map(ts -&gt; {</span>
+                            try {
+<span class="nc" id="L363">                                return new BigDecimal(ts.getEffortInHours());</span>
+<span class="nc" id="L364">                            } catch (Exception e) {</span>
+<span class="nc" id="L365">                                return BigDecimal.ZERO;</span>
+                            }
+<span class="nc" id="L367">                        }).reduce(BigDecimal.ZERO, BigDecimal::add);</span>
+
+<span class="nc" id="L369">                Set&lt;String&gt; statuses = weekTs.stream().map(UserTaskMapping::getTimesheetStatus).filter(Objects::nonNull).map(String::toLowerCase).collect(Collectors.toSet());</span>
+
+                String finalStatus;
+<span class="nc bnc" id="L372" title="All 2 branches missed.">                if (statuses.size() == 1) {</span>
+<span class="nc" id="L373">                    String singleStatus = statuses.iterator().next();</span>
+<span class="nc bnc" id="L374" title="All 2 branches missed.">                    if (&quot;approved&quot;.equals(singleStatus)) {</span>
+<span class="nc" id="L375">                        finalStatus = &quot;Approved&quot;;</span>
+<span class="nc bnc" id="L376" title="All 2 branches missed.">                    } else if (&quot;rejected&quot;.equals(singleStatus)) {</span>
+<span class="nc" id="L377">                        finalStatus = &quot;Rejected&quot;;</span>
+                    } else {
+<span class="nc" id="L379">                        finalStatus = &quot;Pending&quot;;</span>
+                    }
+<span class="nc" id="L381">                } else {</span>
+<span class="nc" id="L382">                    finalStatus = &quot;Pending&quot;;</span>
+                }
+
+<span class="nc" id="L385">                UserTaskMapping first = weekTs.get(0);</span>
+<span class="nc" id="L386">                Employee emp = employeeRepository.findById(empId).orElse(null);</span>
+
+<span class="nc" id="L388">                WeeklyTimesheetSummary dto = new WeeklyTimesheetSummary();</span>
+<span class="nc" id="L389">                dto.setEmployeeId(empId);</span>
+<span class="nc" id="L390">                dto.setWeekStart(weekStart);</span>
+<span class="nc" id="L391">                dto.setWeekEnd(weekEnd);</span>
+<span class="nc" id="L392">                dto.setTotalEffort(totalEffort);</span>
+<span class="nc bnc" id="L393" title="All 2 branches missed.">                dto.setEmployeeName(emp != null ? emp.getFullName() + &quot; (&quot; + emp.getEmployeeNumber() + &quot;)&quot; : &quot;Unknown&quot;);</span>
+<span class="nc" id="L394">                String formattedWeekStart = weekStart.format(formatter);</span>
+<span class="nc" id="L395">                String formattedWeekEnd = weekEnd.format(formatter);</span>
+<span class="nc" id="L396">                dto.setWeekDates(formattedWeekStart + &quot; - &quot; + formattedWeekEnd);</span>
+<span class="nc" id="L397">                dto.setUsername(first.getUsername());</span>
+<span class="nc" id="L398">                dto.setTimesheetId(first.getTimesheetId());</span>
+<span class="nc" id="L399">                dto.setReportingManagerName(</span>
+<span class="nc bnc" id="L400" title="All 4 branches missed.">                        emp != null &amp;&amp; emp.getReportingManager() != null</span>
+<span class="nc" id="L401">                                ? emp.getReportingManager().getFirstName() + &quot; &quot; + emp.getReportingManager().getLastName()</span>
+<span class="nc" id="L402">                                : &quot;Unknown&quot;);</span>
+<span class="nc" id="L403">                dto.setStatus(finalStatus);</span>
+<span class="nc" id="L404">                dto.setApproverRemark(first.getApproverRemark());</span>
+
+<span class="nc" id="L406">                summaries.add(dto);</span>
+<span class="nc" id="L407">            }</span>
+<span class="nc" id="L408">        }</span>
+
+<span class="nc bnc" id="L410" title="All 8 branches missed.">        if (searchField != null &amp;&amp; searchKeyword != null &amp;&amp; !searchField.isBlank() &amp;&amp; !searchKeyword.isBlank()) {</span>
+<span class="nc" id="L411">            summaries = summaries.stream()</span>
+<span class="nc" id="L412">                    .filter(dto -&gt; {</span>
+                        try {
+<span class="nc" id="L414">                            Field field = WeeklyTimesheetSummary.class.getDeclaredField(searchField);</span>
+<span class="nc" id="L415">                            field.setAccessible(true);</span>
+<span class="nc" id="L416">                            Object fieldValue = field.get(dto);</span>
+<span class="nc bnc" id="L417" title="All 4 branches missed.">                            return fieldValue != null &amp;&amp; fieldValue.toString().toLowerCase().contains(searchKeyword.toLowerCase());</span>
+<span class="nc" id="L418">                        } catch (NoSuchFieldException | IllegalAccessException e) {</span>
+<span class="nc" id="L419">                            return false;</span>
+                        }
+                    })
+<span class="nc" id="L422">                    .collect(Collectors.toList());</span>
+        }
+
+<span class="nc bnc" id="L425" title="All 4 branches missed.">        if (sortBy != null &amp;&amp; !sortBy.isBlank()) {</span>
+            try {
+<span class="nc" id="L427">                Field sortField = WeeklyTimesheetSummary.class.getDeclaredField(sortBy);</span>
+<span class="nc" id="L428">                sortField.setAccessible(true);</span>
+
+<span class="nc" id="L430">                Comparator&lt;WeeklyTimesheetSummary&gt; comparator = Comparator.comparing(dto -&gt; {</span>
+                    try {
+<span class="nc" id="L432">                        Object val = sortField.get(dto);</span>
+<span class="nc" id="L433">                        return (Comparable&lt;Object&gt;) val;</span>
+<span class="nc" id="L434">                    } catch (IllegalAccessException e) {</span>
+<span class="nc" id="L435">                        return null;</span>
+                    }
+<span class="nc" id="L437">                }, Comparator.nullsLast(Comparator.naturalOrder()));</span>
+
+<span class="nc bnc" id="L439" title="All 2 branches missed.">                if (&quot;desc&quot;.equalsIgnoreCase(sortDir)) {</span>
+<span class="nc" id="L440">                    comparator = comparator.reversed();</span>
+                }
+
+<span class="nc" id="L443">                summaries.sort(comparator);</span>
+
+<span class="nc" id="L445">            } catch (NoSuchFieldException e) {</span>
+<span class="nc" id="L446">                log.info(&quot;Invalid sort field: {}&quot;, sortBy);</span>
+<span class="nc" id="L447">            }</span>
+        }
+
+<span class="nc" id="L450">        int totalItems = summaries.size();</span>
+<span class="nc" id="L451">        int currentPage = pageable.getPageNumber();</span>
+<span class="nc" id="L452">        int pageSize = pageable.getPageSize();</span>
+<span class="nc" id="L453">        int startIndex = currentPage * pageSize;</span>
+<span class="nc" id="L454">        int endIndex = Math.min(startIndex + pageSize, totalItems);</span>
+<span class="nc" id="L455">        int totalPages = (int) Math.ceil((double) totalItems / pageSize);</span>
+
+        List&lt;WeeklyTimesheetSummary&gt; paginatedList =
+<span class="nc bnc" id="L458" title="All 2 branches missed.">                (startIndex &lt; totalItems) ? summaries.subList(startIndex, endIndex) : Collections.emptyList();</span>
+
+<span class="nc" id="L460">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L461">        response.put(&quot;result&quot;, paginatedList);</span>
+<span class="nc" id="L462">        response.put(&quot;currentPage&quot;, currentPage + 1);</span>
+<span class="nc" id="L463">        response.put(&quot;pageSize&quot;, pageSize);</span>
+<span class="nc" id="L464">        response.put(&quot;totalItems&quot;, totalItems);</span>
+<span class="nc" id="L465">        response.put(&quot;totalPages&quot;, totalPages);</span>
+
+<span class="nc" id="L467">        return response;</span>
+    }
+
+    private LocalDate getWeekStart(Date date) {
+<span class="nc" id="L471">        LocalDate localDate = ((java.sql.Date) date).toLocalDate();</span>
+<span class="nc bnc" id="L472" title="All 2 branches missed.">        return localDate.getDayOfWeek() == DayOfWeek.SUNDAY ? localDate : localDate.minusDays(localDate.getDayOfWeek().getValue());</span>
+    }
+
+    public void checkTimesheetExists(LeaveRequestDTO leaveRequestDTO) {
+<span class="nc" id="L476">        String tokenUsername = SessionHolder.getUserLoginDetail().getUsername().toString();</span>
+<span class="nc" id="L477">        Map&lt;String, LocalDate&gt; weekRange = getWeekRange(leaveRequestDTO.getStartDate());</span>
+<span class="nc" id="L478">        LocalDate weekStartLocal = weekRange.get(&quot;weekStart&quot;);</span>
+<span class="nc" id="L479">        LocalDate weekEndLocal = weekRange.get(&quot;weekEnd&quot;);</span>
+<span class="nc" id="L480">        Date weekStart = Date.from(weekStartLocal.atStartOfDay(ZoneId.systemDefault()).toInstant());</span>
+<span class="nc" id="L481">        Date weekEnd = Date.from(weekEndLocal.atStartOfDay(ZoneId.systemDefault()).toInstant());</span>
+<span class="nc" id="L482">        java.sql.Date start = new java.sql.Date(weekStart.getTime());</span>
+<span class="nc" id="L483">        java.sql.Date end = new java.sql.Date(weekEnd.getTime());</span>
+<span class="nc" id="L484">        List&lt;UserTaskMapping&gt; timesheetData = userTaskMappingRepository.findByEmployeeIdAndTimesheetDateBetweenAndTimesheetStatus(leaveRequestDTO.getEmpId(), weekStart, weekEnd, &quot;Pending&quot;);</span>
+<span class="nc bnc" id="L485" title="All 2 branches missed.">        if (!timesheetData.isEmpty()) {</span>
+<span class="nc" id="L486">            String username = timesheetData.stream().map(UserTaskMapping::getUsername).findFirst().get();</span>
+<span class="nc" id="L487">            userTaskMappingRepository.updateUserTaskMappingStatusWithFalse(&quot;Rejected&quot;, sdf.format(new Date()), tokenUsername, username, start.toString(), end.toString());</span>
+        }
+<span class="nc" id="L489">    }</span>
+
+    public Map&lt;String, LocalDate&gt; getWeekRange(LocalDate localDate) {
+<span class="nc bnc" id="L492" title="All 2 branches missed.">        LocalDate weekStart = localDate.getDayOfWeek() == DayOfWeek.SUNDAY ? localDate : localDate.minusDays(localDate.getDayOfWeek().getValue());</span>
+<span class="nc" id="L493">        LocalDate weekEnd = weekStart.plusDays(6);</span>
+
+<span class="nc" id="L495">        Map&lt;String, LocalDate&gt; weekRange = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L496">        weekRange.put(&quot;weekStart&quot;, weekStart);</span>
+<span class="nc" id="L497">        weekRange.put(&quot;weekEnd&quot;, weekEnd);</span>
+
+<span class="nc" id="L499">        return weekRange;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

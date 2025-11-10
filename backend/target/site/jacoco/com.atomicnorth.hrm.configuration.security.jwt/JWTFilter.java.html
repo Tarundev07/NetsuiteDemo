@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JWTFilter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.configuration.security.jwt</a> &gt; <span class="el_source">JWTFilter.java</span></div><h1>JWTFilter.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.configuration.security.jwt;
+
+import com.atomicnorth.hrm.configuration.multitenant.TenantContextHolder;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.util.StringUtils;
+import org.springframework.web.filter.GenericFilterBean;
+
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.text.ParseException;
+
+/**
+ * Filters incoming requests and installs a Spring Security principal if a header corresponding to a valid user is
+ * found.
+ */
+public class JWTFilter extends GenericFilterBean {
+
+    public static final String AUTHORIZATION_HEADER = &quot;Authorization&quot;;
+
+    private final TokenProvider tokenProvider;
+
+<span class="nc" id="L31">    public JWTFilter(TokenProvider tokenProvider) {</span>
+<span class="nc" id="L32">        this.tokenProvider = tokenProvider;</span>
+<span class="nc" id="L33">    }</span>
+
+    /*@Override
+    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
+        throws IOException, ServletException {
+        HttpServletRequest httpServletRequest = (HttpServletRequest) servletRequest;
+        String jwt = resolveToken(httpServletRequest);
+        if (StringUtils.hasText(jwt) &amp;&amp; this.tokenProvider.validateToken(jwt)) {
+            UserLoginDetail userLoginDetail = this.tokenProvider.parse(jwt);
+            Authentication authentication = this.tokenProvider.getAuthentication(userLoginDetail, jwt);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            SessionHolder.setUserLoginDetail(userLoginDetail);
+        }
+        filterChain.doFilter(servletRequest, servletResponse);
+        SessionHolder.clear();
+    }
+*/
+    @Override
+    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
+            throws IOException, ServletException {
+<span class="nc" id="L53">        HttpServletRequest httpServletRequest = (HttpServletRequest) servletRequest;</span>
+<span class="nc" id="L54">        String jwt = resolveToken(httpServletRequest);</span>
+<span class="nc bnc" id="L55" title="All 2 branches missed.">        if (StringUtils.hasText(jwt)) {</span>
+<span class="nc" id="L56">            String extracted = this.tokenProvider.extractTenantId(jwt);</span>
+<span class="nc bnc" id="L57" title="All 2 branches missed.">            if (StringUtils.hasText(extracted)) {</span>
+<span class="nc" id="L58">                TenantContextHolder.setTenantId(extracted);</span>
+            }
+        }
+
+<span class="nc bnc" id="L62" title="All 4 branches missed.">        if (StringUtils.hasText(jwt) &amp;&amp; this.tokenProvider.validateToken(jwt)) {</span>
+<span class="nc" id="L63">            UserLoginDetail userLoginDetail = null;</span>
+            try {
+<span class="nc" id="L65">                userLoginDetail = this.tokenProvider.parse(jwt);</span>
+<span class="nc" id="L66">            } catch (ParseException e) {</span>
+<span class="nc" id="L67">                throw new RuntimeException(e);</span>
+<span class="nc" id="L68">            }</span>
+<span class="nc" id="L69">            Authentication authentication = this.tokenProvider.getAuthentication(userLoginDetail, jwt);</span>
+<span class="nc" id="L70">            SecurityContextHolder.getContext().setAuthentication(authentication);</span>
+<span class="nc" id="L71">            SessionHolder.setUserLoginDetail(userLoginDetail);</span>
+        }
+<span class="nc" id="L73">        filterChain.doFilter(servletRequest, servletResponse);</span>
+<span class="nc" id="L74">        SessionHolder.clear();</span>
+<span class="nc" id="L75">    }</span>
+
+    private String resolveToken(HttpServletRequest request) {
+<span class="nc" id="L78">        String bearerToken = request.getHeader(AUTHORIZATION_HEADER);</span>
+<span class="nc bnc" id="L79" title="All 4 branches missed.">        if (StringUtils.hasText(bearerToken) &amp;&amp; bearerToken.startsWith(&quot;Bearer &quot;)) {</span>
+<span class="nc" id="L80">            return bearerToken.substring(7);</span>
+        }
+<span class="nc" id="L82">        return null;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

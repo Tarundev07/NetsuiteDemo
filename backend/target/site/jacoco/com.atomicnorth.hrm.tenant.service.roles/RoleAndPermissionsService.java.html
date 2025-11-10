@@ -1,0 +1,503 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RoleAndPermissionsService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.roles</a> &gt; <span class="el_source">RoleAndPermissionsService.java</span></div><h1>RoleAndPermissionsService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.roles;
+
+import com.atomicnorth.hrm.configuration.multitenant.TenantContextHolder;
+import com.atomicnorth.hrm.tenant.domain.User;
+import com.atomicnorth.hrm.tenant.domain.roles.*;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.UserRepository;
+import com.atomicnorth.hrm.tenant.repository.roles.*;
+import com.atomicnorth.hrm.tenant.service.advanceSearch.SearchAvailableColumnService;
+import com.atomicnorth.hrm.tenant.service.dto.roles.RolePermissionDto;
+import com.atomicnorth.hrm.tenant.service.dto.roles.RoleRequest;
+import com.atomicnorth.hrm.tenant.service.dto.roles.UserModuleFunctionFeatureDTO;
+import com.atomicnorth.hrm.tenant.service.translation.SupraTranslationCommonServices;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+
+import javax.transaction.Transactional;
+import java.math.BigInteger;
+import java.sql.CallableStatement;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Types;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+<span class="nc" id="L31">@Service</span>
+<span class="nc" id="L32">public class RoleAndPermissionsService {</span>
+
+    @Autowired
+    UserRepository userRepository;
+    @Autowired
+    SearchAvailableColumnService searchAvailableColumnService;
+    @Autowired
+    JdbcTemplate jdbcTemplate;
+    @Autowired
+    UserRoleRepository userRoleRepository;
+    @Autowired
+    private ApplicationRepository applicationRepository;
+    @Autowired
+    private ApplicationModuleRepository moduleRepository;
+    @Autowired
+    private FunctionRepository featureRepository;
+    @Autowired
+    private FeatureFunctionRepository featureFunctionRepository;
+    @Autowired
+    private SupraTranslationCommonServices translationService;
+    @Autowired
+    private RoleRepository roleRepository;
+    @Autowired
+    private RolePermissionRepository rolePermissionRepository;
+
+    public List&lt;Application&gt; getApplicationsWithModulesAndFeatures(int languageId) {
+<span class="nc" id="L58">        List&lt;Application&gt; applications = applicationRepository.findAll();</span>
+<span class="nc bnc" id="L59" title="All 2 branches missed.">        for (Application application : applications) {</span>
+<span class="nc" id="L60">            application.setDescription(translationService.getDescription(languageId, application.getShortCode()));</span>
+<span class="nc" id="L61">            System.out.println(&quot;Application ID: &quot; + application.getApplicationId() + &quot; Description: &quot; + application.getDescription());</span>
+<span class="nc" id="L62">            List&lt;ApplicationModule&gt; modules = moduleRepository.findByApplicationId(application.getApplicationId());</span>
+<span class="nc bnc" id="L63" title="All 2 branches missed.">            for (ApplicationModule module : modules) {</span>
+<span class="nc" id="L64">                module.setDescription(translationService.getDescription(languageId, module.getShortCode()));</span>
+<span class="nc" id="L65">                System.out.println(&quot;Module ID: &quot; + module.getModuleId() + &quot; Description: &quot; + module.getDescription());</span>
+<span class="nc" id="L66">                List&lt;FunctionEntity&gt; features = featureRepository.findByModuleId(module.getModuleId());</span>
+<span class="nc bnc" id="L67" title="All 2 branches missed.">                for (FunctionEntity feature : features) {</span>
+<span class="nc" id="L68">                    feature.setDescription(translationService.getDescription(languageId, feature.getShortCode()));</span>
+<span class="nc" id="L69">                    System.out.println(&quot;Feature ID: &quot; + feature.getFunctionId() + &quot; Description: &quot; + feature.getDescription());</span>
+<span class="nc" id="L70">                    List&lt;FeatureFunction&gt; featureFunctions = featureFunctionRepository.findByModuleFeatureId(feature.getFunctionId());</span>
+<span class="nc bnc" id="L71" title="All 2 branches missed.">                    for (FeatureFunction featureFunction : featureFunctions) {</span>
+<span class="nc" id="L72">                        featureFunction.setDescription(translationService.getDescription(languageId, featureFunction.getShortCode()));</span>
+<span class="nc" id="L73">                        System.out.println(&quot;Feature Function ID: &quot; + featureFunction.getFeatureFunctionId() + &quot; Description: &quot; + featureFunction.getDescription());</span>
+<span class="nc" id="L74">                    }</span>
+<span class="nc" id="L75">                    feature.setChild(featureFunctions);</span>
+<span class="nc" id="L76">                }</span>
+<span class="nc" id="L77">                module.setChild(features);</span>
+<span class="nc" id="L78">            }</span>
+<span class="nc" id="L79">            application.setChild(modules);</span>
+<span class="nc" id="L80">        }</span>
+<span class="nc" id="L81">        return applications;</span>
+    }
+
+    public Map&lt;String, Object&gt; getAllRoles(String searchKeyword, String searchField, Pageable pageable, int languageId) {
+<span class="nc" id="L85">        Page&lt;Role&gt; rolePage = null;</span>
+
+<span class="nc bnc" id="L87" title="All 6 branches missed.">        if (searchKeyword != null &amp;&amp; !searchKeyword.trim().isEmpty() &amp;&amp; searchField != null) {</span>
+<span class="nc bnc" id="L88" title="All 2 branches missed.">            if (searchField.equalsIgnoreCase(&quot;roleName&quot;)) searchField = &quot;roleNameCode&quot;;</span>
+<span class="nc bnc" id="L89" title="All 2 branches missed.">            if (&quot;status&quot;.equalsIgnoreCase(searchField)) {</span>
+<span class="nc bnc" id="L90" title="All 2 branches missed.">                if (searchKeyword.trim().toLowerCase().matches(&quot;a|ac|act|activ|active.*&quot;)) {</span>
+<span class="nc" id="L91">                    searchKeyword = &quot;A&quot;;</span>
+<span class="nc bnc" id="L92" title="All 2 branches missed.">                } else if (searchKeyword.trim().toLowerCase().matches(&quot;i|in|ina|inac|inact|inacti|inactive.*&quot;)) {</span>
+<span class="nc" id="L93">                    searchKeyword = &quot;I&quot;;</span>
+                }
+<span class="nc" id="L95">                rolePage = roleRepository.searchRoles(searchKeyword, searchField, languageId, pageable);</span>
+            }
+        } else {
+<span class="nc" id="L98">            rolePage = roleRepository.findAll(pageable);</span>
+        }
+<span class="nc" id="L100">        Map&lt;String, String&gt; translationCache = translationService.getAllDescriptions(languageId);</span>
+<span class="nc" id="L101">        List&lt;Map&lt;String, Object&gt;&gt; dataList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L102" title="All 2 branches missed.">        for (Role role : rolePage.getContent()) {</span>
+<span class="nc" id="L103">            Map&lt;String, Object&gt; roleData = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L104">            List&lt;RolePermissions&gt; rolePermissions = rolePermissionRepository.findByRole(role);</span>
+<span class="nc" id="L105">            roleData.put(&quot;roleId&quot;, role.getRoleId());</span>
+<span class="nc" id="L106">            roleData.put(&quot;roleCode&quot;, role.getRoleCode());</span>
+<span class="nc" id="L107">            roleData.put(&quot;ssoRoleId&quot;, role.getSso_role_unique_key());</span>
+<span class="nc" id="L108">            roleData.put(&quot;roleNameCode&quot;, role.getRoleNameCode());</span>
+<span class="nc" id="L109">            roleData.put(&quot;roleDescriptionCode&quot;, role.getRoleDescriptionCode());</span>
+<span class="nc" id="L110">            roleData.put(&quot;roleName&quot;, translationCache.getOrDefault(role.getRoleNameCode(), &quot;N/A&quot;));</span>
+<span class="nc" id="L111">            roleData.put(&quot;roleDescription&quot;, translationCache.getOrDefault(role.getRoleDescriptionCode(), &quot;N/A&quot;));</span>
+<span class="nc" id="L112">            roleData.put(&quot;moduleId&quot;, role.getModuleId());</span>
+<span class="nc" id="L113">            roleData.put(&quot;functionId&quot;, role.getFunctionId());</span>
+<span class="nc" id="L114">            roleData.put(&quot;status&quot;, role.getStatus());</span>
+<span class="nc" id="L115">            roleData.put(&quot;startDate&quot;, role.getStartDate());</span>
+<span class="nc bnc" id="L116" title="All 2 branches missed.">            roleData.put(&quot;endDate&quot;, role.getEndDate() != null ? role.getEndDate().toString() : null);</span>
+<span class="nc" id="L117">            String fullName = getAddedByName(role.getCreatedBy());</span>
+<span class="nc" id="L118">            roleData.put(&quot;addedBy&quot;, fullName);</span>
+<span class="nc" id="L119">            Map&lt;String, Object&gt; permissionsWithCount = buildPermissionsWithApplicationHierarchy(rolePermissions, translationCache, languageId);</span>
+<span class="nc" id="L120">            roleData.put(&quot;permissions&quot;, permissionsWithCount.get(&quot;permissions&quot;));</span>
+<span class="nc" id="L121">            roleData.put(&quot;totalPermissions&quot;, permissionsWithCount.get(&quot;totalPermissions&quot;));</span>
+<span class="nc" id="L122">            dataList.add(roleData);</span>
+<span class="nc" id="L123">        }</span>
+<span class="nc" id="L124">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L125">        response.put(&quot;result&quot;, dataList);</span>
+<span class="nc" id="L126">        response.put(&quot;currentPage&quot;, rolePage.getNumber() + 1);</span>
+<span class="nc" id="L127">        response.put(&quot;totalItems&quot;, rolePage.getTotalElements());</span>
+<span class="nc" id="L128">        response.put(&quot;totalPages&quot;, rolePage.getTotalPages());</span>
+
+<span class="nc" id="L130">        return response;</span>
+    }
+
+    private String getAddedByName(String createdBy) {
+        try {
+<span class="nc bnc" id="L135" title="All 2 branches missed.">            if (createdBy != null) {</span>
+<span class="nc" id="L136">                return userRepository.findById(Long.valueOf(createdBy))</span>
+<span class="nc" id="L137">                        .map(User::getDisplayName)</span>
+<span class="nc" id="L138">                        .orElse(&quot;Unknown&quot;);</span>
+            }
+<span class="nc" id="L140">        } catch (NumberFormatException e) {</span>
+<span class="nc" id="L141">        }</span>
+<span class="nc" id="L142">        return &quot;Unknown&quot;;</span>
+    }
+
+    private Map&lt;String, Object&gt; buildPermissionsWithApplicationHierarchy(List&lt;RolePermissions&gt; rolePermissions, Map&lt;String, String&gt; translationCache, int languageId) {
+<span class="nc" id="L146">        List&lt;Integer&gt; applicationIds = rolePermissions.stream()</span>
+<span class="nc" id="L147">                .map(RolePermissions::getApplicationId)</span>
+<span class="nc" id="L148">                .distinct()</span>
+<span class="nc" id="L149">                .collect(Collectors.toList());</span>
+<span class="nc" id="L150">        List&lt;Application&gt; allApplications = applicationRepository.findAllByApplicationIdIn(applicationIds);</span>
+<span class="nc" id="L151">        List&lt;Integer&gt; moduleIds = rolePermissions.stream()</span>
+<span class="nc" id="L152">                .map(RolePermissions::getModuleId)</span>
+<span class="nc" id="L153">                .distinct()</span>
+<span class="nc" id="L154">                .collect(Collectors.toList());</span>
+<span class="nc" id="L155">        List&lt;Integer&gt; functionIds = rolePermissions.stream()</span>
+<span class="nc" id="L156">                .map(RolePermissions::getModuleFunctionId)</span>
+<span class="nc" id="L157">                .distinct()</span>
+<span class="nc" id="L158">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L160">        List&lt;Integer&gt; featureIds = rolePermissions.stream()</span>
+<span class="nc" id="L161">                .map(RolePermissions::getModuleFeatureId)</span>
+<span class="nc" id="L162">                .distinct()</span>
+<span class="nc" id="L163">                .collect(Collectors.toList());</span>
+<span class="nc" id="L164">        List&lt;ApplicationModule&gt; allModules = moduleRepository.findAllByModuleIdIn(moduleIds);</span>
+<span class="nc" id="L165">        List&lt;FunctionEntity&gt; allFunctions = featureRepository.findAllByFunctionIdIn(functionIds);</span>
+<span class="nc" id="L166">        List&lt;FeatureFunction&gt; allFeatures = featureFunctionRepository.findByFeatureFunctionIdIn(featureIds);</span>
+<span class="nc" id="L167">        Map&lt;Integer, List&lt;ApplicationModule&gt;&gt; modulesByApplication = allModules.stream()</span>
+<span class="nc" id="L168">                .collect(Collectors.groupingBy(ApplicationModule::getApplicationId));</span>
+<span class="nc" id="L169">        Map&lt;Integer, List&lt;FunctionEntity&gt;&gt; functionsByModule = allFunctions.stream()</span>
+<span class="nc" id="L170">                .collect(Collectors.groupingBy(FunctionEntity::getModuleId));</span>
+<span class="nc" id="L171">        Map&lt;Integer, List&lt;FeatureFunction&gt;&gt; featuresByFunction = allFeatures.stream()</span>
+<span class="nc" id="L172">                .collect(Collectors.groupingBy(FeatureFunction::getModuleFeatureId));</span>
+<span class="nc" id="L173">        Map&lt;Integer, Map&lt;String, Object&gt;&gt; applicationMap = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L174">        int totalFeaturesCount = 0;</span>
+
+        // Step 2: Populate the application hierarchy
+<span class="nc bnc" id="L177" title="All 2 branches missed.">        for (Application application : allApplications) {</span>
+<span class="nc" id="L178">            Map&lt;String, Object&gt; applicationData = applicationMap.computeIfAbsent(application.getApplicationId(), appId -&gt; {</span>
+<span class="nc" id="L179">                Map&lt;String, Object&gt; newApplication = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L180">                newApplication.put(&quot;applicationId&quot;, application.getApplicationId());</span>
+<span class="nc" id="L181">                newApplication.put(&quot;shortCode&quot;, application.getShortCode());</span>
+<span class="nc" id="L182">                newApplication.put(&quot;description&quot;, translationCache.getOrDefault(application.getShortCode(), &quot;N/A&quot;));</span>
+<span class="nc" id="L183">                newApplication.put(&quot;child&quot;, new ArrayList&lt;Map&lt;String, Object&gt;&gt;());</span>
+<span class="nc" id="L184">                return newApplication;</span>
+            });
+
+<span class="nc" id="L187">            List&lt;Map&lt;String, Object&gt;&gt; moduleList = (List&lt;Map&lt;String, Object&gt;&gt;) applicationData.get(&quot;child&quot;);</span>
+<span class="nc" id="L188">            List&lt;ApplicationModule&gt; modules = modulesByApplication.get(application.getApplicationId());</span>
+<span class="nc bnc" id="L189" title="All 2 branches missed.">            if (modules != null) {</span>
+<span class="nc bnc" id="L190" title="All 2 branches missed.">                for (ApplicationModule module : modules) {</span>
+<span class="nc" id="L191">                    Map&lt;String, Object&gt; moduleData = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L192">                    moduleData.put(&quot;moduleId&quot;, module.getModuleId());</span>
+<span class="nc" id="L193">                    moduleData.put(&quot;shortCode&quot;, module.getShortCode());</span>
+<span class="nc" id="L194">                    moduleData.put(&quot;description&quot;, translationCache.getOrDefault(module.getShortCode(), &quot;N/A&quot;));</span>
+<span class="nc" id="L195">                    moduleData.put(&quot;child&quot;, new ArrayList&lt;Map&lt;String, Object&gt;&gt;());</span>
+
+<span class="nc" id="L197">                    List&lt;FunctionEntity&gt; functions = functionsByModule.get(module.getModuleId());</span>
+<span class="nc bnc" id="L198" title="All 2 branches missed.">                    if (functions != null) {</span>
+<span class="nc" id="L199">                        List&lt;Map&lt;String, Object&gt;&gt; functionList = (List&lt;Map&lt;String, Object&gt;&gt;) moduleData.get(&quot;child&quot;);</span>
+<span class="nc bnc" id="L200" title="All 2 branches missed.">                        for (FunctionEntity function : functions) {</span>
+<span class="nc" id="L201">                            Map&lt;String, Object&gt; functionData = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L202">                            functionData.put(&quot;functionId&quot;, function.getFunctionId());</span>
+<span class="nc" id="L203">                            functionData.put(&quot;shortCode&quot;, function.getShortCode());</span>
+<span class="nc" id="L204">                            functionData.put(&quot;description&quot;, translationCache.getOrDefault(function.getShortCode(), &quot;N/A&quot;));</span>
+<span class="nc" id="L205">                            functionData.put(&quot;child&quot;, new ArrayList&lt;Map&lt;String, Object&gt;&gt;());</span>
+
+<span class="nc" id="L207">                            List&lt;FeatureFunction&gt; features = featuresByFunction.get(function.getFunctionId());</span>
+<span class="nc bnc" id="L208" title="All 2 branches missed.">                            if (features != null) {</span>
+<span class="nc" id="L209">                                List&lt;Map&lt;String, Object&gt;&gt; featureList = (List&lt;Map&lt;String, Object&gt;&gt;) functionData.get(&quot;child&quot;);</span>
+<span class="nc bnc" id="L210" title="All 2 branches missed.">                                for (FeatureFunction feature : features) {</span>
+<span class="nc" id="L211">                                    Map&lt;String, Object&gt; featureData = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L212">                                    featureData.put(&quot;featureId&quot;, feature.getFeatureFunctionId());</span>
+<span class="nc" id="L213">                                    featureData.put(&quot;shortCode&quot;, feature.getShortCode());</span>
+<span class="nc" id="L214">                                    featureData.put(&quot;description&quot;, translationCache.getOrDefault(feature.getShortCode(), &quot;N/A&quot;));</span>
+
+<span class="nc" id="L216">                                    featureList.add(featureData);</span>
+<span class="nc" id="L217">                                    totalFeaturesCount++;</span>
+<span class="nc" id="L218">                                }</span>
+                            }
+
+<span class="nc" id="L221">                            functionList.add(functionData);</span>
+<span class="nc" id="L222">                        }</span>
+                    }
+
+<span class="nc" id="L225">                    moduleList.add(moduleData);</span>
+<span class="nc" id="L226">                }</span>
+            }
+<span class="nc" id="L228">        }</span>
+<span class="nc" id="L229">        Map&lt;String, Object&gt; result = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L230">        result.put(&quot;permissions&quot;, new ArrayList&lt;&gt;(applicationMap.values()));</span>
+<span class="nc" id="L231">        result.put(&quot;totalPermissions&quot;, totalFeaturesCount);</span>
+<span class="nc" id="L232">        return result;</span>
+    }
+
+    public String createRollCode(String content, String code, Integer moduleId) {
+<span class="nc" id="L236">        Connection connection = null;</span>
+<span class="nc" id="L237">        CallableStatement callableStatement = null;</span>
+        try {
+<span class="nc" id="L239">            String schemaName = TenantContextHolder.getTenant();</span>
+<span class="nc" id="L240">            String procedureName = schemaName + &quot;.GenerateRoleShortcode&quot;;</span>
+<span class="nc" id="L241">            connection = jdbcTemplate.getDataSource().getConnection();</span>
+<span class="nc" id="L242">            callableStatement = connection.prepareCall(&quot;{CALL &quot; + procedureName + &quot;(?, ?, ?, ?)}&quot;);</span>
+<span class="nc" id="L243">            callableStatement.setString(1, content);</span>
+<span class="nc" id="L244">            callableStatement.setString(2, code);</span>
+<span class="nc bnc" id="L245" title="All 2 branches missed.">            if (moduleId != null) {</span>
+<span class="nc" id="L246">                callableStatement.setInt(3, moduleId);</span>
+            } else {
+<span class="nc" id="L248">                callableStatement.setNull(3, Types.INTEGER);</span>
+            }
+<span class="nc" id="L250">            callableStatement.registerOutParameter(4, Types.VARCHAR);</span>
+<span class="nc" id="L251">            callableStatement.execute();</span>
+<span class="nc" id="L252">            String generatedCode = callableStatement.getString(4);</span>
+<span class="nc bnc" id="L253" title="All 4 branches missed.">            if (generatedCode == null || generatedCode.isEmpty()) {</span>
+<span class="nc" id="L254">                throw new RuntimeException(&quot;Generated code is null or empty.&quot;);</span>
+            }
+<span class="nc" id="L256">            return generatedCode;</span>
+<span class="nc" id="L257">        } catch (SQLException e) {</span>
+<span class="nc" id="L258">            System.err.println(&quot;Error occurred while calling the stored procedure: &quot; + e.getMessage());</span>
+<span class="nc" id="L259">            throw new RuntimeException(&quot;Error while generating lookup code: &quot; + e.getMessage(), e);</span>
+        } finally {
+            try {
+<span class="nc bnc" id="L262" title="All 2 branches missed.">                if (callableStatement != null) callableStatement.close();</span>
+<span class="nc bnc" id="L263" title="All 2 branches missed.">                if (connection != null) connection.close();</span>
+<span class="nc" id="L264">            } catch (SQLException e) {</span>
+<span class="nc" id="L265">                System.err.println(&quot;Error while closing database resources: &quot; + e.getMessage());</span>
+<span class="nc" id="L266">                throw new RuntimeException(&quot;Error while closing resources: &quot; + e.getMessage(), e);</span>
+<span class="nc" id="L267">            }</span>
+        }
+    }
+
+
+    public List&lt;UserModuleFunctionFeatureDTO&gt; getModuleFunctionFeatureDetailsByUserId(Integer userId) {
+<span class="nc" id="L273">        Set&lt;UserRole&gt; userRoles = userRoleRepository.findByUserId(userId);</span>
+
+<span class="nc" id="L275">        Set&lt;Integer&gt; roleIds = userRoles.stream().map(userRole -&gt; userRole.getRoleId().getRoleId()).collect(Collectors.toSet());</span>
+<span class="nc bnc" id="L276" title="All 2 branches missed.">        if (roleIds.isEmpty()) return Collections.emptyList();</span>
+
+<span class="nc" id="L278">        List&lt;RolePermissions&gt; rolePermissions = rolePermissionRepository.findAllByRole_RoleIdIn(new ArrayList&lt;&gt;(roleIds));</span>
+<span class="nc bnc" id="L279" title="All 2 branches missed.">        if (rolePermissions.isEmpty()) return Collections.emptyList();</span>
+
+<span class="nc" id="L281">        Set&lt;Integer&gt; moduleIds = rolePermissions.stream().map(RolePermissions::getModuleId).collect(Collectors.toSet());</span>
+<span class="nc" id="L282">        Set&lt;Integer&gt; functionIds = rolePermissions.stream().map(RolePermissions::getModuleFunctionId).collect(Collectors.toSet());</span>
+<span class="nc" id="L283">        Set&lt;Integer&gt; featureIds = rolePermissions.stream().map(RolePermissions::getModuleFeatureId).collect(Collectors.toSet());</span>
+
+<span class="nc" id="L285">        List&lt;ApplicationModule&gt; appModules = moduleRepository.findAllByModuleIdIn(new ArrayList&lt;&gt;(moduleIds));</span>
+<span class="nc" id="L286">        Map&lt;Integer, ApplicationModule&gt; appModuleMap = appModules.stream().collect(Collectors.toMap(ApplicationModule::getModuleId, Function.identity()));</span>
+
+<span class="nc" id="L288">        List&lt;FunctionEntity&gt; moduleFunctions = featureRepository.findAllByFunctionIdIn(new ArrayList&lt;&gt;(functionIds));</span>
+<span class="nc" id="L289">        Map&lt;Integer, FunctionEntity&gt; moduleFunctionMap = moduleFunctions.stream().collect(Collectors.toMap(FunctionEntity::getFunctionId, Function.identity()));</span>
+
+<span class="nc" id="L291">        List&lt;FeatureFunction&gt; featureFunctions = featureFunctionRepository.findByFeatureFunctionIdIn(new ArrayList&lt;&gt;(featureIds));</span>
+<span class="nc" id="L292">        Map&lt;Integer, FeatureFunction&gt; featureFunctionMap = featureFunctions.stream().collect(Collectors.toMap(FeatureFunction::getFeatureFunctionId, Function.identity()));</span>
+
+        // Prepare the results by looping through the permissions and looking up the corresponding data in maps.
+<span class="nc" id="L295">        List&lt;UserModuleFunctionFeatureDTO&gt; results = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L296" title="All 2 branches missed.">        for (RolePermissions permission : rolePermissions) {</span>
+<span class="nc" id="L297">            ApplicationModule appModule = appModuleMap.get(permission.getModuleId());</span>
+<span class="nc" id="L298">            FunctionEntity moduleFunction = moduleFunctionMap.get(permission.getModuleFunctionId());</span>
+<span class="nc" id="L299">            FeatureFunction featureFunction = featureFunctionMap.get(permission.getModuleFeatureId());</span>
+
+<span class="nc bnc" id="L301" title="All 6 branches missed.">            if (appModule != null &amp;&amp; moduleFunction != null &amp;&amp; featureFunction != null) {</span>
+<span class="nc" id="L302">                results.add(new UserModuleFunctionFeatureDTO(</span>
+<span class="nc" id="L303">                        appModule.getShortCode(),</span>
+<span class="nc" id="L304">                        moduleFunction.getShortCode(),</span>
+<span class="nc" id="L305">                        featureFunction.getShortCode(),</span>
+<span class="nc" id="L306">                        appModule.getModuleUrl(),</span>
+<span class="nc" id="L307">                        moduleFunction.getFunctionUrl(),</span>
+<span class="nc" id="L308">                        appModule.getDisplayOrder(),</span>
+<span class="nc" id="L309">                        moduleFunction.getDisplayorder()</span>
+                ));
+            }
+<span class="nc" id="L312">        }</span>
+
+<span class="nc" id="L314">        return results;</span>
+    }
+
+    @Transactional
+    public RoleRequest saveOrUpdate(RoleRequest roleRequest) {
+<span class="nc" id="L319">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L320">        Role role = null;</span>
+<span class="nc" id="L321">        Role finalRole = null;</span>
+        Integer featureFunctionId;
+        Integer moduleFeatureId;
+        Integer moduleId;
+<span class="nc" id="L325">        Role savedRole = null;</span>
+<span class="nc bnc" id="L326" title="All 2 branches missed.">        if (roleRequest.getRoleId() == 0) {</span>
+<span class="nc" id="L327">            role = new Role();</span>
+<span class="nc" id="L328">            role.setRoleCode(roleRequest.getRoleCode());</span>
+<span class="nc" id="L329">            role.setStatus(roleRequest.getStatus());</span>
+<span class="nc" id="L330">            role.setStartDate(roleRequest.getStartDate());</span>
+<span class="nc bnc" id="L331" title="All 4 branches missed.">            if (roleRequest.getEndDate() != null &amp;&amp; !roleRequest.getEndDate().toString().isEmpty()) {</span>
+<span class="nc" id="L332">                role.setEndDate(roleRequest.getEndDate());</span>
+            }
+<span class="nc" id="L334">            role.setModuleId(roleRequest.getModuleId());</span>
+<span class="nc" id="L335">            role.setFunctionId(roleRequest.getFunctionId());</span>
+            //role.setRoleNameCode(&quot;A&quot;);
+<span class="nc" id="L337">            role.setCreatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L338">            role.setCreationDate(new Date());</span>
+            //role = roleRepository.save(role);
+<span class="nc" id="L340">            finalRole = role;</span>
+<span class="nc" id="L341">            System.out.println(&quot;Saved new role: &quot; + role);</span>
+<span class="nc" id="L342">            String content = roleRequest.getRoleCode().toUpperCase();</span>
+<span class="nc" id="L343">            String generatedCode = createRollCode(content, &quot;M&quot;, roleRequest.getModuleId());</span>
+<span class="nc" id="L344">            String generatedCodeDescription = createRollCode(content, &quot;D&quot;, roleRequest.getModuleId());</span>
+<span class="nc" id="L345">            role.setRoleNameCode(generatedCode);</span>
+<span class="nc" id="L346">            role.setRoleDescriptionCode(generatedCodeDescription);</span>
+<span class="nc" id="L347">            savedRole = roleRepository.save(role);</span>
+<span class="nc" id="L348">            searchAvailableColumnService.startDaemonTranslationThread(generatedCode, generatedCodeDescription, roleRequest.getRoleName());</span>
+<span class="nc" id="L349">        } else {</span>
+<span class="nc" id="L350">            Optional&lt;Role&gt; roleUpdate = roleRepository.findById(roleRequest.getRoleId());</span>
+<span class="nc bnc" id="L351" title="All 2 branches missed.">            if (roleUpdate.isPresent()) {</span>
+<span class="nc" id="L352">                finalRole = roleUpdate.get();</span>
+<span class="nc" id="L353">                role = new Role();</span>
+<span class="nc" id="L354">                role.setStatus(roleRequest.getStatus());</span>
+<span class="nc" id="L355">                role.setStartDate(roleRequest.getStartDate());</span>
+<span class="nc bnc" id="L356" title="All 4 branches missed.">                if (roleRequest.getEndDate() != null &amp;&amp; !roleRequest.getEndDate().toString().isEmpty()) {</span>
+<span class="nc" id="L357">                    role.setEndDate(roleRequest.getEndDate());</span>
+                }
+<span class="nc" id="L359">                role.setModuleId(finalRole.getModuleId());</span>
+<span class="nc" id="L360">                role.setFunctionId(finalRole.getFunctionId());</span>
+<span class="nc" id="L361">                role.setRoleCode(finalRole.getRoleCode());</span>
+<span class="nc" id="L362">                role.setRoleNameCode(finalRole.getRoleNameCode());</span>
+<span class="nc" id="L363">                role.setRoleDescriptionCode(finalRole.getRoleDescriptionCode());</span>
+<span class="nc" id="L364">                role.setRoleId(roleRequest.getRoleId());</span>
+<span class="nc" id="L365">                role.setCreatedBy(finalRole.getCreatedBy());</span>
+<span class="nc" id="L366">                role.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L367">                role.setCreationDate(finalRole.getCreationDate());</span>
+<span class="nc" id="L368">                role.setLastUpdatedDate(new Date());</span>
+<span class="nc" id="L369">                roleRepository.save(role);</span>
+<span class="nc" id="L370">                System.out.println(&quot;Fetched existing role with ID: &quot; + finalRole.getRoleId());</span>
+            } else {
+<span class="nc" id="L372">                throw new IllegalStateException(&quot;Role not found for ID: &quot; + roleRequest.getRoleId());</span>
+            }
+        }
+<span class="nc" id="L375">        List&lt;int[]&gt; featureDetailsList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L376" title="All 2 branches missed.">        for (RolePermissionDto rolePermissionDto : roleRequest.getRolePermission()) {</span>
+<span class="nc bnc" id="L377" title="All 2 branches missed.">            if (rolePermissionDto.getModuleFeatureId() != null) {</span>
+<span class="nc" id="L378">                List&lt;Object[]&gt; results = featureRepository.findFunctionIdModuleId(Math.toIntExact(rolePermissionDto.getModuleFeatureId()));</span>
+
+<span class="nc bnc" id="L380" title="All 2 branches missed.">                if (!results.isEmpty()) {</span>
+<span class="nc bnc" id="L381" title="All 2 branches missed.">                    for (Object[] result : results) {</span>
+<span class="nc" id="L382">                        featureFunctionId = convertToInteger(result[0]);</span>
+<span class="nc" id="L383">                        moduleFeatureId = convertToInteger(result[1]);</span>
+<span class="nc" id="L384">                        moduleId = convertToInteger(result[2]);</span>
+<span class="nc" id="L385">                        featureDetailsList.add(new int[]{featureFunctionId, moduleFeatureId, moduleId});</span>
+<span class="nc" id="L386">                    }</span>
+                }
+            }
+<span class="nc" id="L389">        }</span>
+<span class="nc bnc" id="L390" title="All 2 branches missed.">        if (roleRequest.getRoleId() &gt; 0) {</span>
+<span class="nc" id="L391">            List&lt;RolePermissions&gt; existingPermissions = rolePermissionRepository.findByRoleRoleId(roleRequest.getRoleId());</span>
+<span class="nc" id="L392">            Set&lt;Integer&gt; featureFunctionIds = featureDetailsList.stream()</span>
+<span class="nc" id="L393">                    .map(details -&gt; details[0])</span>
+<span class="nc" id="L394">                    .collect(Collectors.toSet());</span>
+<span class="nc" id="L395">            List&lt;RolePermissions&gt; permissionsToDelete = existingPermissions.stream()</span>
+<span class="nc bnc" id="L396" title="All 2 branches missed.">                    .filter(rp -&gt; !featureFunctionIds.contains(rp.getModuleFeatureId())) // Compare against featureFunctionIds</span>
+<span class="nc" id="L397">                    .collect(Collectors.toList());</span>
+<span class="nc bnc" id="L398" title="All 2 branches missed.">            if (!permissionsToDelete.isEmpty()) {</span>
+<span class="nc" id="L399">                List&lt;Integer&gt; idsToDelete = permissionsToDelete.stream()</span>
+<span class="nc" id="L400">                        .map(RolePermissions::getRolePermissionId)</span>
+<span class="nc" id="L401">                        .collect(Collectors.toList());</span>
+<span class="nc" id="L402">                rolePermissionRepository.deleteAllByIds(idsToDelete);</span>
+            }
+<span class="nc" id="L404">            Role finalRole1 = finalRole;</span>
+<span class="nc" id="L405">            featureDetailsList.forEach(details -&gt; {</span>
+<span class="nc" id="L406">                Integer featureFunctionIdLocal = details[0];</span>
+<span class="nc" id="L407">                Integer moduleFeatureIdLocal = details[1];</span>
+<span class="nc" id="L408">                Integer moduleIdLocal = details[2];</span>
+<span class="nc" id="L409">                boolean permissionExists = existingPermissions.stream()</span>
+<span class="nc" id="L410">                        .anyMatch(rp -&gt; rp.getModuleFeatureId().equals(featureFunctionIdLocal));</span>
+<span class="nc bnc" id="L411" title="All 2 branches missed.">                if (!permissionExists) {</span>
+<span class="nc" id="L412">                    RolePermissions newRolePermission = new RolePermissions();</span>
+<span class="nc" id="L413">                    newRolePermission.setRole(finalRole1);</span>
+<span class="nc" id="L414">                    newRolePermission.setApplicationId(1);</span>
+<span class="nc" id="L415">                    newRolePermission.setModuleId(moduleIdLocal);</span>
+<span class="nc" id="L416">                    newRolePermission.setModuleFunctionId(moduleFeatureIdLocal);</span>
+<span class="nc" id="L417">                    newRolePermission.setModuleFeatureId(featureFunctionIdLocal);</span>
+<span class="nc" id="L418">                    rolePermissionRepository.save(newRolePermission);</span>
+                }
+<span class="nc" id="L420">            });</span>
+<span class="nc" id="L421">        } else {</span>
+<span class="nc" id="L422">            Role finalRole2 = finalRole;</span>
+<span class="nc" id="L423">            featureDetailsList.forEach(details -&gt; {</span>
+<span class="nc" id="L424">                Integer featureFunctionIdLocal = details[0];</span>
+<span class="nc" id="L425">                Integer moduleFeatureIdLocal = details[1];</span>
+<span class="nc" id="L426">                Integer moduleIdLocal = details[2];</span>
+<span class="nc" id="L427">                RolePermissions newRolePermission = new RolePermissions();</span>
+<span class="nc" id="L428">                newRolePermission.setRole(finalRole2);</span>
+<span class="nc" id="L429">                newRolePermission.setApplicationId(1);</span>
+<span class="nc" id="L430">                newRolePermission.setModuleId(moduleIdLocal);</span>
+<span class="nc" id="L431">                newRolePermission.setModuleFunctionId(moduleFeatureIdLocal);</span>
+<span class="nc" id="L432">                newRolePermission.setModuleFeatureId(featureFunctionIdLocal);</span>
+<span class="nc" id="L433">                rolePermissionRepository.save(newRolePermission);</span>
+<span class="nc" id="L434">            });</span>
+        }
+<span class="nc bnc" id="L436" title="All 2 branches missed.">        if (roleRequest.getRoleId() == 0) {</span>
+<span class="nc bnc" id="L437" title="All 2 branches missed.">            assert savedRole != null;</span>
+<span class="nc" id="L438">            roleRequest.setRoleId(savedRole.getRoleId());</span>
+        }
+<span class="nc" id="L440">        return roleRequest;</span>
+    }
+
+    private Integer convertToInteger(Object obj) {
+<span class="nc bnc" id="L444" title="All 2 branches missed.">        if (obj instanceof Integer) {</span>
+<span class="nc" id="L445">            return (Integer) obj;</span>
+<span class="nc bnc" id="L446" title="All 2 branches missed.">        } else if (obj instanceof BigInteger) {</span>
+<span class="nc" id="L447">            return ((BigInteger) obj).intValue();</span>
+        }
+<span class="nc" id="L449">        return null;</span>
+    }
+
+    public Set&lt;UserRole&gt; findByUserId(Long id) {
+<span class="nc" id="L453">        return userRoleRepository.findByUserId(Math.toIntExact(id));</span>
+    }
+
+    public List&lt;UserModuleFunctionFeatureDTO&gt; getFunctionsByModuleId(Integer userId, Integer moduleId) {
+<span class="nc" id="L457">        Set&lt;UserRole&gt; userRoles = userRoleRepository.findByUserId(userId);</span>
+<span class="nc" id="L458">        List&lt;UserModuleFunctionFeatureDTO&gt; results = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L459" title="All 2 branches missed.">        for (UserRole userRole : userRoles) {</span>
+<span class="nc" id="L460">            List&lt;RolePermissions&gt; rolePermissions = rolePermissionRepository.findByRole(userRole.getRoleId());</span>
+<span class="nc" id="L461">            List&lt;RolePermissions&gt; filteredPermissions = rolePermissions.stream()</span>
+<span class="nc" id="L462">                    .filter(permission -&gt; permission.getModuleId().equals(moduleId))</span>
+<span class="nc" id="L463">                    .collect(Collectors.toList());</span>
+<span class="nc" id="L464">            List&lt;ApplicationModule&gt; appModules = moduleRepository.findByModuleId(moduleId);</span>
+<span class="nc bnc" id="L465" title="All 2 branches missed.">            for (RolePermissions permission : filteredPermissions) {</span>
+<span class="nc" id="L466">                List&lt;FunctionEntity&gt; moduleFunctions = featureRepository.findByFunctionId(permission.getModuleFunctionId());</span>
+<span class="nc" id="L467">                List&lt;FeatureFunction&gt; featureFunctions = featureFunctionRepository.findByFeatureFunctionId(permission.getModuleFeatureId());</span>
+<span class="nc bnc" id="L468" title="All 2 branches missed.">                for (ApplicationModule appModule : appModules) {</span>
+<span class="nc bnc" id="L469" title="All 2 branches missed.">                    for (FunctionEntity moduleFunction : moduleFunctions) {</span>
+<span class="nc bnc" id="L470" title="All 2 branches missed.">                        for (FeatureFunction featureFunction : featureFunctions) {</span>
+<span class="nc" id="L471">                            results.add(new UserModuleFunctionFeatureDTO(</span>
+<span class="nc bnc" id="L472" title="All 2 branches missed.">                                    appModule != null ? appModule.getShortCode() : null,</span>
+<span class="nc bnc" id="L473" title="All 2 branches missed.">                                    moduleFunction != null ? moduleFunction.getShortCode() : null,</span>
+<span class="nc bnc" id="L474" title="All 2 branches missed.">                                    featureFunction != null ? featureFunction.getShortCode() : null,</span>
+<span class="nc bnc" id="L475" title="All 2 branches missed.">                                    appModule != null ? appModule.getModuleUrl() : null,</span>
+<span class="nc bnc" id="L476" title="All 2 branches missed.">                                    moduleFunction != null ? moduleFunction.getFunctionUrl() : null,</span>
+<span class="nc bnc" id="L477" title="All 2 branches missed.">                                    appModule != null ? appModule.getDisplayOrder() : null,</span>
+<span class="nc bnc" id="L478" title="All 2 branches missed.">                                    moduleFunction != null ? moduleFunction.getDisplayorder() : null</span>
+                            ));
+<span class="nc" id="L480">                        }</span>
+<span class="nc" id="L481">                    }</span>
+<span class="nc" id="L482">                }</span>
+<span class="nc" id="L483">            }</span>
+<span class="nc" id="L484">        }</span>
+<span class="nc" id="L485">        return results;</span>
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; rolesDropdownList(int languageId) {
+<span class="nc" id="L489">        Map&lt;String, String&gt; translationCache = translationService.getAllDescriptions(languageId);</span>
+<span class="nc" id="L490">        return roleRepository.findAll().stream()</span>
+<span class="nc" id="L491">                .filter(role -&gt; &quot;A&quot;.equals(role.getStatus()))</span>
+<span class="nc" id="L492">                .map(role -&gt; {</span>
+<span class="nc" id="L493">                    Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L494">                    result.put(&quot;roleId&quot;, role.getRoleId());</span>
+<span class="nc" id="L495">                    result.put(&quot;roleName&quot;, translationCache.getOrDefault(role.getRoleNameCode(), &quot;N/A&quot;));</span>
+<span class="nc" id="L496">                    return result;</span>
+<span class="nc" id="L497">                }).collect(Collectors.toList());</span>
+    }
+    public int fetchFunctionId(String code){
+<span class="nc" id="L500">        return  featureRepository.findByShortCode(code).getFunctionId();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

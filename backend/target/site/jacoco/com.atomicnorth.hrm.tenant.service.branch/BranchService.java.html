@@ -1,0 +1,490 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BranchService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.branch</a> &gt; <span class="el_source">BranchService.java</span></div><h1>BranchService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.branch;
+
+import com.atomicnorth.hrm.exception.ResourceNotFoundException;
+import com.atomicnorth.hrm.tenant.domain.Employee;
+import com.atomicnorth.hrm.tenant.domain.MasterAddress.AddressMaster;
+import com.atomicnorth.hrm.tenant.domain.branch.Branch;
+import com.atomicnorth.hrm.tenant.domain.branch.EmployeeAdvance;
+import com.atomicnorth.hrm.tenant.domain.branch.HRSettings;
+import com.atomicnorth.hrm.tenant.domain.branch.LeaveTypes;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.repository.LeaveTypeRepository;
+import com.atomicnorth.hrm.tenant.repository.MasterAddressRepo.AddressMasterRepository;
+import com.atomicnorth.hrm.tenant.repository.branch.BranchRepository;
+import com.atomicnorth.hrm.tenant.repository.branch.EmployeeAdvanceRepository;
+import com.atomicnorth.hrm.tenant.repository.branch.HRSettingsRepository;
+import com.atomicnorth.hrm.tenant.service.MasterAddressService.AddressMasterService;
+import com.atomicnorth.hrm.tenant.service.dto.EmployeeAdvanceDto;
+import com.atomicnorth.hrm.tenant.service.dto.MasterAddressDTO.AddressRequestDTO;
+import com.atomicnorth.hrm.tenant.service.dto.MasterAddressDTO.AddressResponseDTO;
+import com.atomicnorth.hrm.tenant.service.dto.branch.BranchDto;
+import com.atomicnorth.hrm.tenant.service.dto.branch.BranchWithAddressDto;
+import com.atomicnorth.hrm.tenant.service.dto.branch.HRSettingDto;
+import com.atomicnorth.hrm.tenant.service.dto.branch.LeaveTypeDto;
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+
+import javax.persistence.EntityNotFoundException;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Path;
+import javax.persistence.criteria.Root;
+import javax.transaction.Transactional;
+import javax.validation.ValidationException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+public class BranchService {
+
+    private final BranchRepository branchRepository;
+    private final HRSettingsRepository hrSettingsRepository;
+    private final LeaveTypeRepository leaveTypeRepository;
+    private final EmployeeAdvanceRepository employeeAdvanceRepository;
+    private final EmployeeRepository employeeRepository;
+    @Autowired
+    private AddressMasterService addressMasterService;
+    @Autowired
+    private ModelMapper mapper;
+
+    @Autowired
+    private AddressMasterRepository addressMasterRepository;
+
+
+<span class="nc" id="L64">    public BranchService(BranchRepository branchRepository, HRSettingsRepository hrSettingsRepository, EmployeeAdvanceRepository employeeAdvanceRepository, LeaveTypeRepository leaveTypeRepository, EmployeeRepository employeeRepository) {</span>
+<span class="nc" id="L65">        this.branchRepository = branchRepository;</span>
+<span class="nc" id="L66">        this.hrSettingsRepository = hrSettingsRepository;</span>
+<span class="nc" id="L67">        this.employeeAdvanceRepository = employeeAdvanceRepository;</span>
+<span class="nc" id="L68">        this.leaveTypeRepository = leaveTypeRepository;</span>
+<span class="nc" id="L69">        this.employeeRepository = employeeRepository;</span>
+<span class="nc" id="L70">    }</span>
+
+    public Branch createBranch(BranchDto branchDto) {
+<span class="nc" id="L73">        UserLoginDetail token = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L74">        Branch branch = new Branch();</span>
+<span class="nc" id="L75">        branch.setName(branchDto.getName());</span>
+<span class="nc" id="L76">        branch.setCode(branchDto.getCode());</span>
+<span class="nc" id="L77">        branch.setIsActive(branchDto.getIsActive());</span>
+<span class="nc" id="L78">        branch.setStartDate(branchDto.getStartDate());</span>
+<span class="nc" id="L79">        branch.setAddressId(branchDto.getAddressId());</span>
+<span class="nc" id="L80">        branch.setCreatedBy(String.valueOf(token.getUsername()));</span>
+<span class="nc" id="L81">        branch.setLastUpdatedBy(String.valueOf(token.getUsername()));</span>
+<span class="nc" id="L82">        return branchRepository.save(branch);</span>
+    }
+
+    public HRSettings createHrmsSettings(HRSettingDto hrSettingDto) {
+<span class="nc" id="L86">        UserLoginDetail token = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L87">        HRSettings hrmsSettings = mapper.map(hrSettingDto, HRSettings.class);</span>
+<span class="nc" id="L88">        hrmsSettings.setCreatedBy(String.valueOf(token.getUsername()));</span>
+<span class="nc" id="L89">        hrmsSettings.setLastUpdatedBy(String.valueOf(token.getUsername()));</span>
+<span class="nc" id="L90">        return hrSettingsRepository.save(hrmsSettings);</span>
+    }
+
+    public void validateBirthdays(Date birthdays) {
+<span class="nc bnc" id="L94" title="All 2 branches missed.">        if (birthdays != null) {</span>
+<span class="nc" id="L95">            LocalDate today = LocalDate.now();</span>
+<span class="nc" id="L96">            LocalDate eighteenYearsAgo = today.minusYears(18);</span>
+<span class="nc" id="L97">            LocalDate providedDate = birthdays.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">            if (providedDate.isAfter(today)) {</span>
+<span class="nc" id="L99">                throw new ValidationException(&quot;Birthday date cannot be in the future.&quot;);</span>
+            }
+<span class="nc bnc" id="L101" title="All 2 branches missed.">            if (providedDate.isAfter(eighteenYearsAgo)) {</span>
+<span class="nc" id="L102">                throw new ValidationException(&quot;Employee must be at least 18 years old.&quot;);</span>
+            }
+        }
+<span class="nc" id="L105">    }</span>
+
+    public Map&lt;String, Object&gt; getHrmsSettingsList() {
+<span class="nc" id="L108">        List&lt;HRSettings&gt; hrSettingsList = hrSettingsRepository.findAll();</span>
+
+<span class="nc" id="L110">        List&lt;HRSettingDto&gt; hrmsDTOList = hrSettingsList.stream()</span>
+<span class="nc" id="L111">                .map(HRSettingDto::new) // Using constructor reference</span>
+<span class="nc" id="L112">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L114">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L115">        response.put(&quot;result&quot;, hrmsDTOList);</span>
+<span class="nc" id="L116">        response.put(&quot;totalItems&quot;, hrmsDTOList.size());</span>
+
+<span class="nc" id="L118">        return response;</span>
+    }
+
+
+    @Transactional
+    public HRSettingDto updateHRSetting(Integer id, HRSettingDto dto) {
+<span class="nc" id="L124">        UserLoginDetail token = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L125">        HRSettings existingHRSettings = hrSettingsRepository.findById(id)</span>
+<span class="nc" id="L126">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;HR Setting with id &quot; + id + &quot; not found.&quot;));</span>
+<span class="nc" id="L127">        boolean isEmployeeIdExists = hrSettingsRepository.existsByEmployeeIdAndIdNot(dto.getEmployeeId(), id);</span>
+<span class="nc bnc" id="L128" title="All 2 branches missed.">        if (isEmployeeIdExists) {</span>
+<span class="nc" id="L129">            throw new IllegalArgumentException(&quot;Employee ID &quot; + dto.getEmployeeId() + &quot; already exists for another record.&quot;);</span>
+        }
+<span class="nc bnc" id="L131" title="All 2 branches missed.">        if (dto.getStandardWorkingHours() != null)</span>
+<span class="nc" id="L132">            existingHRSettings.setStandardWorkingHours(dto.getStandardWorkingHours());</span>
+<span class="nc bnc" id="L133" title="All 2 branches missed.">        if (dto.getRetirementAge() != null) existingHRSettings.setRetirementAge(dto.getRetirementAge());</span>
+<span class="nc bnc" id="L134" title="All 2 branches missed.">        if (dto.getWorkAnniversaries() != null) existingHRSettings.setWorkAnniversaries(dto.getWorkAnniversaries());</span>
+<span class="nc bnc" id="L135" title="All 2 branches missed.">        if (dto.getBirthdays() != null) existingHRSettings.setBirthdays(dto.getBirthdays());</span>
+<span class="nc bnc" id="L136" title="All 2 branches missed.">        if (dto.getHolidays() != null) existingHRSettings.setHolidays(dto.getHolidays());</span>
+<span class="nc bnc" id="L137" title="All 2 branches missed.">        if (dto.getHolidayReminderFrequency() != null)</span>
+<span class="nc" id="L138">            existingHRSettings.setHolidayReminderFrequency(dto.getHolidayReminderFrequency());</span>
+<span class="nc bnc" id="L139" title="All 2 branches missed.">        if (dto.getSendLeaveNotification() != null)</span>
+<span class="nc" id="L140">            existingHRSettings.setSendLeaveNotification(dto.getSendLeaveNotification());</span>
+<span class="nc bnc" id="L141" title="All 2 branches missed.">        if (dto.getLeaveApprovalNotificationTemplate() != null)</span>
+<span class="nc" id="L142">            existingHRSettings.setLeaveApprovalNotificationTemplate(dto.getLeaveApprovalNotificationTemplate());</span>
+<span class="nc bnc" id="L143" title="All 2 branches missed.">        if (dto.getExpenseApproverMandatory() != null)</span>
+<span class="nc" id="L144">            existingHRSettings.setExpenseApproverMandatory(dto.getExpenseApproverMandatory());</span>
+<span class="nc bnc" id="L145" title="All 2 branches missed.">        if (dto.getLeaveStatusNotificationTemplate() != null)</span>
+<span class="nc" id="L146">            existingHRSettings.setLeaveStatusNotificationTemplate(dto.getLeaveStatusNotificationTemplate());</span>
+<span class="nc bnc" id="L147" title="All 2 branches missed.">        if (dto.getShowDeptLeavesOnCalendar() != null)</span>
+<span class="nc" id="L148">            existingHRSettings.setShowDeptLeavesOnCalendar(dto.getShowDeptLeavesOnCalendar());</span>
+<span class="nc bnc" id="L149" title="All 2 branches missed.">        if (dto.getLeaveApprovalMandatory() != null)</span>
+<span class="nc" id="L150">            existingHRSettings.setLeaveApprovalMandatory(dto.getLeaveApprovalMandatory());</span>
+<span class="nc bnc" id="L151" title="All 2 branches missed.">        if (dto.getAutoLeaveEncashment() != null)</span>
+<span class="nc" id="L152">            existingHRSettings.setAutoLeaveEncashment(dto.getAutoLeaveEncashment());</span>
+<span class="nc bnc" id="L153" title="All 2 branches missed.">        if (dto.getRestrictBackDatedLeave() != null)</span>
+<span class="nc" id="L154">            existingHRSettings.setRestrictBackDatedLeave(dto.getRestrictBackDatedLeave());</span>
+<span class="nc bnc" id="L155" title="All 2 branches missed.">        if (dto.getAllowMultipleShiftAssignment() != null)</span>
+<span class="nc" id="L156">            existingHRSettings.setAllowMultipleShiftAssignment(dto.getAllowMultipleShiftAssignment());</span>
+<span class="nc bnc" id="L157" title="All 2 branches missed.">        if (dto.getCheckVacancies() != null) existingHRSettings.setCheckVacancies(dto.getCheckVacancies());</span>
+<span class="nc bnc" id="L158" title="All 2 branches missed.">        if (dto.getSendInterviewReminder() != null)</span>
+<span class="nc" id="L159">            existingHRSettings.setSendInterviewReminder(dto.getSendInterviewReminder());</span>
+<span class="nc bnc" id="L160" title="All 2 branches missed.">        if (dto.getSendFeedbackInterview() != null)</span>
+<span class="nc" id="L161">            existingHRSettings.setSendFeedbackInterview(dto.getSendFeedbackInterview());</span>
+<span class="nc bnc" id="L162" title="All 2 branches missed.">        if (dto.getExitQuestionnaireForm() != null)</span>
+<span class="nc" id="L163">            existingHRSettings.setExitQuestionnaireForm(dto.getExitQuestionnaireForm());</span>
+<span class="nc bnc" id="L164" title="All 2 branches missed.">        if (dto.getExitQuestionnaireNotificationTemplate() != null)</span>
+<span class="nc" id="L165">            existingHRSettings.setExitQuestionnaireNotificationTemplate(dto.getExitQuestionnaireNotificationTemplate());</span>
+<span class="nc bnc" id="L166" title="All 2 branches missed.">        if (dto.getAllowEmployeeCheckInMobileApp() != null)</span>
+<span class="nc" id="L167">            existingHRSettings.setAllowEmployeeCheckInMobileApp(dto.getAllowEmployeeCheckInMobileApp());</span>
+<span class="nc bnc" id="L168" title="All 2 branches missed.">        if (dto.getAllowGeoLocationTracking() != null)</span>
+<span class="nc" id="L169">            existingHRSettings.setAllowGeoLocationTracking(dto.getAllowGeoLocationTracking());</span>
+<span class="nc bnc" id="L170" title="All 2 branches missed.">        if (dto.getEmployeeAdvance() != null) existingHRSettings.setEmployeeAdvance(dto.getEmployeeAdvance());</span>
+<span class="nc" id="L171">        existingHRSettings.setLastUpdatedBy(String.valueOf(token.getUsername()));</span>
+<span class="nc" id="L172">        HRSettings updatedHRSettings = hrSettingsRepository.save(existingHRSettings);</span>
+<span class="nc" id="L173">        return new HRSettingDto(updatedHRSettings);</span>
+    }
+
+    public Map&lt;String, Object&gt; getPaginatedBranchList(String searchField, String searchKeyword, Pageable pageable) {
+        Page&lt;Branch&gt; branches;
+<span class="nc bnc" id="L178" title="All 6 branches missed.">        if (searchKeyword != null &amp;&amp; !searchKeyword.trim().isEmpty() &amp;&amp; searchField != null) {</span>
+<span class="nc bnc" id="L179" title="All 2 branches missed.">            if (&quot;isActive&quot;.equalsIgnoreCase(searchField)) {</span>
+<span class="nc bnc" id="L180" title="All 2 branches missed.">                if (searchKeyword.trim().toLowerCase().matches(&quot;a|ac|act|activ|active.*&quot;)) {</span>
+<span class="nc" id="L181">                    searchKeyword = &quot;A&quot;;</span>
+<span class="nc bnc" id="L182" title="All 2 branches missed.">                } else if (searchKeyword.trim().toLowerCase().matches(&quot;i|in|ina|inac|inact|inacti|inactive.*&quot;)) {</span>
+<span class="nc" id="L183">                    searchKeyword = &quot;I&quot;;</span>
+                }
+            }
+<span class="nc" id="L186">            Specification&lt;Branch&gt; spec = searchByColumn(searchField, searchKeyword);</span>
+<span class="nc" id="L187">            branches = branchRepository.findAll(spec, pageable);</span>
+<span class="nc" id="L188">        } else {</span>
+<span class="nc" id="L189">            branches = branchRepository.findAll(pageable);</span>
+        }
+
+<span class="nc" id="L192">        List&lt;BranchDto&gt; branchDtoList = branches.getContent().stream()</span>
+<span class="nc" id="L193">                .map(branch -&gt; {</span>
+<span class="nc" id="L194">                    BranchDto dto = mapper.map(branch, BranchDto.class);</span>
+<span class="nc" id="L195">                    dto.setAddress(addressMasterRepository.findById(branch.getAddressId())</span>
+<span class="nc" id="L196">                            .map(AddressMaster::getFullAddress)</span>
+<span class="nc" id="L197">                            .orElse(&quot;Address not found&quot;));</span>
+<span class="nc" id="L198">                    return dto;</span>
+                })
+<span class="nc" id="L200">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L202">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L203">        response.put(&quot;result&quot;, branchDtoList);</span>
+<span class="nc" id="L204">        response.put(&quot;currentPage&quot;, pageable.getPageNumber() + 1);</span>
+<span class="nc" id="L205">        response.put(&quot;pageSize&quot;, pageable.getPageSize());</span>
+<span class="nc" id="L206">        response.put(&quot;totalItems&quot;, branches.getTotalElements());</span>
+<span class="nc" id="L207">        response.put(&quot;totalPages&quot;, branches.getTotalPages());</span>
+<span class="nc" id="L208">        return response;</span>
+    }
+
+    public static Specification&lt;Branch&gt; searchByColumn(String column, String value) {
+<span class="nc" id="L212">        return (Root&lt;Branch&gt; root, CriteriaQuery&lt;?&gt; query, CriteriaBuilder criteriaBuilder) -&gt; {</span>
+<span class="nc" id="L213">            Path&lt;?&gt; path = root.get(column);</span>
+
+<span class="nc bnc" id="L215" title="All 2 branches missed.">            if (path.getJavaType().equals(String.class)) {</span>
+<span class="nc" id="L216">                return criteriaBuilder.like(criteriaBuilder.lower(root.get(column)), &quot;%&quot; + value.toLowerCase() + &quot;%&quot;);</span>
+<span class="nc bnc" id="L217" title="All 2 branches missed.">            } else if (path.getJavaType().equals(Date.class)) {</span>
+                try {
+<span class="nc" id="L219">                    Date parsedDate = new SimpleDateFormat(&quot;yyyy-MM-dd&quot;).parse(value);</span>
+<span class="nc" id="L220">                    return criteriaBuilder.equal(root.get(column), parsedDate);</span>
+<span class="nc" id="L221">                } catch (ParseException e) {</span>
+<span class="nc" id="L222">                    throw new RuntimeException(&quot;Invalid date format for field: &quot; + column, e);</span>
+                }
+            } else {
+<span class="nc" id="L225">                return criteriaBuilder.equal(root.get(column), value);</span>
+            }
+        };
+    }
+
+    @Transactional
+    public BranchDto updateBranch(Integer id, BranchDto dto) {
+<span class="nc" id="L232">        UserLoginDetail token = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L233">        Branch existingBranch = branchRepository.findById(id)</span>
+<span class="nc" id="L234">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Branch with id &quot; + id + &quot; not found.&quot;));</span>
+<span class="nc bnc" id="L235" title="All 2 branches missed.">        if (dto.getName() != null) existingBranch.setName(dto.getName());</span>
+<span class="nc bnc" id="L236" title="All 2 branches missed.">        if (dto.getIsActive() != null) existingBranch.setIsActive(dto.getIsActive());</span>
+<span class="nc bnc" id="L237" title="All 2 branches missed.">        if (dto.getStartDate() != null) existingBranch.setStartDate(dto.getStartDate());</span>
+<span class="nc bnc" id="L238" title="All 2 branches missed.">        if (dto.getAddressId() != null) existingBranch.setAddressId(dto.getAddressId());</span>
+<span class="nc" id="L239">        existingBranch.setLastUpdatedBy(String.valueOf(token.getUsername()));</span>
+<span class="nc" id="L240">        Branch updatedBranch = branchRepository.save(existingBranch);</span>
+<span class="nc" id="L241">        return new BranchDto(updatedBranch);</span>
+    }
+
+    public Optional&lt;HRSettingDto&gt; getHRSettingById(Integer id) {
+<span class="nc" id="L245">        return hrSettingsRepository.findById(id)</span>
+<span class="nc" id="L246">                .map(HRSettingDto::new);</span>
+    }
+
+    public EmployeeAdvance saveOrUpdateEmployeeAdvance(EmployeeAdvanceDto employeeAdvanceDto) {
+        EmployeeAdvance employeeAdvance;
+<span class="nc" id="L251">        UserLoginDetail token = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L252">        String username = String.valueOf(token.getUsername());</span>
+<span class="nc bnc" id="L253" title="All 2 branches missed.">        if (employeeAdvanceDto.getId() != null) {</span>
+<span class="nc" id="L254">            employeeAdvance = employeeAdvanceRepository.findById(employeeAdvanceDto.getId())</span>
+<span class="nc" id="L255">                    .orElseThrow(() -&gt; new ValidationException(&quot;Employee Advance not found for update&quot;));</span>
+<span class="nc" id="L256">            employeeAdvance.setEmployeeId(employeeAdvanceDto.getEmployeeId());</span>
+<span class="nc" id="L257">            employeeAdvance.setPostingDate(employeeAdvanceDto.getPostingDate());</span>
+<span class="nc" id="L258">            employeeAdvance.setCompany(employeeAdvanceDto.getCompany());</span>
+<span class="nc" id="L259">            employeeAdvance.setPurpose(employeeAdvanceDto.getPurpose());</span>
+<span class="nc" id="L260">            employeeAdvance.setAdvanceAmount(employeeAdvanceDto.getAdvanceAmount());</span>
+<span class="nc" id="L261">            employeeAdvance.setPaidAmount(employeeAdvanceDto.getPaidAmount());</span>
+<span class="nc" id="L262">            employeeAdvance.setPendingAmount(employeeAdvanceDto.getPendingAmount());</span>
+<span class="nc" id="L263">            employeeAdvance.setClaimedAmount(employeeAdvanceDto.getClaimedAmount());</span>
+<span class="nc" id="L264">            employeeAdvance.setReturnedAmount(employeeAdvanceDto.getReturnedAmount());</span>
+<span class="nc" id="L265">            employeeAdvance.setAccounting(employeeAdvanceDto.getAccounting());</span>
+<span class="nc" id="L266">            employeeAdvance.setBankAccount(employeeAdvanceDto.getBankAccount());</span>
+<span class="nc" id="L267">            employeeAdvance.setRepayUnclaimedAmount(employeeAdvanceDto.getRepayUnclaimedAmount());</span>
+<span class="nc" id="L268">            employeeAdvance.setMoreInfo(employeeAdvanceDto.getMoreInfo());</span>
+<span class="nc" id="L269">            employeeAdvance.setCreatedBy(username);</span>
+<span class="nc" id="L270">            employeeAdvance.setLastUpdatedBy(username);</span>
+        } else {
+<span class="nc" id="L272">            employeeAdvance = new EmployeeAdvance();</span>
+<span class="nc" id="L273">            employeeAdvance.setEmployeeId(employeeAdvanceDto.getEmployeeId());</span>
+<span class="nc" id="L274">            employeeAdvance.setPostingDate(employeeAdvanceDto.getPostingDate());</span>
+<span class="nc" id="L275">            employeeAdvance.setCompany(employeeAdvanceDto.getCompany());</span>
+<span class="nc" id="L276">            employeeAdvance.setPurpose(employeeAdvanceDto.getPurpose());</span>
+<span class="nc" id="L277">            employeeAdvance.setAdvanceAmount(employeeAdvanceDto.getAdvanceAmount());</span>
+<span class="nc" id="L278">            employeeAdvance.setPaidAmount(employeeAdvanceDto.getPaidAmount());</span>
+<span class="nc" id="L279">            employeeAdvance.setPendingAmount(employeeAdvanceDto.getPendingAmount());</span>
+<span class="nc" id="L280">            employeeAdvance.setClaimedAmount(employeeAdvanceDto.getClaimedAmount());</span>
+<span class="nc" id="L281">            employeeAdvance.setReturnedAmount(employeeAdvanceDto.getReturnedAmount());</span>
+<span class="nc" id="L282">            employeeAdvance.setAccounting(employeeAdvanceDto.getAccounting());</span>
+<span class="nc" id="L283">            employeeAdvance.setBankAccount(employeeAdvanceDto.getBankAccount());</span>
+<span class="nc" id="L284">            employeeAdvance.setRepayUnclaimedAmount(employeeAdvanceDto.getRepayUnclaimedAmount());</span>
+<span class="nc" id="L285">            employeeAdvance.setMoreInfo(employeeAdvanceDto.getMoreInfo());</span>
+<span class="nc" id="L286">            employeeAdvance.setCreatedBy(username);</span>
+<span class="nc" id="L287">            employeeAdvance.setLastUpdatedBy(username);</span>
+        }
+<span class="nc" id="L289">        return employeeAdvanceRepository.save(employeeAdvance);</span>
+    }
+
+    public LeaveTypes saveOrUpdateLeaveType(LeaveTypeDto leaveTypeDto) {
+        LeaveTypes leaveType;
+<span class="nc" id="L294">        UserLoginDetail token = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L295">        String username = String.valueOf(token.getUsername());</span>
+<span class="nc bnc" id="L296" title="All 2 branches missed.">        if (leaveTypeDto.getId() != null) {</span>
+<span class="nc" id="L297">            leaveType = leaveTypeRepository.findById(leaveTypeDto.getId())</span>
+<span class="nc" id="L298">                    .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Leave type not found with id: &quot; + leaveTypeDto.getId()));</span>
+<span class="nc" id="L299">            leaveType.setLeaveName(leaveTypeDto.getLeaveName());</span>
+<span class="nc" id="L300">            leaveType.setLeaveCode(leaveType.getLeaveCode());</span>
+<span class="nc" id="L301">            leaveType.setIsFlexible(leaveTypeDto.getIsFlexible());</span>
+<span class="nc" id="L302">            leaveType.setIsCarryForward(leaveTypeDto.getIsCarryForward());</span>
+<span class="nc" id="L303">            leaveType.setIsLeaveWithoutPay(leaveTypeDto.getIsLeaveWithoutPay());</span>
+<span class="nc" id="L304">            leaveType.setIsPartialPaidLeave(leaveTypeDto.getIsPartialPaidLeave());</span>
+<span class="nc" id="L305">            leaveType.setIsOptionalLeave(leaveTypeDto.getIsOptionalLeave());</span>
+<span class="nc" id="L306">            leaveType.setAllowNegativeBalance(leaveTypeDto.getAllowNegativeBalance());</span>
+<span class="nc" id="L307">            leaveType.setAllowOverApplication(leaveTypeDto.getAllowOverApplication());</span>
+<span class="nc" id="L308">            leaveType.setIncludeHolidaysWithinLeaves(leaveTypeDto.getIncludeHolidaysWithinLeaves());</span>
+<span class="nc" id="L309">            leaveType.setIsCompensatoryLeaves(leaveTypeDto.getIsCompensatoryLeaves());</span>
+<span class="nc" id="L310">            leaveType.setMaximumLeave(leaveTypeDto.getMaximumLeave());</span>
+<span class="nc" id="L311">            leaveType.setAllocationAllowedLeavePeriod(leaveTypeDto.getAllocationAllowedLeavePeriod());</span>
+<span class="nc" id="L312">            leaveType.setAllowLeaveApplicationAfterWorkingDays(leaveTypeDto.getAllowLeaveApplicationAfterWorkingDays());</span>
+<span class="nc" id="L313">            leaveType.setMaximumConsecutiveLeaveAllowed(leaveTypeDto.getMaximumConsecutiveLeaveAllowed());</span>
+<span class="nc" id="L314">            leaveType.setMaxIncashableLeave(leaveTypeDto.getMaxIncashableLeave());</span>
+<span class="nc" id="L315">            leaveType.setNonIncashableLeave(leaveTypeDto.getNonIncashableLeave());</span>
+<span class="nc" id="L316">            leaveType.setEarningComponent(leaveTypeDto.getEarningComponent());</span>
+<span class="nc" id="L317">            leaveType.setMaxCarryForwardDays(leaveTypeDto.getMaxCarryForwardDays());</span>
+<span class="nc" id="L318">            leaveType.setApplicable(leaveTypeDto.getApplicable());</span>
+<span class="nc" id="L319">            leaveType.setCreatedBy(String.valueOf(username));</span>
+<span class="nc" id="L320">            leaveType.setLastUpdatedBy(String.valueOf(username));</span>
+<span class="nc" id="L321">            leaveType.setAllowEncashment(leaveTypeDto.getAllowEncashment());</span>
+<span class="nc" id="L322">            leaveType.setIsEarnedleave(leaveTypeDto.getIsEarnedleave());</span>
+<span class="nc" id="L323">            leaveType.setEarnedLeaveFrequency(leaveTypeDto.getEarnedLeaveFrequency());</span>
+<span class="nc" id="L324">            leaveType.setAllocateOnDay(leaveTypeDto.getAllocateOnDay());</span>
+        } else {
+<span class="nc" id="L326">            leaveType = new LeaveTypes();</span>
+<span class="nc" id="L327">            leaveType.setLeaveName(leaveTypeDto.getLeaveName());</span>
+<span class="nc" id="L328">            leaveType.setLeaveCode(leaveTypeDto.getLeaveCode());</span>
+<span class="nc" id="L329">            leaveType.setIsFlexible(leaveTypeDto.getIsFlexible());</span>
+<span class="nc" id="L330">            leaveType.setIsCarryForward(leaveTypeDto.getIsCarryForward());</span>
+<span class="nc" id="L331">            leaveType.setIsLeaveWithoutPay(leaveTypeDto.getIsLeaveWithoutPay());</span>
+<span class="nc" id="L332">            leaveType.setIsPartialPaidLeave(leaveTypeDto.getIsPartialPaidLeave());</span>
+<span class="nc" id="L333">            leaveType.setIsOptionalLeave(leaveTypeDto.getIsOptionalLeave());</span>
+<span class="nc" id="L334">            leaveType.setAllowNegativeBalance(leaveTypeDto.getAllowNegativeBalance());</span>
+<span class="nc" id="L335">            leaveType.setAllowOverApplication(leaveTypeDto.getAllowOverApplication());</span>
+<span class="nc" id="L336">            leaveType.setIncludeHolidaysWithinLeaves(leaveTypeDto.getIncludeHolidaysWithinLeaves());</span>
+<span class="nc" id="L337">            leaveType.setIsCompensatoryLeaves(leaveTypeDto.getIsCompensatoryLeaves());</span>
+<span class="nc" id="L338">            leaveType.setMaximumLeave(leaveTypeDto.getMaximumLeave());</span>
+<span class="nc" id="L339">            leaveType.setAllocationAllowedLeavePeriod(leaveTypeDto.getAllocationAllowedLeavePeriod());</span>
+<span class="nc" id="L340">            leaveType.setAllowLeaveApplicationAfterWorkingDays(leaveTypeDto.getAllowLeaveApplicationAfterWorkingDays());</span>
+<span class="nc" id="L341">            leaveType.setMaximumConsecutiveLeaveAllowed(leaveTypeDto.getMaximumConsecutiveLeaveAllowed());</span>
+<span class="nc" id="L342">            leaveType.setMaxIncashableLeave(leaveTypeDto.getMaxIncashableLeave());</span>
+<span class="nc" id="L343">            leaveType.setNonIncashableLeave(leaveTypeDto.getNonIncashableLeave());</span>
+<span class="nc" id="L344">            leaveType.setEarningComponent(leaveTypeDto.getEarningComponent());</span>
+<span class="nc" id="L345">            leaveType.setMaxCarryForwardDays(leaveTypeDto.getMaxCarryForwardDays());</span>
+<span class="nc" id="L346">            leaveType.setApplicable(leaveTypeDto.getApplicable());</span>
+<span class="nc" id="L347">            leaveType.setCreatedBy(String.valueOf(username));</span>
+<span class="nc" id="L348">            leaveType.setLastUpdatedBy(String.valueOf(username));</span>
+<span class="nc" id="L349">            leaveType.setAllowEncashment(leaveTypeDto.getAllowEncashment());</span>
+<span class="nc" id="L350">            leaveType.setIsEarnedleave(leaveTypeDto.getIsEarnedleave());</span>
+<span class="nc" id="L351">            leaveType.setEarnedLeaveFrequency(leaveTypeDto.getEarnedLeaveFrequency());</span>
+<span class="nc" id="L352">            leaveType.setAllocateOnDay(leaveTypeDto.getAllocateOnDay());</span>
+        }
+<span class="nc" id="L354">        return leaveTypeRepository.save(leaveType);</span>
+    }
+
+    public Map&lt;String, Object&gt; getPaginatedLeaveTypeList(String searchKeyword, String searchField, Pageable pageable) {
+        Page&lt;LeaveTypes&gt; leaveTypePage;
+<span class="nc bnc" id="L359" title="All 6 branches missed.">        if (searchKeyword != null &amp;&amp; !searchKeyword.trim().isEmpty() &amp;&amp; searchField != null) {</span>
+<span class="nc" id="L360">            leaveTypePage = leaveTypeRepository.searchLeaveTypes(searchKeyword, searchField, pageable);</span>
+        } else {
+<span class="nc" id="L362">            leaveTypePage = leaveTypeRepository.findAll(pageable);</span>
+        }
+<span class="nc" id="L364">        List&lt;LeaveTypeDto&gt; hrmsDTOList = leaveTypePage.getContent().stream()</span>
+<span class="nc" id="L365">                .map(LeaveTypeDto::new)</span>
+<span class="nc" id="L366">                .collect(Collectors.toList());</span>
+<span class="nc" id="L367">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L368">        response.put(&quot;result&quot;, hrmsDTOList);</span>
+<span class="nc" id="L369">        response.put(&quot;currentPage&quot;, pageable.getPageNumber() + 1);</span>
+<span class="nc" id="L370">        response.put(&quot;pageSize&quot;, pageable.getPageSize());</span>
+<span class="nc" id="L371">        response.put(&quot;totalItems&quot;, leaveTypePage.getTotalElements());</span>
+<span class="nc" id="L372">        response.put(&quot;totalPages&quot;, leaveTypePage.getTotalPages());</span>
+<span class="nc" id="L373">        return response;</span>
+    }
+
+    public Map&lt;String, Object&gt; getPaginatedEmployeeAdvanceList(String searchKeyword, String searchField, Pageable pageable) {
+        Page&lt;EmployeeAdvance&gt; employeeAdvancesPage;
+        Page&lt;LeaveTypes&gt; leaveTypePage;
+<span class="nc bnc" id="L379" title="All 6 branches missed.">        if (searchKeyword != null &amp;&amp; !searchKeyword.trim().isEmpty() &amp;&amp; searchField != null) {</span>
+<span class="nc bnc" id="L380" title="All 2 branches missed.">            if (searchField.equalsIgnoreCase(&quot;employeeName&quot;)) searchField = &quot;employeeId&quot;;</span>
+<span class="nc" id="L381">            employeeAdvancesPage = employeeAdvanceRepository.searchEmployeeAdvance(searchKeyword, searchField, pageable);</span>
+        } else {
+<span class="nc" id="L383">            employeeAdvancesPage = employeeAdvanceRepository.findAll(pageable);</span>
+        }
+<span class="nc" id="L385">        List&lt;EmployeeAdvanceDto&gt; employeeAdvanceDtoListDTOList = employeeAdvancesPage.getContent().stream()</span>
+<span class="nc" id="L386">                .map(EmployeeAdvanceDto::new)</span>
+<span class="nc" id="L387">                .collect(Collectors.toList());</span>
+<span class="nc" id="L388">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L389">        response.put(&quot;result&quot;, employeeAdvanceDtoListDTOList);</span>
+<span class="nc" id="L390">        response.put(&quot;currentPage&quot;, pageable.getPageNumber() + 1);</span>
+<span class="nc" id="L391">        response.put(&quot;pageSize&quot;, pageable.getPageSize());</span>
+<span class="nc" id="L392">        response.put(&quot;totalItems&quot;, employeeAdvancesPage.getTotalElements());</span>
+<span class="nc" id="L393">        response.put(&quot;totalPages&quot;, employeeAdvancesPage.getTotalPages());</span>
+<span class="nc" id="L394">        return response;</span>
+    }
+
+    @Transactional
+    public Branch createOrUpdateBranch(BranchWithAddressDto branchDto) {
+<span class="nc" id="L399">        UserLoginDetail token = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L400">        String username = String.valueOf(token.getUsername());</span>
+<span class="nc" id="L401">        Integer addressId = null;</span>
+<span class="nc" id="L402">        boolean isNewAddress = false;</span>
+
+<span class="nc bnc" id="L404" title="All 2 branches missed.">        if (branchDto.getAddress() != null) {</span>
+<span class="nc" id="L405">            AddressRequestDTO addressRequestDTO = branchDto.getAddress();</span>
+
+<span class="nc bnc" id="L407" title="All 2 branches missed.">            if (addressRequestDTO.getAddressId() == null) {</span>
+                // Create a new address with branchId as null
+<span class="nc" id="L409">                AddressResponseDTO newAddress = addressMasterService.saveOrUpdateAddress(addressRequestDTO);</span>
+<span class="nc" id="L410">                addressId = newAddress.getAddressId();</span>
+<span class="nc" id="L411">                isNewAddress = true;</span>
+<span class="nc" id="L412">            } else {</span>
+                // Fetch the existing address to ensure branchId is updated later
+<span class="nc" id="L414">                AddressResponseDTO existingAddress = addressMasterService.saveOrUpdateAddress(addressRequestDTO);</span>
+<span class="nc" id="L415">                addressId = existingAddress.getAddressId();</span>
+            }
+        }
+
+        // Step 2: Create or Update Branch with Address ID
+<span class="nc bnc" id="L420" title="All 2 branches missed.">        Branch branch = (branchDto.getId() != null)</span>
+<span class="nc" id="L421">                ? branchRepository.findById(branchDto.getId()).orElse(new Branch())</span>
+<span class="nc" id="L422">                : new Branch();</span>
+
+<span class="nc" id="L424">        branch.setName(branchDto.getName());</span>
+<span class="nc" id="L425">        branch.setCode(branchDto.getCode());</span>
+<span class="nc" id="L426">        branch.setIsActive(branchDto.getIsActive());</span>
+<span class="nc" id="L427">        branch.setStartDate(branchDto.getStartDate());</span>
+
+<span class="nc bnc" id="L429" title="All 2 branches missed.">        if (addressId != null) {</span>
+<span class="nc" id="L430">            branch.setAddressId(addressId);</span>
+        }
+
+<span class="nc bnc" id="L433" title="All 2 branches missed.">        branch.setCreatedBy((branch.getId() == null) ? username : branch.getCreatedBy());</span>
+<span class="nc" id="L434">        branch.setLastUpdatedBy(username);</span>
+
+<span class="nc" id="L436">        Branch savedBranch = branchRepository.save(branch);</span>
+
+        // Step 3: Ensure Address has correct Branch ID
+<span class="nc bnc" id="L439" title="All 2 branches missed.">        if (addressId != null) {</span>
+<span class="nc" id="L440">            AddressRequestDTO updateAddressRequest = branchDto.getAddress();</span>
+<span class="nc" id="L441">            updateAddressRequest.setAddressId(addressId);</span>
+<span class="nc" id="L442">            updateAddressRequest.setBranchId(savedBranch.getId());</span>
+<span class="nc" id="L443">            addressMasterService.saveOrUpdateAddress(updateAddressRequest);</span>
+<span class="nc" id="L444">        } else {</span>
+<span class="nc" id="L445">            throw new RuntimeException(&quot;Address ID is missing, transaction rollback.&quot;);</span>
+        }
+
+<span class="nc" id="L448">        return savedBranch;</span>
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; findBranchNameAndId() {
+<span class="nc" id="L452">        return branchRepository.findAll().stream()</span>
+<span class="nc" id="L453">                .filter(x -&gt; &quot;A&quot;.equalsIgnoreCase((x.getIsActive()))</span>
+<span class="nc" id="L454">                ).sorted(Comparator.comparing(Branch::getName, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))</span>
+<span class="nc" id="L455">                .map(x -&gt; {</span>
+<span class="nc" id="L456">                    Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L457">                    result.put(&quot;id&quot;, x.getId());</span>
+<span class="nc" id="L458">                    result.put(&quot;branchName&quot;, x.getName());</span>
+<span class="nc" id="L459">                    return result;</span>
+<span class="nc" id="L460">                }).collect(Collectors.toList());</span>
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; nonAssociateEmployees() {
+<span class="nc" id="L464">        List&lt;Integer&gt; employeesId = hrSettingsRepository.findAll().stream().map(HRSettings::getEmployeeId).collect(Collectors.toList());</span>
+<span class="nc" id="L465">        List&lt;Employee&gt; employeeList = employeeRepository.findByEmployeeIdNotIn(employeesId).stream().filter(x -&gt; &quot;Y&quot;.equalsIgnoreCase(x.getIsActive())).collect(Collectors.toList());</span>
+<span class="nc" id="L466">        return employeeList.stream().sorted(Comparator.comparing(Employee::getFirstName)).map(emp -&gt; {</span>
+<span class="nc" id="L467">            Map&lt;String, Object&gt; response = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L468">            response.put(&quot;empId&quot;, emp.getEmployeeId());</span>
+<span class="nc" id="L469">            response.put(&quot;empNo&quot;, emp.getEmployeeNumber());</span>
+<span class="nc" id="L470">            response.put(&quot;fullName&quot;, emp.getFullName() + &quot; (&quot; + emp.getEmployeeNumber() + &quot;)&quot;);</span>
+<span class="nc" id="L471">            response.put(&quot;dob&quot;, emp.getDob());</span>
+<span class="nc" id="L472">            response.put(&quot;doj&quot;, emp.getEffectiveStartDate());</span>
+<span class="nc" id="L473">            response.put(&quot;isActive&quot;, emp.getIsActive());</span>
+<span class="nc" id="L474">            return response;</span>
+<span class="nc" id="L475">        }).collect(Collectors.toList());</span>
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; leaveTypeDropdownList() {
+<span class="nc" id="L479">        return leaveTypeRepository.findAll().stream()</span>
+<span class="nc" id="L480">                .map(leaveTypes -&gt; {</span>
+<span class="nc" id="L481">                    Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L482">                    result.put(&quot;leaveTypeId&quot;, leaveTypes.getId());</span>
+<span class="nc" id="L483">                    result.put(&quot;leaveCode&quot;, leaveTypes.getLeaveCode());</span>
+<span class="nc" id="L484">                    result.put(&quot;leaveTypeName&quot;, leaveTypes.getLeaveName());</span>
+<span class="nc" id="L485">                    result.put(&quot;isCarryForward&quot;, leaveTypes.getIsCarryForward());</span>
+<span class="nc" id="L486">                    return result;</span>
+<span class="nc" id="L487">                }).collect(Collectors.toList());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

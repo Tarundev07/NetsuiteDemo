@@ -1,0 +1,322 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmployeeResource.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest</a> &gt; <span class="el_source">EmployeeResource.java</span></div><h1>EmployeeResource.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest;
+
+import com.atomicnorth.hrm.tenant.domain.Employee;
+import com.atomicnorth.hrm.tenant.service.EmployeeService;
+import com.atomicnorth.hrm.tenant.service.EmployeeTemplateService;
+import com.atomicnorth.hrm.tenant.service.dto.EmployeeDTO;
+import com.atomicnorth.hrm.tenant.service.dto.EmployeeHierarchyViewDTO;
+import com.atomicnorth.hrm.tenant.service.dto.EmployeeProfileDTO;
+import com.atomicnorth.hrm.tenant.service.dto.employement.AddEmployee;
+import com.atomicnorth.hrm.tenant.service.dto.employement.EmployeeBasicDetails;
+import com.atomicnorth.hrm.tenant.service.dto.employement.EmployeeContactInfoDTO;
+import com.atomicnorth.hrm.tenant.service.dto.employement.EmployeePersonalInfoDTO;
+import com.atomicnorth.hrm.tenant.service.dto.employement.EmployeeWorkInfoDTO;
+import com.atomicnorth.hrm.tenant.service.dto.employement.Response.EmployeeResponseDTO;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.support.DefaultMessageSourceResolvable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import javax.validation.Valid;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping(&quot;/api/employee&quot;)
+public class EmployeeResource {
+
+<span class="nc" id="L49">    private final Logger log = LoggerFactory.getLogger(EmployeeResource.class);</span>
+
+    private final EmployeeService employeeService;
+
+    private final EmployeeTemplateService templateService;
+
+<span class="nc" id="L55">    public EmployeeResource(EmployeeService employeeService, EmployeeTemplateService templateService) {</span>
+<span class="nc" id="L56">        this.employeeService = employeeService;</span>
+<span class="nc" id="L57">        this.templateService = templateService;</span>
+<span class="nc" id="L58">    }</span>
+
+    private ResponseEntity&lt;ApiResponse&lt;?&gt;&gt; handleValidationErrors(BindingResult bindingResult) {
+<span class="nc" id="L61">        Map&lt;String, String&gt; errors = bindingResult.getFieldErrors().stream().collect(Collectors.toMap(FieldError::getField, DefaultMessageSourceResolvable::getDefaultMessage));</span>
+<span class="nc" id="L62">        return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_VALIDATION_ERROR&quot;, &quot;FAILURE&quot;, new ArrayList&lt;&gt;(errors.values())), HttpStatus.BAD_REQUEST);</span>
+    }
+
+    @PostMapping(&quot;/create&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;?&gt;&gt; saveEmployee(@Valid @RequestBody EmployeeResponseDTO employeeResponseDTO, BindingResult bindingResult) {
+<span class="nc bnc" id="L67" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L68">            return handleValidationErrors(bindingResult);</span>
+        }
+        try {
+<span class="nc" id="L71">            EmployeeResponseDTO savedEmployeeResponseDTO = employeeService.addEmployee(employeeResponseDTO, true);</span>
+<span class="nc" id="L72">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(savedEmployeeResponseDTO, true, &quot;ATMCMN_EMPLOYEE_CREATED&quot;, &quot;SUCCESS&quot;), HttpStatus.CREATED);</span>
+<span class="nc" id="L73">        } catch (Exception e) {</span>
+<span class="nc" id="L74">            log.error(&quot;Error occurred while saving Employee&quot;, e);</span>
+<span class="nc" id="L75">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_EMPLOYEE_SAVE_ERROR&quot;, &quot;FAILURE&quot;, Collections.singletonList(e.getMessage())), HttpStatus.INTERNAL_SERVER_ERROR);</span>
+        }
+    }
+
+    @PutMapping(&quot;/{id}/personal-info&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;?&gt;&gt; updatePersonalInfo(
+            @PathVariable Integer id,
+            @RequestBody EmployeePersonalInfoDTO dto) {
+        try {
+<span class="nc" id="L84">            EmployeeResponseDTO savedEmployeeResponseDTO = employeeService.updatePersonalInfo(id, dto);</span>
+<span class="nc" id="L85">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(savedEmployeeResponseDTO, true, &quot;ATMCMN_EMPLOYEE_PERSONAL_INFO&quot;, &quot;SUCCESS&quot;), HttpStatus.CREATED);</span>
+<span class="nc" id="L86">        } catch (Exception e) {</span>
+<span class="nc" id="L87">            log.error(&quot;Error occurred while saving Employee&quot;, e);</span>
+<span class="nc" id="L88">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_EMPLOYEE_PERSONAL_INFO_ERROR&quot;, &quot;FAILURE&quot;, Collections.singletonList(e.getMessage())), HttpStatus.INTERNAL_SERVER_ERROR);</span>
+        }
+    }
+
+    @PutMapping(&quot;/{id}/work-info&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;?&gt;&gt; updateWorkInfo(
+            @PathVariable Integer id,
+            @RequestBody EmployeeWorkInfoDTO dto) {
+        try {
+<span class="nc" id="L97">            EmployeeResponseDTO savedEmployeeResponseDTO = employeeService.updateWorkInfo(id, dto);</span>
+<span class="nc" id="L98">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(savedEmployeeResponseDTO, true, &quot;ATMCMN_EMPLOYEE_PERSONAL_INFO&quot;, &quot;SUCCESS&quot;), HttpStatus.CREATED);</span>
+<span class="nc" id="L99">        } catch (Exception e) {</span>
+<span class="nc" id="L100">            log.error(&quot;Error occurred while saving Employee&quot;, e);</span>
+<span class="nc" id="L101">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_EMPLOYEE_PERSONAL_INFO_ERROR&quot;, &quot;FAILURE&quot;, Collections.singletonList(e.getMessage())), HttpStatus.INTERNAL_SERVER_ERROR);</span>
+        }
+    }
+
+    @PutMapping(&quot;/{id}/contact-info&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;?&gt;&gt; updateContactInfo(
+            @PathVariable Integer id,
+            @RequestBody EmployeeContactInfoDTO dto) {
+        try {
+<span class="nc" id="L110">            EmployeeResponseDTO savedEmployeeResponseDTO = employeeService.updateContactInfo(id, dto);</span>
+<span class="nc" id="L111">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(savedEmployeeResponseDTO, true, &quot;ATMCMN_EMPLOYEE_PERSONAL_INFO&quot;, &quot;SUCCESS&quot;), HttpStatus.CREATED);</span>
+<span class="nc" id="L112">        } catch (Exception e) {</span>
+<span class="nc" id="L113">            log.error(&quot;Error occurred while saving Employee&quot;, e);</span>
+<span class="nc" id="L114">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_EMPLOYEE_PERSONAL_INFO_ERROR&quot;, &quot;FAILURE&quot;, Collections.singletonList(e.getMessage())), HttpStatus.INTERNAL_SERVER_ERROR);</span>
+        }
+    }
+
+    @GetMapping(&quot;/get/{employeeId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;EmployeeResponseDTO&gt;&gt; getEmployeeById(@PathVariable(&quot;employeeId&quot;) Integer employeeId) {
+        try {
+<span class="nc" id="L121">            return employeeService.getEmployeeById(employeeId).map(employeeResponseDTO -&gt; ResponseEntity.ok(new ApiResponse&lt;&gt;(employeeResponseDTO, true, &quot;ATMCMN_EMPLOYEE_FETCHED&quot;, &quot;SUCCESS&quot;))).orElse(new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_EMPLOYEE_NOT_FOUND&quot;, &quot;FAILURE&quot;, Collections.singletonList(&quot;Employee not found with ID: &quot; + employeeId)), HttpStatus.OK));</span>
+<span class="nc" id="L122">        } catch (Exception e) {</span>
+<span class="nc" id="L123">            log.error(&quot;Error occurred while fetching Employee by ID&quot;, e);</span>
+<span class="nc" id="L124">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_EMPLOYEE_FETCH_ERROR&quot;, &quot;FAILURE&quot;, Collections.singletonList(e.getMessage())), HttpStatus.INTERNAL_SERVER_ERROR);</span>
+        }
+    }
+
+    private Sort getSort(String sortBy, String sortDir) {
+<span class="nc" id="L129">        Sort.Direction direction = Sort.Direction.fromString(sortDir.toUpperCase());</span>
+
+<span class="nc bnc" id="L131" title="All 4 branches missed.">        switch (sortBy) {</span>
+            case &quot;fullName&quot;:
+<span class="nc" id="L133">                return Sort.by(direction, &quot;firstName&quot;)</span>
+<span class="nc" id="L134">                        .and(Sort.by(direction, &quot;middleName&quot;))</span>
+<span class="nc" id="L135">                        .and(Sort.by(direction, &quot;lastName&quot;));</span>
+            case &quot;designationName&quot;:
+<span class="nc" id="L137">                return Sort.by(direction, &quot;designation.designationName&quot;);</span>
+            case &quot;departmentName&quot;:
+<span class="nc" id="L139">                return Sort.by(direction, &quot;department.dname&quot;);</span>
+            default:
+<span class="nc" id="L141">                return Sort.by(direction, sortBy);</span>
+        }
+    }
+
+    @GetMapping
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getEmpList(
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;employeeId&quot;, required = false) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;, required = false) String sortDir,
+            @RequestParam(value = &quot;searchColumn&quot;, required = false) String searchColumn,
+            @RequestParam(value = &quot;searchValue&quot;, required = false) String searchValue
+    ) {
+        try {
+<span class="nc" id="L155">            Sort sort = getSort(sortBy, sortDir);</span>
+<span class="nc" id="L156">            Pageable pageable = PageRequest.of(page - 1, size, sort);</span>
+<span class="nc" id="L157">            Map&lt;String, Object&gt; EmployeeResponseDTO = employeeService.getPaginatedEmployee(pageable, searchColumn, searchValue);</span>
+
+<span class="nc" id="L159">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    EmployeeResponseDTO,
+                    true,
+                    &quot;EMP-LIST-SUCCESS&quot;,
+                    &quot;Success&quot;
+            );
+<span class="nc" id="L165">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+
+<span class="nc" id="L167">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L168">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;EMP-LIST-FAILURE&quot;,
+                    &quot;Warning&quot;,
+<span class="nc" id="L173">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L175">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+<span class="nc" id="L176">        } catch (Exception ex) {</span>
+<span class="nc" id="L177">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;EMP-LIST-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L182">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L184">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/details&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;EmployeeBasicDetails&gt;&gt;&gt; getEmployeesDetails() {
+        try {
+<span class="nc" id="L191">            List&lt;EmployeeBasicDetails&gt; employees = employeeService.getAllEmployeesWithDetails();</span>
+<span class="nc bnc" id="L192" title="All 2 branches missed.">            if (employees.isEmpty()) {</span>
+<span class="nc" id="L193">                return new ResponseEntity&lt;&gt;(</span>
+                        new ApiResponse&lt;&gt;(null, false, &quot;EMPLOYEE_DETAILS_NOT_FOUND&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L195">                                Collections.singletonList(&quot;No employee details found.&quot;)),</span>
+                        HttpStatus.OK);
+            }
+<span class="nc" id="L198">            return ResponseEntity.ok(</span>
+                    new ApiResponse&lt;&gt;(employees, true, &quot;EMPLOYEE_DETAILS_FETCHED&quot;, &quot;SUCCESS&quot;));
+<span class="nc" id="L200">        } catch (Exception e) {</span>
+<span class="nc" id="L201">            log.error(&quot;Error occurred while fetching employee details&quot;, e);</span>
+<span class="nc" id="L202">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;EMPLOYEE_DETAILS_FETCH_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L204">                            Collections.singletonList(e.getMessage())),</span>
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping(&quot;/findAllManager&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;EmployeeDTO&gt;&gt;&gt; getEmployeeRMName() {
+        try {
+<span class="nc" id="L212">            List&lt;EmployeeDTO&gt; employeeResponseDTOS = employeeService.findManagerFullName();</span>
+<span class="nc bnc" id="L213" title="All 4 branches missed.">            if (employeeResponseDTOS == null || employeeResponseDTOS.isEmpty()) {</span>
+<span class="nc" id="L214">                return new ResponseEntity&lt;&gt;(</span>
+                        new ApiResponse&lt;&gt;(null, false, &quot;NO-DATA-FOUND&quot;, &quot;No manager records found.&quot;),
+                        HttpStatus.NOT_FOUND
+                );
+            }
+<span class="nc" id="L219">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(employeeResponseDTOS, true, &quot;RM-DETAILS-FETCHED&quot;, &quot;Success&quot;),
+                    HttpStatus.OK
+            );
+<span class="nc" id="L223">        } catch (Exception e) {</span>
+<span class="nc" id="L224">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;ERROR&quot;, &quot;An error occurred while fetching manager details.&quot;),
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    @GetMapping(&quot;/profile&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;EmployeeProfileDTO&gt;&gt; getEmployeeProfile(@RequestParam Integer empId) {
+        try {
+<span class="nc" id="L234">            Optional&lt;EmployeeProfileDTO&gt; employeeProfile = employeeService.getEmployeeProfileById(empId);</span>
+
+<span class="nc" id="L236">            return employeeProfile.map(employeeProfileDTO -&gt; ResponseEntity.ok(new ApiResponse&lt;&gt;(</span>
+<span class="nc" id="L237">                    employeeProfileDTO, true, &quot;EMPLOYEE-PROFILE-FETCHED&quot;, &quot;Success&quot;))).orElseGet(() -&gt; ResponseEntity.ok(new ApiResponse&lt;&gt;(null, false,</span>
+                    &quot;EMPLOYEE_NOT_FOUND&quot;, &quot;FAILURE&quot;)));
+
+<span class="nc" id="L240">        } catch (Exception e) {</span>
+<span class="nc" id="L241">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;ERROR&quot;, &quot;An error occurred while fetching employee profile.&quot;)
+            );
+        }
+    }
+
+    @GetMapping(&quot;/filter&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Employee&gt;&gt;&gt; getActiveEmployeesByDepartment(
+            @RequestParam(&quot;departmentId&quot;) List&lt;Long&gt; departmentIds) {
+        try {
+<span class="nc bnc" id="L251" title="All 4 branches missed.">            if (departmentIds == null || departmentIds.isEmpty()) {</span>
+<span class="nc" id="L252">                return ResponseEntity.badRequest().body(</span>
+                        new ApiResponse&lt;&gt;(null, false, &quot;NO_DEPARTMENT_IDS_PROVIDED&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L254">                                Collections.singletonList(&quot;At least one departmentId is required.&quot;))</span>
+                );
+            }
+
+<span class="nc" id="L258">            List&lt;Employee&gt; employees = employeeService.getActiveEmployeesByDepartment(departmentIds, &quot;Y&quot;);</span>
+<span class="nc" id="L259">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(employees, true, &quot;EMPLOYEES_FETCHED&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L260">        } catch (Exception e) {</span>
+<span class="nc" id="L261">            log.error(&quot;Error occurred while fetching filtered employees&quot;, e);</span>
+<span class="nc" id="L262">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;EMPLOYEES_FETCH_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L264">                            Collections.singletonList(e.getMessage())),</span>
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping(&quot;/allManager&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;EmployeeBasicDetails&gt;&gt;&gt; getAllManager(@RequestParam(value = &quot;levelId&quot;, required = false) Integer levelId) {
+        try {
+<span class="nc" id="L272">            List&lt;EmployeeBasicDetails&gt; managerDetails = employeeService.getAllManager(levelId);</span>
+<span class="nc" id="L273">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(managerDetails, true, &quot;MANAGER_DETAILS_FETCHED&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L274">        } catch (Exception e) {</span>
+<span class="nc" id="L275">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;MANAGER_DETAILS_FETCHED&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L277">                            Collections.singletonList(e.getMessage())),</span>
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+    @GetMapping(&quot;/download-employee-template&quot;)
+    public ResponseEntity&lt;byte[]&gt; downloadTemplate() throws Exception {
+<span class="nc" id="L285">        byte[] report = templateService.generateTemplate();</span>
+
+<span class="nc" id="L287">        return ResponseEntity.ok()</span>
+<span class="nc" id="L288">                .header(HttpHeaders.CONTENT_DISPOSITION, &quot;attachment; filename=EmployeeTemplate.xlsx&quot;)</span>
+<span class="nc" id="L289">                .contentType(MediaType.APPLICATION_OCTET_STREAM)</span>
+<span class="nc" id="L290">                .body(report);</span>
+    }
+
+    @GetMapping(&quot;filters&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;EmployeeHierarchyViewDTO&gt;&gt;&gt; applyFilters(
+            @RequestParam(name = &quot;divisionId&quot;, required = false) List&lt;Integer&gt; divisionId,
+            @RequestParam(name = &quot;departmentId&quot;, required = false) List&lt;Integer&gt; departmentId,
+            @RequestParam(name = &quot;reportingManagerId&quot;, required = false) List&lt;Integer&gt; reportingManagerId
+    ) {
+        try {
+<span class="nc bnc" id="L300" title="All 2 branches missed.">            List&lt;Integer&gt; divisions = divisionId != null ? divisionId : Collections.emptyList();</span>
+<span class="nc bnc" id="L301" title="All 2 branches missed.">            List&lt;Integer&gt; departments = departmentId != null ? departmentId : Collections.emptyList();</span>
+<span class="nc bnc" id="L302" title="All 2 branches missed.">            List&lt;Integer&gt; rms = reportingManagerId != null ? reportingManagerId : Collections.emptyList();</span>
+<span class="nc" id="L303">            List&lt;EmployeeHierarchyViewDTO&gt; results = employeeService.applyFilters(divisions, departments, rms);</span>
+<span class="nc" id="L304">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(results, true, &quot;FILTERED_EMPLOYEES_FETCH_SUCCESS&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L305">        } catch (IllegalArgumentException e) {</span>
+<span class="nc" id="L306">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;FILTERED_EMPLOYEES_FETCH_ERROR&quot;, &quot;ERROR&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+
+    @PostMapping(&quot;/add-employees&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;?&gt;&gt; saveEmployee(@Valid @RequestBody List&lt;AddEmployee&gt; addEmployees) {
+        try {
+<span class="nc" id="L313">            List&lt;EmployeeResponseDTO&gt; savedEmployeeResponseDTO = employeeService.addEmployees(addEmployees);</span>
+<span class="nc" id="L314">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(savedEmployeeResponseDTO, true, &quot;ATMCMN_EMPLOYEE_CREATED&quot;, &quot;SUCCESS&quot;), HttpStatus.CREATED);</span>
+<span class="nc" id="L315">        } catch (Exception e) {</span>
+<span class="nc" id="L316">            log.error(&quot;Error occurred while saving Employee&quot;, e);</span>
+<span class="nc" id="L317">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_EMPLOYEE_SAVE_ERROR&quot;, &quot;FAILURE&quot;, Collections.singletonList(e.getMessage())), HttpStatus.INTERNAL_SERVER_ERROR);</span>
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RandomUtil.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.util</a> &gt; <span class="el_source">RandomUtil.java</span></div><h1>RandomUtil.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.util;
+
+import org.apache.commons.lang3.RandomStringUtils;
+
+import java.security.SecureRandom;
+
+public class RandomUtil {
+    private static final int DEF_COUNT = 20;
+<span class="nc" id="L9">    private static final SecureRandom SECURE_RANDOM = new SecureRandom();</span>
+
+    static {
+<span class="nc" id="L12">        SECURE_RANDOM.nextBytes(new byte[64]);</span>
+<span class="nc" id="L13">    }</span>
+
+    private RandomUtil() {
+    }
+
+    public static String generateRandomAlphanumericString() {
+<span class="nc" id="L19">        return RandomStringUtils.random(20, 0, 0, true, true, null, SECURE_RANDOM);</span>
+    }
+
+    public static String generatePassword() {
+<span class="nc" id="L23">        return generateRandomAlphanumericString();</span>
+    }
+
+    public static String generateActivationKey() {
+<span class="nc" id="L27">        return generateRandomAlphanumericString();</span>
+    }
+
+    public static String generateResetKey() {
+<span class="nc" id="L31">        return generateRandomAlphanumericString();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

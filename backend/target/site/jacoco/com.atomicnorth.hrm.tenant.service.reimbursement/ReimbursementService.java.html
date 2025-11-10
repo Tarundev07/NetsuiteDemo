@@ -1,0 +1,733 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReimbursementService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.reimbursement</a> &gt; <span class="el_source">ReimbursementService.java</span></div><h1>ReimbursementService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.reimbursement;
+
+import com.atomicnorth.hrm.tenant.domain.Employee;
+import com.atomicnorth.hrm.tenant.domain.approvalflow.WorkflowRequest;
+import com.atomicnorth.hrm.tenant.domain.reimbursement.ReimbursementActionHistory;
+import com.atomicnorth.hrm.tenant.domain.reimbursement.ReimbursementDocument;
+import com.atomicnorth.hrm.tenant.domain.reimbursement.ReimbursementRequest;
+import com.atomicnorth.hrm.tenant.domain.reimbursement.ReimbursementRequestMapping;
+import com.atomicnorth.hrm.tenant.domain.reimbursement.ReimbursementType;
+import com.atomicnorth.hrm.tenant.helper.Constant;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.repository.reimbursement.ReimbursementActionHistoryRepository;
+import com.atomicnorth.hrm.tenant.repository.reimbursement.ReimbursementDocumentRepository;
+import com.atomicnorth.hrm.tenant.repository.reimbursement.ReimbursementRequestMappingRepository;
+import com.atomicnorth.hrm.tenant.repository.reimbursement.ReimbursementRequestRepository;
+import com.atomicnorth.hrm.tenant.repository.reimbursement.ReimbursementTypeRepository;
+import com.atomicnorth.hrm.tenant.service.SequenceGeneratorService;
+import com.atomicnorth.hrm.tenant.service.approvalflow.ApprovalFlowService;
+import com.atomicnorth.hrm.tenant.service.dto.reimbursement.*;
+import com.atomicnorth.hrm.util.Enum.SequenceType;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityNotFoundException;
+import javax.persistence.Query;
+import java.io.IOException;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L57">@Slf4j</span>
+<span class="nc" id="L58">public class ReimbursementService {</span>
+
+<span class="nc" id="L60">    private static final SimpleDateFormat sdf = new SimpleDateFormat(&quot;yyyy-MM-dd&quot;);</span>
+    @Autowired
+    private ReimbursementTypeRepository reimbursementTypeRepository;
+    @Autowired
+    private ReimbursementRequestRepository reimbursementRequestRepository;
+    @Autowired
+    private ReimbursementRequestMappingRepository reimbursementRequestMappingRepository;
+    @Autowired
+    private ReimbursementActionHistoryRepository reimbursementActionHistoryRepository;
+    @Autowired
+    private EmployeeRepository employeeRepository;
+    @Autowired
+    private ReimbursementDocumentRepository reimbursementDocumentRepository;
+    @Autowired
+    private SequenceGeneratorService sequenceGeneratorService;
+    @Autowired
+    private ApprovalFlowService approvalFlowService;
+    @Autowired
+    EntityManager entityManager;
+
+    private Integer requestid;
+
+    public List&lt;ReimbursementType&gt; findAllReimbursementType() {
+<span class="nc" id="L83">        return reimbursementTypeRepository.findAll();</span>
+    }
+
+    public String validateExxpenseRequestBean(ExpenseRequestDTO expenseRequestdto) {
+<span class="nc" id="L87">        String validationString = &quot;success&quot;;</span>
+        try {
+<span class="nc" id="L89">            double countTotalExpense = 0;</span>
+<span class="nc" id="L90">            double countTotalBill = 0;</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">            for (ExpenseDTO temp : expenseRequestdto.getExpenseList()) {</span>
+<span class="nc" id="L92">                countTotalExpense = countTotalExpense + temp.getRequestAmount();</span>
+<span class="nc" id="L93">                countTotalBill = countTotalBill + temp.getBillAmount();</span>
+<span class="nc" id="L94">            }</span>
+<span class="nc bnc" id="L95" title="All 2 branches missed.">            if (countTotalExpense &gt; countTotalBill) {</span>
+<span class="nc" id="L96">                countTotalExpense = countTotalBill;</span>
+            }
+<span class="nc" id="L98">            expenseRequestdto.setRequestedAmount(countTotalExpense);</span>
+<span class="nc" id="L99">            expenseRequestdto.setApprovedAmount(countTotalExpense);</span>
+<span class="nc" id="L100">            return validationString;</span>
+<span class="nc" id="L101">        } catch (Exception e) {</span>
+<span class="nc" id="L102">            return e.getMessage();</span>
+        }
+    }
+
+    public byte[] downloadExpense(Integer requestid) {
+<span class="nc" id="L107">        return reimbursementDocumentRepository.findExpenseByRqNo(requestid);</span>
+    }
+
+    public String findRMSRequestNumber() {
+<span class="nc" id="L111">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L112">        Integer employeeId = tokenHolder.getEmpId();</span>
+<span class="nc" id="L113">        String requestNum = reimbursementRequestRepository.findReimbursementRequestNumber(employeeId);</span>
+
+<span class="nc bnc" id="L115" title="All 4 branches missed.">        if (requestNum == null || requestNum.isEmpty()) {</span>
+<span class="nc" id="L116">            return employeeId + &quot;_001&quot;;</span>
+        }
+        try {
+<span class="nc" id="L119">            int lastUnderscoreIndex = requestNum.lastIndexOf(&quot;_&quot;);</span>
+<span class="nc" id="L120">            int num = Integer.parseInt(requestNum.substring(lastUnderscoreIndex + 1)) + 1;</span>
+<span class="nc" id="L121">            String formattedNumber = String.format(&quot;%03d&quot;, num);</span>
+
+<span class="nc" id="L123">            return requestNum.substring(0, lastUnderscoreIndex) + &quot;_&quot; + formattedNumber;</span>
+<span class="nc" id="L124">        } catch (NumberFormatException e) {</span>
+<span class="nc" id="L125">            return employeeId + &quot;_001&quot;;</span>
+        }
+    }
+
+    public List&lt;JSONArray&gt; getPendingRequestDetails(String reqNumber) {
+<span class="nc" id="L130">        List&lt;JSONArray&gt; prjList = new ArrayList&lt;JSONArray&gt;();</span>
+        try {
+<span class="nc" id="L132">            List&lt;JSONArray&gt; tempList = new ArrayList&lt;JSONArray&gt;();</span>
+<span class="nc" id="L133">            JSONArray jasonProjectData = new JSONArray();</span>
+<span class="nc" id="L134">            List&lt;Object[]&gt; results = reimbursementRequestMappingRepository.findReimbursementRequestView(reqNumber);</span>
+<span class="nc bnc" id="L135" title="All 2 branches missed.">            for (Object[] row : results) {</span>
+<span class="nc" id="L136">                JSONObject jasonTimeEachData = new JSONObject();</span>
+                try {
+<span class="nc" id="L138">                    jasonTimeEachData.put(&quot;expensecode&quot;, row[0]);</span>
+<span class="nc" id="L139">                    jasonTimeEachData.put(&quot;expensename&quot;, row[1]);</span>
+<span class="nc" id="L140">                    jasonTimeEachData.put(&quot;billdate&quot;, row[2]);</span>
+<span class="nc" id="L141">                    jasonTimeEachData.put(&quot;requestedamount&quot;, row[3]);</span>
+<span class="nc" id="L142">                    jasonTimeEachData.put(&quot;approvedamount&quot;, row[4]);</span>
+<span class="nc" id="L143">                    jasonTimeEachData.put(&quot;applicantremark&quot;, row[5]);</span>
+<span class="nc bnc" id="L144" title="All 4 branches missed.">                    if (null == row[6] || &quot;&quot;.equals(row[6])) jasonTimeEachData.put(&quot;billnumber&quot;, &quot;NA&quot;);</span>
+<span class="nc" id="L145">                    else jasonTimeEachData.put(&quot;billnumber&quot;, row[6]);</span>
+<span class="nc" id="L146">                    jasonTimeEachData.put(&quot;billamount&quot;, row[7]);</span>
+<span class="nc" id="L147">                    jasonTimeEachData.put(&quot;billattachment&quot;, row[8]);</span>
+<span class="nc" id="L148">                    jasonTimeEachData.put(&quot;projectname&quot;, row[9]);</span>
+<span class="nc" id="L149">                    jasonTimeEachData.put(&quot;taskName&quot;, row[10]);</span>
+<span class="nc" id="L150">                } catch (JSONException e) {</span>
+<span class="nc" id="L151">                    e.printStackTrace();</span>
+<span class="nc" id="L152">                }</span>
+<span class="nc" id="L153">                jasonProjectData.put(jasonTimeEachData);</span>
+<span class="nc" id="L154">            }</span>
+<span class="nc" id="L155">            tempList.add(jasonProjectData);</span>
+<span class="nc" id="L156">            return tempList;</span>
+<span class="nc" id="L157">        } catch (Exception e) {</span>
+<span class="nc" id="L158">            e.printStackTrace();</span>
+        }
+<span class="nc" id="L160">        return Collections.singletonList(prjList.get(0));</span>
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; getExpenseTypes() {
+<span class="nc" id="L164">        List&lt;Object[]&gt; results = reimbursementTypeRepository.getExpenseTypes();</span>
+
+<span class="nc" id="L166">        List&lt;Map&lt;String, Object&gt;&gt; expenseList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L167" title="All 2 branches missed.">        for (Object[] row : results) {</span>
+<span class="nc" id="L168">            Map&lt;String, Object&gt; expenseMap = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L169">            expenseMap.put(&quot;expenseCode&quot;, row[0]);</span>
+<span class="nc" id="L170">            expenseMap.put(&quot;expenseName&quot;, row[1]);</span>
+<span class="nc" id="L171">            expenseMap.put(&quot;description&quot;, row[2]);</span>
+<span class="nc" id="L172">            expenseMap.put(&quot;enableFlag&quot;, row[3]);</span>
+<span class="nc" id="L173">            expenseList.add(expenseMap);</span>
+<span class="nc" id="L174">        }</span>
+<span class="nc" id="L175">        return expenseList;</span>
+    }
+
+    public List&lt;ReimbursementRequestDTO&gt; getAllReimbursementRequests() {
+<span class="nc" id="L179">        Integer empId = SessionHolder.getUserLoginDetail().getEmpId();</span>
+<span class="nc" id="L180">        List&lt;ReimbursementRequest&gt; requests = reimbursementRequestRepository.findByEmployeeId(empId);</span>
+<span class="nc" id="L181">        return requests.stream().map(this::convertToDTO).collect(Collectors.toList());</span>
+    }
+
+    private ReimbursementRequestDTO convertToDTO(ReimbursementRequest request) {
+<span class="nc" id="L185">        ReimbursementRequestDTO dto = new ReimbursementRequestDTO();</span>
+<span class="nc" id="L186">        dto.setSrNo(request.getSrno());</span>
+<span class="nc" id="L187">        dto.setReqNo(request.getRequestNumber());</span>
+<span class="nc bnc" id="L188" title="All 2 branches missed.">        if (request.getEmployeeId() != null) {</span>
+<span class="nc" id="L189">            Optional&lt;Employee&gt; emp = employeeRepository.findById(request.getEmployeeId());</span>
+<span class="nc bnc" id="L190" title="All 2 branches missed.">            if (emp.isPresent()) {</span>
+<span class="nc" id="L191">                dto.setRaisedBy(emp.get().getDisplayName());</span>
+            } else {
+<span class="nc" id="L193">                dto.setRaisedBy(&quot;Unknown Employee &quot;);</span>
+            }
+        }
+<span class="nc" id="L196">        dto.setEmployeeId(request.getEmployeeId());</span>
+<span class="nc" id="L197">        dto.setClaimed(request.getRequestedamount());</span>
+<span class="nc" id="L198">        dto.setApproved(request.getApprovedamount());</span>
+<span class="nc" id="L199">        dto.setRequestStatus(request.getStatus());</span>
+<span class="nc" id="L200">        dto.setReviewer(request.getReviewerremark());</span>
+<span class="nc" id="L201">        dto.setVpRemark(request.getVpremark());</span>
+<span class="nc" id="L202">        dto.setRemark(request.getApproverremark());</span>
+<span class="nc bnc" id="L203" title="All 2 branches missed.">        if (request.getBucketid() != null) {</span>
+<span class="nc" id="L204">            dto.setBucketId(request.getBucketid().longValue());</span>
+        }
+<span class="nc" id="L206">        dto.setBankRefNumber(request.getBankrefnumber());</span>
+<span class="nc" id="L207">        dto.setProcessedDate(request.getProcesseddate());</span>
+<span class="nc" id="L208">        dto.setReassignFlag(request.getReassignflag());</span>
+<span class="nc bnc" id="L209" title="All 2 branches missed.">        if (request.getCreatedDate() != null) {</span>
+<span class="nc" id="L210">            dto.setCreatedOn(request.getCreatedDate().atZone(ZoneId.systemDefault()).toLocalDate());</span>
+        }
+<span class="nc" id="L212">        dto.setCreatedBy(request.getCreatedBy());</span>
+<span class="nc" id="L213">        dto.setLastUpdatedBy(request.getLastUpdatedBy());</span>
+<span class="nc bnc" id="L214" title="All 2 branches missed.">        if (request.getLastUpdatedDate() != null) {</span>
+<span class="nc" id="L215">            dto.setUpdatedOn(request.getLastUpdatedDate().atZone(ZoneId.systemDefault()).toLocalDate());</span>
+        }
+<span class="nc" id="L217">        return dto;</span>
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; getReimbursementData(String requestNumber) {
+<span class="nc" id="L221">        List&lt;ReimbursementRequestMapping&gt; requests = reimbursementRequestMappingRepository.findByRequestnumber(requestNumber);</span>
+<span class="nc bnc" id="L222" title="All 2 branches missed.">        if (requests.isEmpty()) {</span>
+<span class="nc" id="L223">            throw new RuntimeException(&quot;No requests found for the given request number&quot;);</span>
+        }
+<span class="nc" id="L225">        List&lt;Map&lt;String, Object&gt;&gt; dataList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L226" title="All 2 branches missed.">        for (ReimbursementRequestMapping request : requests) {</span>
+<span class="nc bnc" id="L227" title="All 2 branches missed.">            if (!&quot;Y&quot;.equals(request.getMappingFlag())) {</span>
+<span class="nc" id="L228">                continue;</span>
+            }
+<span class="nc" id="L230">            Map&lt;String, Object&gt; data = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L231">            data.put(&quot;requestId&quot;, request.getRequestId());</span>
+<span class="nc" id="L232">            data.put(&quot;requestNumber&quot;, request.getRequestnumber());</span>
+<span class="nc" id="L233">            data.put(&quot;expenseCode&quot;, request.getExpensecode());</span>
+<span class="nc" id="L234">            data.put(&quot;projectId&quot;, request.getProjectId());</span>
+<span class="nc" id="L235">            data.put(&quot;taskId&quot;, request.getTaskId());</span>
+<span class="nc" id="L236">            data.put(&quot;expDesc&quot;, request.getExpensedesc());</span>
+<span class="nc" id="L237">            data.put(&quot;billNumber&quot;, request.getBillnumber());</span>
+<span class="nc" id="L238">            data.put(&quot;billDate&quot;, request.getBilldate());</span>
+<span class="nc" id="L239">            data.put(&quot;requestAmount&quot;, request.getRequestamount());</span>
+<span class="nc" id="L240">            data.put(&quot;approvedAmount&quot;, request.getApprovedamount());</span>
+<span class="nc" id="L241">            data.put(&quot;billAmount&quot;, request.getBillamount());</span>
+<span class="nc" id="L242">            data.put(&quot;applicantRemark&quot;, request.getApplicantremark());</span>
+<span class="nc" id="L243">            data.put(&quot;attachment&quot;, request.getAttachment());</span>
+<span class="nc" id="L244">            data.put(&quot;isActive&quot;, request.getMappingFlag());</span>
+<span class="nc" id="L245">            List&lt;ReimbursementDocument&gt; documents = reimbursementDocumentRepository.findByRequestId(request.getRequestId());</span>
+<span class="nc" id="L246">            List&lt;Map&lt;String, Object&gt;&gt; validDocuments = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L247" title="All 2 branches missed.">            for (ReimbursementDocument document : documents) {</span>
+<span class="nc bnc" id="L248" title="All 2 branches missed.">                if (&quot;Y&quot;.equals(document.getDocflag())) {</span>
+<span class="nc" id="L249">                    Map&lt;String, Object&gt; docData = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L250">                    docData.put(&quot;docId&quot;, document.getDocid());</span>
+<span class="nc" id="L251">                    docData.put(&quot;docCaption&quot;, document.getDoccaption());</span>
+<span class="nc" id="L252">                    docData.put(&quot;docName&quot;, document.getDocname());</span>
+<span class="nc" id="L253">                    docData.put(&quot;docSize&quot;, document.getDocsize());</span>
+<span class="nc" id="L254">                    docData.put(&quot;uploadedBy&quot;, document.getUploadedby());</span>
+<span class="nc" id="L255">                    docData.put(&quot;uploadedOn&quot;, document.getUploadedon());</span>
+<span class="nc" id="L256">                    docData.put(&quot;docFlag&quot;, document.getDocflag());</span>
+<span class="nc" id="L257">                    docData.put(&quot;docType&quot;, document.getDoctype());</span>
+<span class="nc" id="L258">                    docData.put(&quot;docLink&quot;, document.getDocLink());</span>
+<span class="nc" id="L259">                    validDocuments.add(docData);</span>
+                }
+<span class="nc" id="L261">            }</span>
+<span class="nc bnc" id="L262" title="All 4 branches missed.">            if (!validDocuments.isEmpty() || &quot;Y&quot;.equals(request.getMappingFlag())) {</span>
+<span class="nc bnc" id="L263" title="All 2 branches missed.">                data.put(&quot;documentDetails&quot;, validDocuments.isEmpty() ? null : validDocuments);</span>
+<span class="nc" id="L264">                dataList.add(data);</span>
+            }
+<span class="nc" id="L266">        }</span>
+<span class="nc" id="L267">        return dataList;</span>
+    }
+
+    @Transactional
+    public void deleteByRequestId(Integer requestId) {
+<span class="nc" id="L272">        ReimbursementRequestMapping requests = reimbursementRequestMappingRepository.findByRequestId(requestId);</span>
+<span class="nc bnc" id="L273" title="All 2 branches missed.">        if (requests == null) {</span>
+<span class="nc" id="L274">            throw new EntityNotFoundException(&quot;Request Mapping with ID &quot; + requestId + &quot; not found&quot;);</span>
+        }
+<span class="nc" id="L276">        requests.setMappingFlag(&quot;N&quot;);</span>
+<span class="nc" id="L277">        reimbursementRequestMappingRepository.save(requests);</span>
+<span class="nc" id="L278">        List&lt;ReimbursementDocument&gt; documentList = reimbursementDocumentRepository.findByRequestId(requests.getRequestId());</span>
+<span class="nc bnc" id="L279" title="All 2 branches missed.">        if (!documentList.isEmpty()) {</span>
+<span class="nc bnc" id="L280" title="All 2 branches missed.">            for (ReimbursementDocument document : documentList) {</span>
+<span class="nc" id="L281">                document.setDocflag(&quot;N&quot;);</span>
+<span class="nc" id="L282">            }</span>
+<span class="nc" id="L283">            reimbursementDocumentRepository.saveAll(documentList);</span>
+        }
+<span class="nc" id="L285">    }</span>
+
+    public List&lt;RequestDTO&gt; getAllReimbursementRequests(Integer projectId) {
+<span class="nc" id="L288">        List&lt;Object[]&gt; results = reimbursementRequestMappingRepository.fetchReimbursementRequests(projectId);</span>
+<span class="nc" id="L289">        return results.stream().map(this::mapToDTO).collect(Collectors.toList());</span>
+    }
+
+    private RequestDTO mapToDTO(Object[] obj) {
+
+<span class="nc" id="L294">        return new RequestDTO(</span>
+<span class="nc bnc" id="L295" title="All 2 branches missed.">                obj[0] != null ? (Integer) obj[0] : null,</span>
+<span class="nc bnc" id="L296" title="All 2 branches missed.">                obj[1] != null ? (String) obj[1] : null,</span>
+<span class="nc bnc" id="L297" title="All 2 branches missed.">                obj[2] != null ? (Double) obj[2] : null,</span>
+<span class="nc bnc" id="L298" title="All 2 branches missed.">                obj[3] != null ? (Double) obj[3] : null,</span>
+<span class="nc bnc" id="L299" title="All 2 branches missed.">                obj[4] != null ? (String) obj[4] : null,</span>
+<span class="nc bnc" id="L300" title="All 2 branches missed.">                obj[5] != null ? (String) obj[5] : null,</span>
+<span class="nc bnc" id="L301" title="All 2 branches missed.">                obj[6] != null ? ((Number) obj[6]).intValue() : null,</span>
+<span class="nc bnc" id="L302" title="All 2 branches missed.">                obj[7] != null ? convertToDate(obj[7]) : null,</span>
+<span class="nc bnc" id="L303" title="All 2 branches missed.">                obj[8] != null ? convertToDate(obj[8]) : null,</span>
+<span class="nc bnc" id="L304" title="All 2 branches missed.">                obj[9] != null ? (String) obj[9] : null,</span>
+<span class="nc bnc" id="L305" title="All 2 branches missed.">                obj[10] != null ? (String) obj[10] : null,</span>
+<span class="nc bnc" id="L306" title="All 2 branches missed.">                obj[11] != null ? ((Number) obj[11]).intValue() : null);</span>
+    }
+
+    private Date convertToDate(Object obj) {
+<span class="nc bnc" id="L310" title="All 2 branches missed.">        if (obj instanceof java.sql.Date) {</span>
+<span class="nc" id="L311">            return (java.sql.Date) obj;</span>
+<span class="nc bnc" id="L312" title="All 2 branches missed.">        } else if (obj instanceof Timestamp) {</span>
+<span class="nc" id="L313">            return new Date(((Timestamp) obj).getTime());</span>
+        } else {
+<span class="nc" id="L315">            System.err.println(&quot;Unexpected object type for date: &quot; + obj.getClass().getName());</span>
+<span class="nc" id="L316">            return null;</span>
+        }
+    }
+
+    public Map&lt;String, Object&gt; getReimbursementRequests(String status, Date startDate, Date endDate, String searchField, String searchKeyword, String sortBy, String sortDir, int page, int size) {
+        try {
+
+<span class="nc" id="L323">            int offset = Math.max((page - 1) * size, 0);</span>
+<span class="nc bnc" id="L324" title="All 2 branches missed.">            String sortDirection = &quot;ASC&quot;.equalsIgnoreCase(sortDir) ? &quot;ASC&quot; : &quot;DESC&quot;;</span>
+
+<span class="nc" id="L326">            StringBuilder requestQuery = new StringBuilder(&quot;SELECT r.* , e.DISPLAY_NAME FROM ses_m00_rms_request r JOIN emp_employee_master e ON r.EMPLOYEE_ID = e.EMPLOYEE_ID  WHERE 1=1&quot;);</span>
+<span class="nc bnc" id="L327" title="All 4 branches missed.">            if (status != null &amp;&amp; !status.isEmpty()) {</span>
+<span class="nc" id="L328">                requestQuery.append(&quot; AND STATUS = '&quot;).append(status).append(&quot;'&quot;);</span>
+            }
+<span class="nc bnc" id="L330" title="All 4 branches missed.">            if (startDate != null &amp;&amp; endDate != null) {</span>
+<span class="nc" id="L331">                requestQuery.append(&quot; AND CREATED_DATE BETWEEN '&quot;).append(startDate).append(&quot;' AND '&quot;).append(endDate).append(&quot;'&quot;);</span>
+            }
+<span class="nc bnc" id="L333" title="All 4 branches missed.">            if (searchKeyword != null &amp;&amp; !searchKeyword.isEmpty()) {</span>
+<span class="nc" id="L334">                requestQuery.append(&quot; AND &quot;).append(searchField.replaceAll(&quot;([a-z])([A-Z]+)&quot;, &quot;$1_$2&quot;).toUpperCase()).append(&quot; &quot;).append(&quot;LIKE '%&quot;).append(searchKeyword.toLowerCase()).append(&quot;%'&quot;);</span>
+            }
+<span class="nc bnc" id="L336" title="All 4 branches missed.">            if (sortBy != null &amp;&amp; !sortBy.isEmpty()) {</span>
+<span class="nc" id="L337">                requestQuery.append(&quot; ORDER BY &quot;).append(sortBy.replaceAll(&quot;([a-z])([A-Z]+)&quot;, &quot;$1_$2&quot;).toUpperCase()).append(&quot; &quot;).append(sortDirection);</span>
+            } else {
+<span class="nc" id="L339">                requestQuery.append(&quot; ORDER BY &quot;).append(&quot;1&quot;).append(&quot; &quot;).append(sortDirection);</span>
+            }
+<span class="nc" id="L341">            requestQuery.append(&quot; LIMIT &quot;).append(size).append(&quot; OFFSET &quot;).append(offset);</span>
+
+
+<span class="nc" id="L344">            Query reqQuery = entityManager.createNativeQuery(requestQuery.toString());</span>
+<span class="nc" id="L345">            List&lt;Object[]&gt; requestRows = reqQuery.getResultList();</span>
+
+<span class="nc" id="L347">            List&lt;String&gt; requestColumns = getColumnNames(&quot;ses_m00_rms_request&quot;);</span>
+<span class="nc" id="L348">            List&lt;String&gt; mappingColumns = getColumnNames(&quot;ses_m00_rms_request_mapping&quot;);</span>
+<span class="nc" id="L349">            requestColumns.add(&quot;displayName&quot;);</span>
+<span class="nc" id="L350">            List&lt;String&gt; requestNumbers = requestRows.stream().map(row -&gt; {</span>
+<span class="nc" id="L351">                int idx = requestColumns.indexOf(&quot;requestNumber&quot;);</span>
+<span class="nc bnc" id="L352" title="All 2 branches missed.">                return row[idx] != null ? row[idx].toString() : null;</span>
+<span class="nc" id="L353">            }).filter(Objects::nonNull).collect(Collectors.toList());</span>
+
+<span class="nc" id="L355">            Integer empId = SessionHolder.getUserLoginDetail().getEmpId();</span>
+<span class="nc" id="L356">            List&lt;WorkflowRequest&gt; visibleRequests = approvalFlowService.getVisibleRequestsForUser(empId, Constant.REIMBURSEMENT_APPROVAL_FUNCTION_ID);</span>
+<span class="nc" id="L357">            Set&lt;String&gt; visibleRequestNumbers = visibleRequests.stream().map(WorkflowRequest::getRequestNumber).collect(Collectors.toSet());</span>
+
+<span class="nc" id="L359">            requestRows = requestRows.stream().filter(row -&gt; {</span>
+<span class="nc" id="L360">                        int idx = requestColumns.indexOf(&quot;requestNumber&quot;);</span>
+<span class="nc bnc" id="L361" title="All 2 branches missed.">                        String reqNum = row[idx] != null ? row[idx].toString() : null;</span>
+<span class="nc bnc" id="L362" title="All 4 branches missed.">                        return reqNum != null &amp;&amp; visibleRequestNumbers.contains(reqNum);</span>
+<span class="nc" id="L363">                    }).collect(Collectors.toList());</span>
+
+<span class="nc" id="L365">            Map&lt;String, WorkflowRequest&gt; requestMap = visibleRequests.stream().collect(Collectors.toMap(WorkflowRequest::getRequestNumber, Function.identity()));</span>
+
+<span class="nc" id="L367">            List&lt;Object[]&gt; mappingRows = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L368" title="All 2 branches missed.">            if (!requestNumbers.isEmpty()) {</span>
+
+<span class="nc" id="L370">                String mappingQuery = &quot;SELECT rm.*  FROM ses_m00_rms_request_mapping rm WHERE rm.REQUEST_NUMBER IN :requestNumbers And rm.MAPPING_FLAG != 'N'&quot;;</span>
+
+<span class="nc" id="L372">                Query query = entityManager.createNativeQuery(mappingQuery);</span>
+
+<span class="nc" id="L374">                query.setParameter(&quot;requestNumbers&quot;, requestNumbers);</span>
+<span class="nc" id="L375">                mappingRows = query.getResultList();</span>
+            }
+
+<span class="nc" id="L378">            Map&lt;String, List&lt;Map&lt;String, Object&gt;&gt;&gt; groupedMapping = mappingRows.stream().map(row -&gt; {</span>
+<span class="nc" id="L379">                Map&lt;String, Object&gt; map = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L380" title="All 2 branches missed.">                for (int i = 0; i &lt; mappingColumns.size(); i++) {</span>
+
+<span class="nc bnc" id="L382" title="All 4 branches missed.">                    if (mappingColumns.get(i).contains(&quot;Attribute&quot;) &amp;&amp; row[i] == null) {</span>
+<span class="nc" id="L383">                        continue;</span>
+                    } else {
+<span class="nc bnc" id="L385" title="All 2 branches missed.">                        if (mappingColumns.get(i).contains(&quot;attachment&quot;)) {</span>
+<span class="nc" id="L386">                            Query query = entityManager.createNativeQuery(&quot;Select DOC_LINK from ses_m00_rms_document where REQUEST_ID = :requestID&quot;);</span>
+<span class="nc" id="L387">                            query.setParameter(&quot;requestID&quot;, map.get(&quot;requestId&quot;));</span>
+<span class="nc" id="L388">                            List&lt;Object&gt; attachmentList = query.getResultList();</span>
+<span class="nc bnc" id="L389" title="All 4 branches missed.">                            if (attachmentList != null &amp;&amp; !attachmentList.isEmpty()) {</span>
+<span class="nc" id="L390">                                map.put(&quot;attachment&quot;, attachmentList.get(0));</span>
+                            } else {
+<span class="nc" id="L392">                                map.put(&quot;attachment&quot;, &quot;NA&quot;);</span>
+                            }
+<span class="nc" id="L394">                        } else {</span>
+<span class="nc" id="L395">                            map.put(mappingColumns.get(i), row[i]);</span>
+                        }
+                    }
+                }
+<span class="nc" id="L399">                return map;</span>
+<span class="nc bnc" id="L400" title="All 2 branches missed.">            }).filter(map -&gt; map.get(&quot;requestNumber&quot;) != null).collect(Collectors.groupingBy(map -&gt; map.get(&quot;requestNumber&quot;).toString(), LinkedHashMap::new, Collectors.toList()));</span>
+
+
+<span class="nc" id="L403">            List&lt;Map&lt;String, Object&gt;&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L404" title="All 2 branches missed.">            for (Object[] row : requestRows) {</span>
+<span class="nc" id="L405">                Map&lt;String, Object&gt; rowMap = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L406" title="All 2 branches missed.">                for (int i = 0; i &lt; row.length; i++) {</span>
+
+<span class="nc bnc" id="L408" title="All 4 branches missed.">                    if (requestColumns.get(i).contains(&quot;Attribute&quot;) &amp;&amp; row[i] == null) {</span>
+<span class="nc" id="L409">                        continue;</span>
+                    } else {
+<span class="nc" id="L411">                        rowMap.put(requestColumns.get(i), row[i]);</span>
+                    }
+                }
+
+<span class="nc" id="L415">                String reqNumber = (String) rowMap.get(&quot;requestNumber&quot;);</span>
+<span class="nc" id="L416">                rowMap.put(&quot;Data&quot;, groupedMapping.get(reqNumber));</span>
+<span class="nc" id="L417">                WorkflowRequest wf = requestMap.get(reqNumber);</span>
+<span class="nc bnc" id="L418" title="All 2 branches missed.">                if (wf != null) rowMap.put(&quot;status&quot;, wf.getUserStatus());</span>
+<span class="nc" id="L419">                result.add(rowMap);</span>
+<span class="nc" id="L420">            }</span>
+
+<span class="nc" id="L422">            Map&lt;String, Long&gt; statusCounts = getStatusCounts(visibleRequestNumbers);</span>
+            long totalElements;
+            int totalPages;
+<span class="nc bnc" id="L425" title="All 2 branches missed.">            if (!visibleRequestNumbers.isEmpty()) {</span>
+<span class="nc" id="L426">                StringBuilder countQuery = new StringBuilder(&quot;SELECT COUNT(*) FROM ses_m00_rms_request r JOIN emp_employee_master e ON r.EMPLOYEE_ID = e.EMPLOYEE_ID WHERE 1=1&quot;);</span>
+<span class="nc bnc" id="L427" title="All 4 branches missed.">                if (status != null &amp;&amp; !status.isEmpty()) {</span>
+<span class="nc" id="L428">                    countQuery.append(&quot; AND STATUS = '&quot;).append(status).append(&quot;'&quot;);</span>
+                }
+<span class="nc bnc" id="L430" title="All 4 branches missed.">                if (startDate != null &amp;&amp; endDate != null) {</span>
+<span class="nc" id="L431">                    countQuery.append(&quot; AND CREATED_DATE BETWEEN '&quot;).append(startDate).append(&quot;' AND '&quot;).append(endDate).append(&quot;'&quot;);</span>
+                }
+<span class="nc bnc" id="L433" title="All 4 branches missed.">                if (searchKeyword != null &amp;&amp; !searchKeyword.isEmpty()) {</span>
+<span class="nc" id="L434">                    countQuery.append(&quot; AND &quot;).append(searchField.replaceAll(&quot;([a-z])([A-Z]+)&quot;, &quot;$1_$2&quot;).toUpperCase()).append(&quot; &quot;).append(&quot;LIKE '%&quot;).append(searchKeyword.toLowerCase()).append(&quot;%'&quot;);</span>
+                }
+<span class="nc" id="L436">                String inClause = visibleRequestNumbers.stream().map(req -&gt; &quot;'&quot; + req + &quot;'&quot;).collect(Collectors.joining(&quot;,&quot;));</span>
+<span class="nc" id="L437">                countQuery.append(&quot; AND r.REQUEST_NUMBER IN (&quot;).append(inClause).append(&quot;)&quot;);</span>
+<span class="nc bnc" id="L438" title="All 4 branches missed.">                if (sortBy != null &amp;&amp; !sortBy.isEmpty()) {</span>
+<span class="nc" id="L439">                    countQuery.append(&quot; ORDER BY &quot;).append(sortBy.replaceAll(&quot;([a-z])([A-Z]+)&quot;, &quot;$1_$2&quot;).toUpperCase()).append(&quot; &quot;).append(sortDirection);</span>
+                } else {
+<span class="nc" id="L441">                    countQuery.append(&quot; ORDER BY &quot;).append(&quot;1&quot;).append(&quot; &quot;).append(sortDirection);</span>
+                }
+<span class="nc" id="L443">                totalElements = ((Number) entityManager.createNativeQuery(countQuery.toString()).getSingleResult()).longValue();</span>
+<span class="nc" id="L444">                totalPages = (int) Math.ceil((double) totalElements / size);</span>
+<span class="nc" id="L445">            } else {</span>
+<span class="nc" id="L446">                totalElements = 0;</span>
+<span class="nc" id="L447">                totalPages = 0;</span>
+            }
+
+
+<span class="nc" id="L451">            Map&lt;String, Object&gt; response = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L452">            response.put(&quot;success&quot;, true);</span>
+<span class="nc" id="L453">            response.put(&quot;code&quot;, &quot;RM&quot;);</span>
+<span class="nc" id="L454">            response.put(&quot;message&quot;, &quot;Data reimbursement&quot;);</span>
+<span class="nc" id="L455">            response.put(&quot;result&quot;, result);</span>
+<span class="nc" id="L456">            response.put(&quot;statusCounts&quot;, statusCounts);</span>
+<span class="nc" id="L457">            response.put(&quot;pagination&quot;, Map.of(&quot;totalPages&quot;, totalPages, &quot;totalElements&quot;, totalElements, &quot;currentPage&quot;, page, &quot;pageSize&quot;, size));</span>
+<span class="nc" id="L458">            return response;</span>
+
+<span class="nc" id="L460">        } catch (Exception e) {</span>
+<span class="nc" id="L461">            log.error(&quot;Error while fetching reimbursement data&quot;, e);</span>
+<span class="nc" id="L462">            throw new RuntimeException(&quot;Failed to fetch reimbursement data&quot;);</span>
+        }
+
+    }
+
+    private List&lt;String&gt; getColumnNames(String tableName) {
+<span class="nc" id="L468">        List&lt;String&gt; columnNames = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L469">        Query query = entityManager.createNativeQuery(&quot;SHOW COLUMNS FROM &quot; + tableName);</span>
+<span class="nc" id="L470">        List&lt;Object[]&gt; columns = query.getResultList();</span>
+<span class="nc bnc" id="L471" title="All 2 branches missed.">        for (Object[] col : columns) {</span>
+<span class="nc" id="L472">            columnNames.add(convertToCamelCase((String) col[0]));</span>
+<span class="nc" id="L473">        }</span>
+<span class="nc" id="L474">        return columnNames;</span>
+    }
+
+
+    private String convertToCamelCase(String columnName) {
+<span class="nc" id="L479">        StringBuilder result = new StringBuilder();</span>
+<span class="nc" id="L480">        boolean nextUpper = false;</span>
+<span class="nc bnc" id="L481" title="All 2 branches missed.">        if (columnName.matches(&quot;^[a-z]+([A-Z][a-z0-9]+)*$&quot;)) {</span>
+<span class="nc" id="L482">            return columnName;</span>
+        }
+<span class="nc bnc" id="L484" title="All 2 branches missed.">        for (char c : columnName.toCharArray()) {</span>
+<span class="nc bnc" id="L485" title="All 4 branches missed.">            if (c == '_' || c == ' ') {</span>
+<span class="nc" id="L486">                nextUpper = true;</span>
+            } else {
+<span class="nc bnc" id="L488" title="All 2 branches missed.">                if (nextUpper) {</span>
+<span class="nc" id="L489">                    result.append(Character.toUpperCase(c));</span>
+<span class="nc" id="L490">                    nextUpper = false;</span>
+                } else {
+<span class="nc" id="L492">                    result.append(Character.toLowerCase(c));</span>
+                }
+            }
+        }
+<span class="nc" id="L496">        return result.toString();</span>
+    }
+
+    private Map&lt;String, Long&gt; getStatusCounts(Set&lt;String&gt; visibleRequestNumbers) {
+<span class="nc bnc" id="L500" title="All 4 branches missed.">        if (visibleRequestNumbers == null || visibleRequestNumbers.isEmpty()) {</span>
+<span class="nc" id="L501">            return Map.of(&quot;approved&quot;, 0L, &quot;reimbursed&quot;, 0L, &quot;rejected&quot;, 0L, &quot;pending&quot;, 0L);</span>
+        }
+
+<span class="nc" id="L504">        String sql = &quot;SELECT STATUS, COUNT(*) as count FROM ses_m00_rms_request WHERE REQUEST_NUMBER IN :reqNumbers GROUP BY STATUS&quot;;</span>
+
+<span class="nc" id="L506">        Query query = entityManager.createNativeQuery(sql);</span>
+<span class="nc" id="L507">        query.setParameter(&quot;reqNumbers&quot;, visibleRequestNumbers);</span>
+
+<span class="nc" id="L509">        List&lt;Object[]&gt; counts = query.getResultList();</span>
+
+<span class="nc" id="L511">        Map&lt;String, Long&gt; statusCounts = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L512" title="All 2 branches missed.">        for (Object[] row : counts) {</span>
+<span class="nc" id="L513">            statusCounts.put(convertToCamelCase(row[0].toString()), Long.valueOf(row[1].toString()));</span>
+<span class="nc" id="L514">        }</span>
+
+        // Ensure all statuses present
+<span class="nc" id="L517">        statusCounts.putIfAbsent(&quot;approved&quot;, 0L);</span>
+<span class="nc" id="L518">        statusCounts.putIfAbsent(&quot;reimbursed&quot;, 0L);</span>
+<span class="nc" id="L519">        statusCounts.putIfAbsent(&quot;rejected&quot;, 0L);</span>
+<span class="nc" id="L520">        statusCounts.putIfAbsent(&quot;pending&quot;, 0L);</span>
+
+<span class="nc" id="L522">        return statusCounts;</span>
+    }
+
+    /**
+     * Approve a reimbursement request by its request number.
+     *
+     * @param dto The request number for the reimbursement
+     * @return boolean indicating whether the approval was successful or not
+     */
+    @Transactional
+    public ReimbursementRequest bulkApproveRequests(ReimbursementApprovalDTO dto) {
+<span class="nc" id="L533">        ReimbursementRequest request = reimbursementRequestRepository.findByRequestNumber(dto.getRequestNumber())</span>
+<span class="nc" id="L534">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;No request found for this request number&quot;));</span>
+<span class="nc" id="L535">        request.setApprovedamount(dto.getApprovedAmount());</span>
+<span class="nc" id="L536">        request.setApproverremark(dto.getApproverRemarks());</span>
+
+<span class="nc" id="L538">        List&lt;ReimbursementRequestMapping&gt; requestMappingList = dto.getExpenseList().stream().map(exp -&gt; {</span>
+<span class="nc" id="L539">            ReimbursementRequestMapping requestMapping = reimbursementRequestMappingRepository.findByRequestId(exp.getRequestId());</span>
+<span class="nc bnc" id="L540" title="All 2 branches missed.">            if (requestMapping != null) {</span>
+<span class="nc" id="L541">                requestMapping.setApprovedamount(exp.getApprovedAmount());</span>
+            }
+<span class="nc" id="L543">            return requestMapping;</span>
+<span class="nc" id="L544">        }).collect(Collectors.toList());</span>
+<span class="nc" id="L545">        boolean isApproved = approvalFlowService.updateStatus(request.getRequestNumber(), dto.getStatus());</span>
+<span class="nc bnc" id="L546" title="All 2 branches missed.">        if (isApproved) {</span>
+<span class="nc" id="L547">            request.setStatus(Constant.REIMBURSEMENT_STATUS_APPROVED);</span>
+<span class="nc bnc" id="L548" title="All 2 branches missed.">        } else if (dto.getStatus().equalsIgnoreCase(Constant.REIMBURSEMENT_STATUS_REJECTED)) {</span>
+<span class="nc" id="L549">            request.setStatus(Constant.REIMBURSEMENT_STATUS_REJECTED);</span>
+        }
+<span class="nc" id="L551">        request.setLastUpdatedBy(String.valueOf(SessionHolder.getUserLoginDetail().getEmpId()));</span>
+<span class="nc" id="L552">        request.setLastUpdatedDate(Instant.now());</span>
+<span class="nc" id="L553">        reimbursementRequestMappingRepository.saveAll(requestMappingList);</span>
+<span class="nc" id="L554">        return reimbursementRequestRepository.save(request);</span>
+    }
+
+    @Transactional
+    public boolean saveOrUpdateExpenseRequest(ExpenseRequestDTO dto, MultipartFile[] files, boolean submitStatus) {
+        try {
+<span class="nc" id="L560">            UserLoginDetail token = SessionHolder.getUserLoginDetail();</span>
+<span class="nc bnc" id="L561" title="All 2 branches missed.">            boolean isNew = (dto.getSrno() == null);</span>
+
+<span class="nc bnc" id="L563" title="All 2 branches missed.">            if (!isNew) {</span>
+<span class="nc" id="L564">                Optional&lt;ReimbursementRequest&gt; existing = reimbursementRequestRepository.findById(dto.getSrno());</span>
+<span class="nc bnc" id="L565" title="All 2 branches missed.">                if (existing.isEmpty()) return false;</span>
+            }
+
+<span class="nc bnc" id="L568" title="All 2 branches missed.">            String requestNumber = isNew ? sequenceGeneratorService.generateSequenceWithYear(SequenceType.RMS.toString(), null) : dto.getRequestNumber();</span>
+<span class="nc" id="L569">            dto.setRequestNumber(requestNumber);</span>
+<span class="nc" id="L570">            saveReimbursementRequest(dto, token, submitStatus);</span>
+
+<span class="nc" id="L572">            boolean mappingStatus = saveRequestMappings(dto, token);</span>
+<span class="nc" id="L573">            boolean docStatus = saveOrUpdateDocuments(dto.getExpenseList(), files, dto.getRequestNumber(), token);</span>
+
+<span class="nc bnc" id="L575" title="All 2 branches missed.">            if (submitStatus) {</span>
+<span class="nc" id="L576">                logActionHistory(requestNumber, token, &quot;Review Pending&quot;);</span>
+            } else {
+<span class="nc" id="L578">                logActionHistory(requestNumber, token, &quot;Saved in Draft&quot;);</span>
+            }
+
+<span class="nc bnc" id="L581" title="All 4 branches missed.">            return mappingStatus &amp;&amp; docStatus;</span>
+
+<span class="nc" id="L583">        } catch (Exception e) {</span>
+<span class="nc" id="L584">            return false;</span>
+        }
+    }
+
+    private void saveReimbursementRequest(ExpenseRequestDTO dto, UserLoginDetail token, boolean submitStatus) {
+<span class="nc" id="L589">        double totalExpense = dto.getExpenseList().stream().mapToDouble(ExpenseDTO::getRequestAmount).sum();</span>
+<span class="nc" id="L590">        double totalBill = dto.getExpenseList().stream().mapToDouble(ExpenseDTO::getBillAmount).sum();</span>
+<span class="nc" id="L591">        double finalAmount = Math.min(totalExpense, totalBill);</span>
+
+<span class="nc" id="L593">        dto.setRequestedAmount(finalAmount);</span>
+<span class="nc" id="L594">        dto.setApprovedAmount(finalAmount);</span>
+
+<span class="nc bnc" id="L596" title="All 2 branches missed.">        ReimbursementRequest request = dto.getSrno() != null ?</span>
+<span class="nc" id="L597">                reimbursementRequestRepository.findById(dto.getSrno()).orElse(new ReimbursementRequest()) :</span>
+<span class="nc" id="L598">                new ReimbursementRequest();</span>
+<span class="nc bnc" id="L599" title="All 2 branches missed.">        if (dto.getSrno() == null) {</span>
+<span class="nc" id="L600">            request.setRequestNumber(dto.getRequestNumber());</span>
+<span class="nc" id="L601">            request.setEmployeeId(token.getEmpId());</span>
+<span class="nc" id="L602">            request.setCreatedBy(token.getEmpId().toString());</span>
+<span class="nc" id="L603">            request.setCreatedDate(Instant.now());</span>
+        }
+<span class="nc" id="L605">        request.setRequestedamount(finalAmount);</span>
+        //request.setApprovedamount(finalAmount);
+<span class="nc" id="L607">        request.setLastUpdatedBy(token.getEmpId().toString());</span>
+<span class="nc" id="L608">        request.setLastUpdatedDate(Instant.now());</span>
+<span class="nc" id="L609">        request.setBucketid(786.0);</span>
+<span class="nc" id="L610">        request.setVpremark(&quot;NA&quot;);</span>
+<span class="nc" id="L611">        request.setReviewerremark(&quot;NA&quot;);</span>
+<span class="nc" id="L612">        request.setApproverremark(&quot;NA&quot;);</span>
+<span class="nc bnc" id="L613" title="All 2 branches missed.">        if (submitStatus) {</span>
+<span class="nc" id="L614">            request.setStatus(&quot;Pending&quot;);</span>
+<span class="nc bnc" id="L615" title="All 2 branches missed.">        } else if (dto.getSrno() == null) {</span>
+<span class="nc" id="L616">            request.setStatus(&quot;Saved as Draft&quot;);</span>
+        }
+
+<span class="nc" id="L619">        ReimbursementRequest saved = reimbursementRequestRepository.save(request);</span>
+<span class="nc" id="L620">        approvalFlowService.addRequest(Constant.REIMBURSEMENT_APPROVAL_FUNCTION_ID, saved.getEmployeeId(), saved.getRequestNumber());</span>
+<span class="nc" id="L621">    }</span>
+
+    private boolean saveRequestMappings(ExpenseRequestDTO dto, UserLoginDetail token) {
+<span class="nc bnc" id="L624" title="All 2 branches missed.">        for (ExpenseDTO expense : dto.getExpenseList()) {</span>
+            try {
+                ReimbursementRequestMapping mapping;
+
+<span class="nc bnc" id="L628" title="All 2 branches missed.">                if (expense.getRequestId() != null) {</span>
+<span class="nc" id="L629">                    mapping = reimbursementRequestMappingRepository</span>
+<span class="nc" id="L630">                            .findById(expense.getRequestId())</span>
+<span class="nc" id="L631">                            .orElse(new ReimbursementRequestMapping());</span>
+<span class="nc" id="L632">                    mapping.setApprovedamount(expense.getApprovedAmount());</span>
+
+                } else {
+<span class="nc" id="L635">                    mapping = new ReimbursementRequestMapping();</span>
+<span class="nc" id="L636">                    mapping.setApprovedamount(expense.getRequestAmount());</span>
+                }
+
+<span class="nc" id="L639">                mapping.setRequestnumber(dto.getRequestNumber());</span>
+<span class="nc bnc" id="L640" title="All 2 branches missed.">                mapping.setExpensecode(expense.getExpenseCode() != null ? expense.getExpenseCode() : mapping.getExpensecode());</span>
+<span class="nc bnc" id="L641" title="All 2 branches missed.">                mapping.setExpensedesc(expense.getExpenseName() != null ? expense.getExpenseName() : mapping.getExpensedesc());</span>
+<span class="nc" id="L642">                mapping.setBillnumber(expense.getBillNumber());</span>
+<span class="nc" id="L643">                mapping.setBilldate(sdf.parse(expense.getBillDate()));</span>
+<span class="nc" id="L644">                mapping.setRequestamount(expense.getRequestAmount());</span>
+//                mapping.setApprovedamount(expense.getRequestAmount());
+<span class="nc" id="L646">                mapping.setBillamount(expense.getBillAmount());</span>
+<span class="nc" id="L647">                mapping.setApplicantremark(Optional.ofNullable(expense.getApplicantRemark()).orElse(&quot;NA&quot;).replaceAll(&quot;'&quot;, &quot;&quot;));</span>
+<span class="nc" id="L648">                mapping.setAttachment(Optional.ofNullable(expense.getExpDocName()).orElse(&quot;NA&quot;).replaceAll(&quot;'&quot;, &quot;&quot;));</span>
+<span class="nc" id="L649">                mapping.setProjectId(expense.getProjectId());</span>
+<span class="nc" id="L650">                mapping.setTaskId(expense.getTaskId());</span>
+<span class="nc bnc" id="L651" title="All 2 branches missed.">                if (StringUtils.isNotBlank(expense.getMappingFlag())) {</span>
+<span class="nc bnc" id="L652" title="All 2 branches missed.">                    mapping.setMappingFlag(&quot;Y&quot;.equalsIgnoreCase(expense.getMappingFlag()) ? &quot;Y&quot; : &quot;N&quot;);</span>
+                } else {
+<span class="nc" id="L654">                    mapping.setMappingFlag(&quot;Y&quot;);</span>
+                }
+<span class="nc" id="L656">                mapping.setStatus(&quot;Pending&quot;);</span>
+<span class="nc" id="L657">                mapping.setCreatedDate(Instant.now());</span>
+<span class="nc" id="L658">                mapping.setLastUpdatedDate(Instant.now());</span>
+<span class="nc" id="L659">                mapping.setCreatedBy(token.getEmpId().toString());</span>
+<span class="nc" id="L660">                mapping.setLastUpdatedBy(token.getEmpId().toString());</span>
+
+<span class="nc" id="L662">                ReimbursementRequestMapping saved = reimbursementRequestMappingRepository.save(mapping);</span>
+<span class="nc" id="L663">                expense.setRequestId(saved.getRequestId());</span>
+<span class="nc" id="L664">            } catch (Exception e) {</span>
+<span class="nc" id="L665">                return false;</span>
+<span class="nc" id="L666">            }</span>
+<span class="nc" id="L667">        }</span>
+<span class="nc" id="L668">        return true;</span>
+    }
+
+    public boolean saveOrUpdateDocuments(List&lt;ExpenseDTO&gt; expenseList, MultipartFile[] files, String requestNumber, UserLoginDetail token) throws IOException {
+<span class="nc bnc" id="L672" title="All 2 branches missed.">        if (CollectionUtils.isEmpty(expenseList)) return true;</span>
+
+<span class="nc bnc" id="L674" title="All 2 branches missed.">        Map&lt;String, MultipartFile&gt; fileMap = (files != null)</span>
+<span class="nc" id="L675">                ? Arrays.stream(files)</span>
+<span class="nc bnc" id="L676" title="All 4 branches missed.">                .filter(file -&gt; file != null &amp;&amp; StringUtils.isNotBlank(file.getOriginalFilename()))</span>
+<span class="nc" id="L677">                .collect(Collectors.toMap(MultipartFile::getOriginalFilename, f -&gt; f, (f1, f2) -&gt; f1))</span>
+<span class="nc" id="L678">                : new HashMap&lt;&gt;();</span>
+
+<span class="nc bnc" id="L680" title="All 2 branches missed.">        for (ExpenseDTO expense : expenseList) {</span>
+<span class="nc" id="L681">            Integer requestId = expense.getRequestId();</span>
+<span class="nc" id="L682">            List&lt;ExpenseDocumentDTO&gt; documentList = expense.getExpenseDocumentList();</span>
+
+<span class="nc bnc" id="L684" title="All 2 branches missed.">            if (CollectionUtils.isEmpty(documentList)) continue;</span>
+
+<span class="nc bnc" id="L686" title="All 2 branches missed.">            for (ExpenseDocumentDTO docDTO : documentList) {</span>
+                ReimbursementDocument doc;
+
+<span class="nc bnc" id="L689" title="All 2 branches missed.">                if (docDTO.getDocId() != null) {</span>
+<span class="nc" id="L690">                    doc = reimbursementDocumentRepository.findById(docDTO.getDocId()).orElse(new ReimbursementDocument());</span>
+                } else {
+<span class="nc" id="L692">                    doc = new ReimbursementDocument();</span>
+                }
+
+<span class="nc" id="L695">                doc.setRequestNumber(requestNumber);</span>
+<span class="nc" id="L696">                doc.setRequestId(requestId);</span>
+<span class="nc" id="L697">                doc.setUploadedby(token.getUsername().toString());</span>
+<span class="nc" id="L698">                doc.setUploadedon(new Date());</span>
+
+<span class="nc" id="L700">                doc.setDocflag(StringUtils.defaultIfBlank(docDTO.getDocFlag(), &quot;N&quot;));</span>
+<span class="nc" id="L701">                doc.setDoctype(docDTO.getDoctype());</span>
+<span class="nc" id="L702">                doc.setDocLink(&quot;/api/reimbursement/&quot; + requestId + &quot;/downloadReimbursement&quot;);</span>
+
+<span class="nc" id="L704">                MultipartFile file = fileMap.get(docDTO.getDocName());</span>
+<span class="nc bnc" id="L705" title="All 4 branches missed.">                if (file != null &amp;&amp; !file.isEmpty()) {</span>
+<span class="nc" id="L706">                    doc.setDocname(file.getOriginalFilename());</span>
+<span class="nc" id="L707">                    doc.setDocsize(String.valueOf(file.getSize()));</span>
+<span class="nc" id="L708">                    doc.setDocument(file.getBytes());</span>
+                } else {
+<span class="nc" id="L710">                    doc.setDocname(docDTO.getDocName());</span>
+<span class="nc" id="L711">                    doc.setDocsize(docDTO.getDocSize());</span>
+                }
+<span class="nc" id="L713">                reimbursementDocumentRepository.save(doc);</span>
+<span class="nc" id="L714">            }</span>
+<span class="nc" id="L715">        }</span>
+<span class="nc" id="L716">        return true;</span>
+    }
+
+    private void logActionHistory(String requestNumber, UserLoginDetail token, String actionName) {
+<span class="nc" id="L720">        ReimbursementActionHistory history = new ReimbursementActionHistory();</span>
+<span class="nc" id="L721">        history.setActionname(actionName);</span>
+<span class="nc" id="L722">        history.setRequestnumber(requestNumber);</span>
+<span class="nc" id="L723">        history.setRemark(&quot;NA&quot;);</span>
+<span class="nc" id="L724">        history.setUsername(token.getUsername().toString());</span>
+<span class="nc" id="L725">        history.setActionby(token.getUsername().toString());</span>
+<span class="nc" id="L726">        history.setAssignedto(&quot;&quot;);</span>
+<span class="nc" id="L727">        history.setCreatedBy(token.getUsername().toString());</span>
+<span class="nc" id="L728">        history.setLastUpdatedBy(token.getUsername().toString());</span>
+
+<span class="nc" id="L730">        reimbursementActionHistoryRepository.save(history);</span>
+<span class="nc" id="L731">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

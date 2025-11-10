@@ -1,0 +1,351 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OnboardingService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.employement.employee_on_boarding</a> &gt; <span class="el_source">OnboardingService.java</span></div><h1>OnboardingService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.employement.employee_on_boarding;
+import com.atomicnorth.hrm.tenant.domain.employement.employee_job_applicant.JobApplicant;
+import com.atomicnorth.hrm.tenant.domain.employement.employee_on_boarding.OnboardActivity;
+import com.atomicnorth.hrm.tenant.domain.employement.employee_on_boarding.OnboardApplicant;
+import com.atomicnorth.hrm.tenant.domain.jobOpening.JobOffer;
+import com.atomicnorth.hrm.tenant.domain.jobOpening.JobOpening;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.DepartmentRepository;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.repository.LookupCodeRepository;
+import com.atomicnorth.hrm.tenant.repository.employement.employee_job_applicant.JobApplicantRepository;
+import com.atomicnorth.hrm.tenant.repository.employement.employee_on_boarding.OnboardActivityRepo;
+import com.atomicnorth.hrm.tenant.repository.employement.employee_on_boarding.OnboardApplicantRepo;
+import com.atomicnorth.hrm.tenant.repository.jobOpening.JobOfferRepository;
+import com.atomicnorth.hrm.tenant.repository.jobOpening.JobOpeningRepository;
+import com.atomicnorth.hrm.tenant.service.EmployeeService;
+import com.atomicnorth.hrm.tenant.service.dto.employement.Response.EmployeeResponseDTO;
+import com.atomicnorth.hrm.tenant.service.dto.employement.employee_on_boarding.OnboardingActivitesDTO;
+import com.atomicnorth.hrm.tenant.service.dto.employement.employee_on_boarding.OnboardingApplicantDTO;
+import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.persistence.EntityNotFoundException;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Path;
+import javax.persistence.criteria.Root;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L54">public class OnboardingService {</span>
+
+<span class="nc" id="L56">    private final Logger logger = LoggerFactory.getLogger(OnboardingService.class);</span>
+    @Autowired
+    private OnboardApplicantRepo onboardApplicantRepo;
+    @Autowired
+    private ModelMapper modelMapper;
+    @Autowired
+    private OnboardActivityRepo onboardActivityRepository;
+    @Autowired
+    private DepartmentRepository departmentRepository;
+    @Autowired
+    private EmployeeRepository employeeRepository;
+    @Autowired
+    private LookupCodeRepository lookupCodeRepository;
+    @Autowired
+    private JobApplicantRepository employeeJobApplicantRepository;
+    @Autowired
+    private JobOfferRepository jobOfferRepository;
+    @Autowired
+    private EmployeeService employeeService;
+    @Autowired
+    private JobOpeningRepository jobOpeningRepository;
+
+    @Transactional
+    public OnboardingApplicantDTO saveOrUpdateJobApplicantAndOnboarding(OnboardingApplicantDTO request) {
+<span class="nc" id="L80">        UserLoginDetail user = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L81">        String username = String.valueOf(user.getUsername());</span>
+
+<span class="nc" id="L83">        OnboardApplicant onboardApplicant = Optional.ofNullable(request.getOnboardingId())</span>
+<span class="nc" id="L84">                .flatMap(onboardApplicantRepo::findById)</span>
+<span class="nc" id="L85">                .orElseGet(OnboardApplicant::new);</span>
+
+<span class="nc bnc" id="L87" title="All 4 branches missed.">        if (request.getOnboardingId() != null &amp;&amp; employeeService.checkEmployeeExists(onboardApplicant.getJobApplicantId())) {</span>
+<span class="nc" id="L88">            throw new IllegalArgumentException(&quot;Employee already exists for this applicant.&quot;);</span>
+        }
+<span class="nc" id="L90">        modelMapper.map(request, onboardApplicant);</span>
+<span class="nc" id="L91">        onboardApplicant.setCreatedBy(username);</span>
+<span class="nc" id="L92">        onboardApplicant.setLastUpdatedBy(username);</span>
+<span class="nc" id="L93">        onboardApplicant.setLastUpdatedDate(new Date());</span>
+<span class="nc" id="L94">        onboardApplicant = onboardApplicantRepo.save(onboardApplicant);</span>
+
+<span class="nc" id="L96">        OnboardingApplicantDTO responseDTO = modelMapper.map(onboardApplicant, OnboardingApplicantDTO.class);</span>
+<span class="nc" id="L97">        List&lt;OnboardingActivitesDTO&gt; activityResponses = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L99" title="All 2 branches missed.">        for (OnboardingActivitesDTO activityRequest : request.getOnboardingActivities()) {</span>
+            OnboardActivity onboardActivity;
+<span class="nc" id="L101">            Integer onboardingId = onboardApplicant.getOnboardingId();</span>
+
+<span class="nc bnc" id="L103" title="All 2 branches missed.">            if (activityRequest.getActivityId() == null) {</span>
+<span class="nc" id="L104">                onboardActivity = new OnboardActivity();</span>
+<span class="nc" id="L105">                modelMapper.map(activityRequest, onboardActivity);</span>
+<span class="nc" id="L106">                onboardActivity.setOnboardingId(onboardingId);</span>
+<span class="nc" id="L107">                onboardActivity.setCreatedBy(username);</span>
+            } else {
+<span class="nc" id="L109">                onboardActivity = onboardActivityRepository.findById(activityRequest.getActivityId())</span>
+<span class="nc" id="L110">                        .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Onboarding Activity not found&quot;));</span>
+<span class="nc bnc" id="L111" title="All 2 branches missed.">                if (!onboardActivity.getOnboardingId().equals(onboardingId)) {</span>
+<span class="nc" id="L112">                    throw new IllegalArgumentException(&quot;Activity does not belong to the specified applicant.&quot;);</span>
+                }
+
+<span class="nc" id="L115">                modelMapper.map(activityRequest, onboardActivity);</span>
+            }
+<span class="nc" id="L117">            onboardActivity.setLastUpdatedBy(username);</span>
+<span class="nc" id="L118">            onboardActivity.setLastUpdatedDate(new Date());</span>
+
+<span class="nc bnc" id="L120" title="All 2 branches missed.">            if (&quot;IN-ACTIVE&quot;.equalsIgnoreCase(activityRequest.getStatus())) {</span>
+<span class="nc" id="L121">                onboardActivity.setStatus(&quot;IN-ACTIVE&quot;);</span>
+            } else {
+<span class="nc" id="L123">                onboardActivity.setStatus(activityRequest.getStatus());</span>
+            }
+
+<span class="nc" id="L126">            onboardActivityRepository.save(onboardActivity);</span>
+
+<span class="nc" id="L128">            OnboardingActivitesDTO activityResponse = modelMapper.map(onboardActivity, OnboardingActivitesDTO.class);</span>
+<span class="nc" id="L129">            activityResponse.setDepartment(onboardActivity.getDepartment());</span>
+<span class="nc" id="L130">            activityResponses.add(activityResponse);</span>
+<span class="nc" id="L131">        }</span>
+
+<span class="nc" id="L133">        responseDTO.setOnboardingActivities(activityResponses);</span>
+<span class="nc" id="L134">        return responseDTO;</span>
+    }
+
+    public Map&lt;String, Object&gt; getOnboardingData(Pageable pageable, String searchColumn, String searchValue) {
+        Page&lt;OnboardApplicant&gt; onboardingApplicants;
+
+<span class="nc bnc" id="L140" title="All 2 branches missed.">        if (&quot;designationName&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L141">            onboardingApplicants = onboardApplicantRepo.findByDesignationEntity_DesignationNameContainingIgnoreCase(searchValue, pageable);</span>
+<span class="nc bnc" id="L142" title="All 2 branches missed.">        } else if (&quot;fullName&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L143">            onboardingApplicants = onboardApplicantRepo.findByEmployeeJobApplicant_applicantNameContainingIgnoreCase(searchValue, pageable);</span>
+<span class="nc bnc" id="L144" title="All 2 branches missed.">        } else if (&quot;departmentName&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L145">            onboardingApplicants = onboardApplicantRepo.findByDepartmentEntity_dnameContainingIgnoreCase(searchValue, pageable);</span>
+<span class="nc bnc" id="L146" title="All 2 branches missed.">        } else if (&quot;holidayName&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L147">            onboardingApplicants = onboardApplicantRepo.findByHolidaysCalendar_NameContainingIgnoreCase(searchValue, pageable);</span>
+<span class="nc bnc" id="L148" title="All 2 branches missed.">        } else if (&quot;JobOfferName&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L149">            onboardingApplicants = onboardApplicantRepo.findByJobOfferEntity_jobOfferNameContainingIgnoreCase(searchValue, pageable);</span>
+<span class="nc bnc" id="L150" title="All 4 branches missed.">        } else if (!searchColumn.isBlank() &amp;&amp; !searchValue.isBlank()) {</span>
+<span class="nc" id="L151">            Specification&lt;OnboardApplicant&gt; spec = searchByColumnOnboardApplicant(searchColumn, searchValue);</span>
+<span class="nc" id="L152">            onboardingApplicants = onboardApplicantRepo.findAll(spec, pageable);</span>
+<span class="nc" id="L153">        } else {</span>
+<span class="nc" id="L154">            pageable = resolveSortFields(pageable);</span>
+<span class="nc" id="L155">            onboardingApplicants = onboardApplicantRepo.findAll(pageable);</span>
+        }
+
+<span class="nc" id="L158">        List&lt;OnboardingApplicantDTO&gt; onboardingApplicantDTOS = onboardingApplicants.getContent().stream()</span>
+<span class="nc" id="L159">                .map(this::convertToDTO)</span>
+<span class="nc" id="L160">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L162">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L163">        response.put(&quot;result&quot;, onboardingApplicantDTOS);</span>
+<span class="nc" id="L164">        response.put(&quot;currentPage&quot;, pageable.getPageNumber() + 1);</span>
+<span class="nc" id="L165">        response.put(&quot;pageSize&quot;, pageable.getPageSize());</span>
+<span class="nc" id="L166">        response.put(&quot;totalItems&quot;, onboardingApplicants.getTotalElements());</span>
+<span class="nc" id="L167">        response.put(&quot;totalPages&quot;, onboardingApplicants.getTotalPages());</span>
+
+<span class="nc" id="L169">        return response;</span>
+    }
+
+    private Pageable resolveSortFields(Pageable pageable) {
+<span class="nc" id="L173">        List&lt;Sort.Order&gt; orders = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L174">        Sort sort = pageable.getSort();</span>
+
+<span class="nc" id="L176">        sort.get().forEach(order -&gt; {</span>
+<span class="nc bnc" id="L177" title="All 6 branches missed.">            switch (order.getProperty()) {</span>
+                case &quot;departmentName&quot;:
+<span class="nc" id="L179">                    orders.add(new Sort.Order(order.getDirection(), &quot;departmentEntity.dname&quot;));</span>
+<span class="nc" id="L180">                    break;</span>
+                case &quot;designationName&quot;:
+<span class="nc" id="L182">                    orders.add(new Sort.Order(order.getDirection(), &quot;designationEntity.designationName&quot;));</span>
+<span class="nc" id="L183">                    break;</span>
+                case &quot;fullName&quot;:
+<span class="nc" id="L185">                    orders.add(new Sort.Order(order.getDirection(), &quot;employeeJobApplicant.applicantName&quot;));</span>
+<span class="nc" id="L186">                    break;</span>
+                case &quot;holidayName&quot;:
+<span class="nc" id="L188">                    orders.add(new Sort.Order(order.getDirection(), &quot;holidaysCalendar.name&quot;));</span>
+<span class="nc" id="L189">                    break;</span>
+                case &quot;jobOfferName&quot;:
+<span class="nc" id="L191">                    orders.add(new Sort.Order(order.getDirection(), &quot;jobOfferEntity.jobOfferName&quot;));</span>
+                    break;
+            }
+<span class="nc" id="L194">        });</span>
+
+<span class="nc bnc" id="L196" title="All 2 branches missed.">        return orders.isEmpty() ? pageable : PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(orders));</span>
+    }
+
+    private OnboardingApplicantDTO convertToDTO(OnboardApplicant entity) {
+<span class="nc" id="L200">        OnboardingApplicantDTO dto = modelMapper.map(entity, OnboardingApplicantDTO.class);</span>
+<span class="nc bnc" id="L201" title="All 2 branches missed.">        dto.setDesignationName(entity.getDesignationEntity() != null ? entity.getDesignationEntity().getDesignationName() : &quot;Unknown Designation&quot;);</span>
+<span class="nc bnc" id="L202" title="All 2 branches missed.">        dto.setDepartmentName(entity.getDepartmentEntity() != null ? entity.getDepartmentEntity().getDname() : &quot;Unknown Department&quot;);</span>
+<span class="nc bnc" id="L203" title="All 2 branches missed.">        dto.setHolidayName(entity.getHolidaysCalendar() != null ? entity.getHolidaysCalendar().getName() : &quot;Unknown Holiday&quot;);</span>
+<span class="nc bnc" id="L204" title="All 2 branches missed.">        dto.setFullName(entity.getEmployeeJobApplicant() != null ? entity.getEmployeeJobApplicant().getApplicantName() : &quot;Unknown Full Name&quot;);</span>
+<span class="nc bnc" id="L205" title="All 2 branches missed.">        dto.setJobOfferName(entity.getJobOfferEntity() != null ? entity.getJobOfferEntity().getJobOfferName() : &quot;Unknown Job Offer Name&quot;);</span>
+<span class="nc" id="L206">        return dto;</span>
+    }
+
+    public static Specification&lt;OnboardApplicant&gt; searchByColumnOnboardApplicant(String column, String value) {
+<span class="nc" id="L210">        return (Root&lt;OnboardApplicant&gt; root, CriteriaQuery&lt;?&gt; query, CriteriaBuilder criteriaBuilder) -&gt; {</span>
+<span class="nc" id="L211">            Path&lt;?&gt; path = root.get(column);</span>
+<span class="nc" id="L212">            Class&lt;?&gt; javaType = path.getJavaType();</span>
+
+<span class="nc bnc" id="L214" title="All 2 branches missed.">            if (javaType.equals(String.class)) {</span>
+<span class="nc" id="L215">                return criteriaBuilder.like(criteriaBuilder.lower(root.get(column)), &quot;%&quot; + value.toLowerCase() + &quot;%&quot;);</span>
+<span class="nc bnc" id="L216" title="All 2 branches missed.">            } else if (javaType.equals(LocalDate.class)) {</span>
+                try {
+<span class="nc" id="L218">                    LocalDate parsedDate = LocalDate.parse(value);</span>
+<span class="nc" id="L219">                    return criteriaBuilder.equal(root.get(column), parsedDate);</span>
+<span class="nc" id="L220">                } catch (DateTimeParseException e) {</span>
+<span class="nc" id="L221">                    throw new RuntimeException(&quot;Invalid date format for field: &quot; + column, e);</span>
+                }
+<span class="nc bnc" id="L223" title="All 2 branches missed.">            } else if (javaType.equals(Date.class)) {</span>
+                try {
+<span class="nc" id="L225">                    Date parsedDate = new SimpleDateFormat(&quot;yyyy-MM-dd&quot;).parse(value);</span>
+<span class="nc" id="L226">                    return criteriaBuilder.equal(root.get(column), parsedDate);</span>
+<span class="nc" id="L227">                } catch (ParseException e) {</span>
+<span class="nc" id="L228">                    throw new RuntimeException(&quot;Invalid date format for field: &quot; + column, e);</span>
+                }
+<span class="nc bnc" id="L230" title="All 6 branches missed.">            } else if (Number.class.isAssignableFrom(javaType) || javaType.equals(int.class) || javaType.equals(long.class)) {</span>
+<span class="nc" id="L231">                return criteriaBuilder.equal(root.get(column), Long.valueOf(value));</span>
+<span class="nc bnc" id="L232" title="All 4 branches missed.">            } else if (javaType.equals(Boolean.class) || javaType.equals(boolean.class)) {</span>
+<span class="nc bnc" id="L233" title="All 4 branches missed.">                Boolean boolValue = &quot;true&quot;.equalsIgnoreCase(value) || &quot;active&quot;.equalsIgnoreCase(value);</span>
+<span class="nc" id="L234">                return criteriaBuilder.equal(root.get(column), boolValue);</span>
+            } else {
+<span class="nc" id="L236">                return criteriaBuilder.equal(root.get(column), value);</span>
+            }
+        };
+    }
+
+
+    public OnboardingApplicantDTO getOnboardingById(Integer onboardingId) {
+<span class="nc" id="L243">        OnboardApplicant onboardApplicant = onboardApplicantRepo.findById(onboardingId)</span>
+<span class="nc" id="L244">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Onboarding record not found for ID: &quot; + onboardingId));</span>
+<span class="nc" id="L245">        return mapToDTO(onboardApplicant);</span>
+    }
+
+    private OnboardingApplicantDTO mapToDTO(OnboardApplicant onboardApplicant) {
+<span class="nc" id="L249">        OnboardingApplicantDTO onboardingApplicantDTO = new OnboardingApplicantDTO();</span>
+<span class="nc" id="L250">        modelMapper.map(onboardApplicant, onboardingApplicantDTO);</span>
+<span class="nc" id="L251">        onboardingApplicantDTO.setApplicantName(onboardApplicant.getEmployeeJobApplicant().getApplicantName());</span>
+<span class="nc bnc" id="L252" title="All 2 branches missed.">        onboardingApplicantDTO.setJobOfferName(onboardApplicant.getJobOfferEntity() != null ? onboardApplicant.getJobOfferEntity().getJobOfferName() : &quot;Unknown Job Offer&quot;);</span>
+<span class="nc" id="L253">        List&lt;OnboardActivity&gt; onboardActivities = onboardActivityRepository.findByOnboardingId(onboardApplicant.getOnboardingId());</span>
+<span class="nc bnc" id="L254" title="All 2 branches missed.">        if (!onboardActivities.isEmpty()) {</span>
+<span class="nc" id="L255">            List&lt;OnboardingActivitesDTO&gt; onboardingActivitiesDOS = onboardActivities.stream()</span>
+<span class="nc bnc" id="L256" title="All 2 branches missed.">                    .filter(activity -&gt; !&quot;D&quot;.equalsIgnoreCase(activity.getStatus()))</span>
+<span class="nc" id="L257">                    .map(this::convertToDTOActivity)</span>
+<span class="nc" id="L258">                    .collect(Collectors.toList());</span>
+<span class="nc" id="L259">            onboardingApplicantDTO.setOnboardingActivities(onboardingActivitiesDOS);</span>
+        }
+<span class="nc" id="L261">        return onboardingApplicantDTO;</span>
+    }
+
+    private OnboardingActivitesDTO convertToDTOActivity(OnboardActivity onboardActivity) {
+<span class="nc" id="L265">        OnboardingActivitesDTO onboardingActivitesDTO = new OnboardingActivitesDTO();</span>
+<span class="nc" id="L266">        modelMapper.map(onboardActivity, onboardingActivitesDTO);</span>
+<span class="nc" id="L267">        onboardingActivitesDTO.setActivityName(lookupCodeRepository.findByLookupCodeId(onboardingActivitesDTO.getActivityCode()).orElse(&quot;Unknown Activity&quot;));</span>
+<span class="nc" id="L268">        onboardingActivitesDTO.setDepartmentName(departmentRepository.findDepartmentNameById(Long.valueOf(onboardingActivitesDTO.getDepartment())).orElse(&quot;Unknown Department&quot;));</span>
+<span class="nc" id="L269">        onboardingActivitesDTO.setAssignedUserName(employeeRepository.findEmployeeFullNameById(Long.valueOf(onboardingActivitesDTO.getAssignedUser())).orElse(&quot;Unknown Department&quot;));</span>
+<span class="nc" id="L270">        return onboardingActivitesDTO;</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;OnboardingActivitesDTO&gt; getOnboardingActivityById(Integer onboardingId) {
+<span class="nc bnc" id="L275" title="All 2 branches missed.">        if (onboardingId == null) {</span>
+<span class="nc" id="L276">            throw new IllegalArgumentException(&quot;onboardingId must not be null&quot;);</span>
+        }
+
+<span class="nc" id="L279">        List&lt;OnboardActivity&gt; onboardActivities = onboardActivityRepository.findByOnboardingId(onboardingId);</span>
+
+<span class="nc bnc" id="L281" title="All 2 branches missed.">        if (onboardActivities.isEmpty()) {</span>
+<span class="nc" id="L282">            return Collections.emptyList();</span>
+        }
+
+<span class="nc" id="L285">        return onboardActivities.stream()</span>
+<span class="nc bnc" id="L286" title="All 2 branches missed.">                .filter(activity -&gt; !&quot;D&quot;.equalsIgnoreCase(activity.getStatus()))</span>
+<span class="nc" id="L287">                .map(this::convertToDTOActivity)</span>
+<span class="nc" id="L288">                .collect(Collectors.toList());</span>
+    }
+
+    @Transactional
+    public OnboardingActivitesDTO updateOnboardingActivity(Integer onboardingActivityId, String status) {
+<span class="nc" id="L293">        UserLoginDetail token = SessionHolder.getUserLoginDetail();</span>
+<span class="nc bnc" id="L294" title="All 4 branches missed.">        if (status == null || status.isBlank()) {</span>
+<span class="nc" id="L295">            throw new IllegalArgumentException(&quot;Status must not be null or empty&quot;);</span>
+        }
+
+<span class="nc" id="L298">        OnboardActivity onboardActivity = onboardActivityRepository.findById(onboardingActivityId)</span>
+<span class="nc" id="L299">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Onboarding Activity not found&quot;));</span>
+
+<span class="nc bnc" id="L301" title="All 2 branches missed.">        if (Objects.equals(onboardActivity.getStatus(), status)) {</span>
+<span class="nc" id="L302">            throw new IllegalStateException(&quot;Status is already set to: &quot; + status);</span>
+        }
+
+<span class="nc" id="L305">        onboardActivity.setStatus(status);</span>
+<span class="nc" id="L306">        onboardActivity.setLastUpdatedBy(String.valueOf(token.getUsername()));</span>
+<span class="nc" id="L307">        OnboardActivity savedActivity = onboardActivityRepository.save(onboardActivity);</span>
+
+<span class="nc" id="L309">        List&lt;OnboardActivity&gt; onboardActivities = onboardActivityRepository.findByOnboardingId(onboardActivity.getOnboardingId());</span>
+<span class="nc" id="L310">        boolean hasIncomplete = onboardActivities.stream()</span>
+<span class="nc bnc" id="L311" title="All 2 branches missed.">                .anyMatch(act -&gt; !Objects.equals(act.getStatus(), &quot;Completed&quot;));</span>
+
+<span class="nc bnc" id="L313" title="All 2 branches missed.">        if (!hasIncomplete) {</span>
+<span class="nc" id="L314">            createEmployee(onboardActivity.getOnboardingId());</span>
+        }
+
+<span class="nc" id="L317">        return modelMapper.map(savedActivity, OnboardingActivitesDTO.class);</span>
+    }
+
+    private void createEmployee(Integer OnboardingId) {
+<span class="nc" id="L321">        OnboardApplicant onboardApplicant = onboardApplicantRepo.findById(OnboardingId).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Onboarding Employee not found&quot;));</span>
+<span class="nc" id="L322">        JobApplicant employeeJobApplicant = employeeJobApplicantRepository.findById(onboardApplicant.getJobApplicantId()).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Applicant not found&quot;));</span>
+<span class="nc" id="L323">        JobOffer jobOffer = jobOfferRepository.findByJobApplicantId(onboardApplicant.getJobApplicantId()).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Job Offer not found&quot;));</span>
+<span class="nc" id="L324">        Optional&lt;JobOpening&gt; jobOpening = Optional.ofNullable(employeeJobApplicant.getJobOpeningId()).flatMap(jobOpeningRepository::findById);</span>
+<span class="nc" id="L325">        String[] name = employeeJobApplicant.getApplicantName().trim().split(&quot;\\s+&quot;);</span>
+<span class="nc bnc" id="L326" title="All 2 branches missed.">        String firstName = name.length &gt; 0 ? name[0] : &quot;&quot;;</span>
+<span class="nc bnc" id="L327" title="All 2 branches missed.">        String lastName = name.length &gt; 1 ? name[name.length - 1] : &quot;&quot;;</span>
+<span class="nc bnc" id="L328" title="All 2 branches missed.">        String middleName = name.length &gt; 2</span>
+<span class="nc" id="L329">                ? String.join(&quot; &quot;, Arrays.copyOfRange(name, 1, name.length - 1))</span>
+<span class="nc" id="L330">                : &quot;&quot;;</span>
+
+<span class="nc" id="L332">        EmployeeResponseDTO employeeDTO = new EmployeeResponseDTO();</span>
+<span class="nc" id="L333">        employeeDTO.setFirstName(firstName);</span>
+<span class="nc" id="L334">        employeeDTO.setLastName(lastName);</span>
+<span class="nc" id="L335">        employeeDTO.setMiddleName(middleName);</span>
+<span class="nc" id="L336">        employeeDTO.setPersonalEmail(employeeJobApplicant.getEmailAddress());</span>
+<span class="nc" id="L337">        employeeDTO.setPrimaryContactNumber(employeeJobApplicant.getPhoneNumber());</span>
+<span class="nc" id="L338">        employeeDTO.setHolidayListId(onboardApplicant.getHoliday());</span>
+<span class="nc" id="L339">        employeeDTO.setJobApplicantId(onboardApplicant.getJobApplicantId());</span>
+<span class="nc" id="L340">        employeeDTO.setIsActive(&quot;Y&quot;);</span>
+<span class="nc bnc" id="L341" title="All 2 branches missed.">        employeeDTO.setDepartmentId(employeeJobApplicant.getDepartmentId() != null ? Long.valueOf(employeeJobApplicant.getDepartmentId()) : null);</span>
+<span class="nc" id="L342">        employeeDTO.setDesignationId(employeeJobApplicant.getDesignationId());</span>
+<span class="nc" id="L343">        employeeDTO.setOfferDate(jobOffer.getOfferDate());</span>
+<span class="nc" id="L344">        employeeDTO.setOnBoardingDate(onboardApplicant.getOnboardingBeginsOn());</span>
+<span class="nc" id="L345">        employeeDTO.setEffectiveStartDate(onboardApplicant.getDateOfJoining());</span>
+<span class="nc" id="L346">        employeeDTO.setNoticeDays(jobOffer.getNoticePeriod());</span>
+<span class="nc" id="L347">        employeeDTO.setEmployeeType(jobOpening.map(JobOpening::getEmploymentType).orElse(null));</span>
+<span class="nc" id="L348">        employeeService.addEmployee(employeeDTO, false);</span>
+<span class="nc" id="L349">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserResource.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest</a> &gt; <span class="el_source">UserResource.java</span></div><h1>UserResource.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest;
+
+import com.atomicnorth.hrm.configuration.security.AuthoritiesConstants;
+import com.atomicnorth.hrm.tenant.domain.User;
+import com.atomicnorth.hrm.tenant.domain.accessgroup.SesM00UserDivisionMaster;
+import com.atomicnorth.hrm.tenant.repository.UserRepository;
+import com.atomicnorth.hrm.tenant.service.EmailAlreadyUsedException;
+import com.atomicnorth.hrm.tenant.service.UserService;
+import com.atomicnorth.hrm.tenant.service.dto.AdminUserDTO;
+import com.atomicnorth.hrm.tenant.service.dto.EmployeeDTO;
+import com.atomicnorth.hrm.tenant.web.rest.errors.LoginAlreadyUsedException;
+import com.atomicnorth.hrm.util.HeaderUtil;
+import com.atomicnorth.hrm.util.ResponseUtil;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import java.util.*;
+
+@RestController
+@EnableTransactionManagement
+@RequestMapping(&quot;/api/admin&quot;)
+public class UserResource {
+
+<span class="nc" id="L36">    private final Logger log = LoggerFactory.getLogger(UserResource.class);</span>
+    private final UserService userService;
+    private final UserRepository userRepository;
+    @Value(&quot;${spring.application.name}&quot;)
+    private String applicationName;
+
+<span class="nc" id="L42">    public UserResource(UserService userService, UserRepository userRepository) {</span>
+<span class="nc" id="L43">        this.userService = userService;</span>
+<span class="nc" id="L44">        this.userRepository = userRepository;</span>
+<span class="nc" id="L45">    }</span>
+
+    @PutMapping(&quot;/users&quot;)
+    @PreAuthorize(&quot;hasAuthority(\&quot;&quot; + AuthoritiesConstants.ADMIN + &quot;\&quot;)&quot;)
+    public ResponseEntity&lt;AdminUserDTO&gt; updateUser(@Valid @RequestBody AdminUserDTO userDTO) {
+<span class="nc" id="L50">        log.debug(&quot;REST request to update User : {}&quot;, userDTO);</span>
+<span class="nc" id="L51">        Optional&lt;User&gt; existingUser = userRepository.findOneByEmailIgnoreCase(userDTO.getEmail());</span>
+<span class="nc bnc" id="L52" title="All 4 branches missed.">        if (existingUser.isPresent() &amp;&amp; (!existingUser.get().getId().equals(userDTO.getId()))) {</span>
+<span class="nc" id="L53">            throw new EmailAlreadyUsedException();</span>
+        }
+<span class="nc" id="L55">        existingUser = userRepository.findByEmail(userDTO.getEmail().toLowerCase());</span>
+<span class="nc bnc" id="L56" title="All 4 branches missed.">        if (existingUser.isPresent() &amp;&amp; (!existingUser.get().getId().equals(userDTO.getId()))) {</span>
+<span class="nc" id="L57">            throw new LoginAlreadyUsedException();</span>
+        }
+<span class="nc" id="L59">        Optional&lt;AdminUserDTO&gt; updatedUser = userService.updateUser(userDTO);</span>
+
+<span class="nc" id="L61">        return ResponseUtil.wrapOrNotFound(updatedUser, HeaderUtil.createAlert(applicationName, &quot;userManagement.updated&quot;, userDTO.getEmail()));</span>
+    }
+
+    //API CREATED FOR FETCH REPORTING MANAGER NAME
+    @GetMapping(&quot;/users/reportingManager&quot;)
+    public ResponseEntity&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; getAllUserTableEntityRMName() {
+<span class="nc" id="L67">        List&lt;Map&lt;String, Object&gt;&gt; rm = userService.getAllUserTableEntityRMName();</span>
+<span class="nc" id="L68">        return new ResponseEntity&lt;&gt;(rm, HttpStatus.OK);</span>
+    }
+
+    @GetMapping(&quot;/users/hrmanager&quot;)
+    public ResponseEntity&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; getAllUserTableEntityHRName() {
+<span class="nc" id="L73">        List&lt;Map&lt;String, Object&gt;&gt; hr = userService.getAllUserTableEntityHRName();</span>
+<span class="nc" id="L74">        return new ResponseEntity&lt;&gt;(hr, HttpStatus.OK);</span>
+    }
+
+    @GetMapping(&quot;/divisions&quot;)
+    public ResponseEntity&lt;List&lt;SesM00UserDivisionMaster&gt;&gt; getAllDivisions() {
+        try {
+<span class="nc" id="L80">            List&lt;SesM00UserDivisionMaster&gt; divisions = userService.getAllDivisions();</span>
+<span class="nc" id="L81">            return new ResponseEntity&lt;&gt;(divisions, HttpStatus.OK);</span>
+<span class="nc" id="L82">        } catch (Exception e) {</span>
+<span class="nc" id="L83">            return new ResponseEntity&lt;&gt;(HttpStatus.INTERNAL_SERVER_ERROR);</span>
+        }
+    }
+
+    @PostMapping(&quot;/create&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;AdminUserDTO&gt;&gt; addUserAssociated(@Valid @RequestBody AdminUserDTO userMasterTestDTO) {
+        try {
+<span class="nc" id="L90">            AdminUserDTO userAssociated = userService.createUserMaster(userMasterTestDTO);</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">            String message = (userAssociated.getId() != null)</span>
+<span class="nc" id="L92">                    ? &quot;USER-UPDATE-SUCCESS&quot;</span>
+<span class="nc" id="L93">                    : &quot;USER-CREATE-SUCCESS&quot;;</span>
+<span class="nc" id="L94">            ApiResponse&lt;AdminUserDTO&gt; response = new ApiResponse&lt;&gt;(</span>
+                    userAssociated,
+                    true,
+                    message,
+                    &quot;Success&quot;
+            );
+<span class="nc" id="L100">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L101">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L102">            ApiResponse&lt;AdminUserDTO&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;USER-CREATE-FAILURE&quot;,
+                    &quot;Warning&quot;,
+<span class="nc" id="L107">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L109">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+<span class="nc" id="L110">        } catch (Exception ex) {</span>
+<span class="nc" id="L111">            ex.printStackTrace();</span>
+<span class="nc" id="L112">            ApiResponse&lt;AdminUserDTO&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;USER-CREATE-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L117">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L119">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/notInAssociations&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getEmployeesNotInAssociations() {
+        try {
+<span class="nc" id="L126">            List&lt;EmployeeDTO&gt; employeeDTOs = userService.getEmployeesNotInAssociations();</span>
+<span class="nc" id="L127">            Map&lt;String, Object&gt; res = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L128">            res.put(&quot;result&quot;, employeeDTOs);</span>
+
+<span class="nc" id="L130">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    res,
+                    true,
+                    &quot;EMPLOYEE-NOT-IN-ASSOCIATION-LIST-SUCCESS&quot;,
+                    &quot;Success&quot;
+            );
+<span class="nc" id="L136">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L137">        } catch (Exception ex) {</span>
+<span class="nc" id="L138">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;EMPLOYEE-NOT-IN-ASSOCIATION-LIST-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L143">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L145">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/allusers&quot;)
+    public HttpEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getAllUsers(
+            @RequestParam(value = &quot;page&quot;, defaultValue = &quot;1&quot;) int page,
+            @RequestParam(value = &quot;size&quot;, defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;id&quot;, required = false) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;, required = false) String sortDir,
+            @RequestParam(value = &quot;searchKeyword&quot;, required = false) String searchKeyword,
+            @RequestParam(value = &quot;searchField&quot;, required = false) String searchField) {
+<span class="nc" id="L157">        log.debug(&quot;REST request to get all Users for an admin with search and sorting&quot;);</span>
+        try {
+<span class="nc" id="L159">            Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc" id="L160">            Map&lt;String, Object&gt; users = userService.getAllManagedUsers(searchKeyword, searchField, pageable);</span>
+
+<span class="nc" id="L162">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    users,
+                    true,
+                    &quot;USER-LIST-SUCCESS&quot;,
+                    &quot;Success&quot;
+            );
+<span class="nc" id="L168">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L169">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L170">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;USER-LIST-FAILURE&quot;,
+                    &quot;Warning&quot;,
+<span class="nc" id="L175">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L177">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+<span class="nc" id="L178">        } catch (Exception e) {</span>
+<span class="nc" id="L179">            e.printStackTrace();</span>
+<span class="nc" id="L180">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;USER-LIST-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L185">                    Collections.singletonList(e.getMessage())</span>
+            );
+<span class="nc" id="L187">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/userDropdownList&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; userDropdownList() {
+        try {
+<span class="nc" id="L194">            List&lt;Map&lt;String, Object&gt;&gt; userDropdownList = userService.userDropdownList();</span>
+<span class="nc" id="L195">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(userDropdownList, true, &quot;USER_LIST_FETCHED_SUCCESS&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L196">        } catch (Exception e) {</span>
+<span class="nc" id="L197">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;USER_LIST_FETCHED_ERROR&quot;, &quot;ERROR&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

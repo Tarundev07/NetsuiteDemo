@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ApprovalFlowController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.approvalflow</a> &gt; <span class="el_source">ApprovalFlowController.java</span></div><h1>ApprovalFlowController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.approvalflow;
+
+import com.atomicnorth.hrm.tenant.domain.approvalflow.ApprovalFlowDelegation;
+import com.atomicnorth.hrm.tenant.domain.approvalflow.Level;
+import com.atomicnorth.hrm.tenant.repository.approvalflow.ApprovalFlowRepository;
+import com.atomicnorth.hrm.tenant.service.approvalflow.ApprovalFlowService;
+import com.atomicnorth.hrm.tenant.service.dto.EmployeeDTO;
+import com.atomicnorth.hrm.tenant.service.dto.approvalflow.ApprovalFlowDelegationDto;
+import com.atomicnorth.hrm.tenant.service.dto.approvalflow.ApprovalFlowDto;
+import com.atomicnorth.hrm.tenant.service.dto.approvalflow.LevelMasterDTO;
+import com.atomicnorth.hrm.tenant.service.dto.approvalflow.WorkflowRequestDetailsDto;
+import com.atomicnorth.hrm.tenant.service.dto.designation.DesignationDTO;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping(&quot;api/approvalflow&quot;)
+public class ApprovalFlowController {
+
+    private final ApprovalFlowService approvalFlowService;
+
+    private final ApprovalFlowRepository approvalFlowRepository;
+<span class="nc" id="L38">    public ApprovalFlowController(ApprovalFlowService approvalFlowService,ApprovalFlowRepository approvalFlowRepository){</span>
+<span class="nc" id="L39">        this.approvalFlowService = approvalFlowService;</span>
+<span class="nc" id="L40">        this.approvalFlowRepository = approvalFlowRepository;</span>
+<span class="nc" id="L41">    }</span>
+    @GetMapping(&quot;/getApprovalFlow&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getApprovalFlowRequest(
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(required = false) String searchColumn,
+            @RequestParam(required = false) String searchValue,
+            @RequestParam(defaultValue = &quot;approvalFlowId&quot;) String sortBy,
+            @RequestParam(defaultValue = &quot;desc&quot;) String sortDir
+    ) {
+        try {
+<span class="nc" id="L52">            Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc" id="L53">            Map&lt;String, Object&gt; responseData =</span>
+<span class="nc" id="L54">                    approvalFlowService.fetchApprovalFlow(pageable, searchColumn, searchValue);</span>
+<span class="nc" id="L55">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    responseData, true, &quot;APPROVAL-FLOW-RETRIEVED-SUCCESSFULLY&quot;, &quot;Information&quot;);
+<span class="nc" id="L57">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L58">        } catch (Exception ex) {</span>
+<span class="nc" id="L59">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+<span class="nc" id="L60">                    null, false, &quot;APPROVAL-FLOW-RETRIEVAL-FAILED&quot;, &quot;Error&quot;, List.of(ex.getMessage()));</span>
+<span class="nc" id="L61">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;{approvalId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;ApprovalFlowDto&gt;&gt; getApprovalFlowListBasedOnApprovalId(@PathVariable(&quot;approvalId&quot;) Integer approvalId){
+<span class="nc" id="L67">        ApprovalFlowDto approvalFlowDto = approvalFlowService.findApprovalFlow(approvalId);</span>
+<span class="nc bnc" id="L68" title="All 2 branches missed.">        if(approvalFlowDto == null){</span>
+<span class="nc" id="L69">            ApiResponse&lt;ApprovalFlowDto&gt; response = new ApiResponse&lt;&gt;(approvalFlowDto , true, &quot;APPROVAL-FLOW-NOT-AVAILABLE&quot;, &quot;Information&quot;);</span>
+<span class="nc" id="L70">            return ResponseEntity.ok(response);</span>
+        }
+<span class="nc" id="L72">        ApiResponse&lt;ApprovalFlowDto&gt; response = new ApiResponse&lt;&gt;(approvalFlowDto , true, &quot;APPROVAL-FLOW-RETRIEVED-SUCCESSFULLY&quot;, &quot;Information&quot;);</span>
+<span class="nc" id="L73">        return ResponseEntity.ok(response);</span>
+    }
+    @PostMapping(&quot;/approval-flow&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;ApprovalFlowDto&gt;&gt; saveOrUpdateApprovalFlow(
+            @RequestBody ApprovalFlowDto approvalFlowDto) {
+        boolean exists;
+<span class="nc bnc" id="L79" title="All 2 branches missed.">        if (approvalFlowDto.getApprovalFlowId() == null) {</span>
+<span class="nc" id="L80">            exists = approvalFlowRepository.existsByApprovalFlowCodeIgnoreCase(</span>
+<span class="nc" id="L81">                    approvalFlowDto.getApprovalFlowCode()</span>
+            );
+        } else {
+<span class="nc" id="L84">            exists = approvalFlowRepository.existsByApprovalFlowCodeIgnoreCaseAndApprovalFlowIdNot(</span>
+<span class="nc" id="L85">                    approvalFlowDto.getApprovalFlowCode(),</span>
+<span class="nc" id="L86">                    approvalFlowDto.getApprovalFlowId()</span>
+            );
+        }
+
+<span class="nc bnc" id="L90" title="All 2 branches missed.">        if (exists) {</span>
+<span class="nc" id="L91">            ApiResponse&lt;ApprovalFlowDto&gt; response =</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;Approval Flow Code already exists&quot;, &quot;ERROR&quot;);
+<span class="nc" id="L93">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+        }
+<span class="nc" id="L95">        String validationMsg = approvalFlowService.validateDuplicateRequestMappings(approvalFlowDto);</span>
+<span class="nc bnc" id="L96" title="All 2 branches missed.">        if (validationMsg != null) {</span>
+<span class="nc" id="L97">            ApiResponse&lt;ApprovalFlowDto&gt; response =</span>
+                    new ApiResponse&lt;&gt;(null, false, validationMsg, &quot;ERROR&quot;);
+<span class="nc" id="L99">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+        }
+
+<span class="nc" id="L102">        ApprovalFlowDto savedDto = approvalFlowService.saveOrUpdateApprovalFlow(approvalFlowDto);</span>
+<span class="nc bnc" id="L103" title="All 2 branches missed.">        String message = (approvalFlowDto.getApprovalFlowId() == null)</span>
+<span class="nc" id="L104">                ? &quot;APPROVAL-FLOW-SAVED&quot;</span>
+<span class="nc" id="L105">                : &quot;APPROVAL-FLOW-UPDATED&quot;;</span>
+<span class="nc" id="L106">        ApiResponse&lt;ApprovalFlowDto&gt; response =</span>
+                new ApiResponse&lt;&gt;(savedDto, true, message, &quot;SUCCESS&quot;);
+<span class="nc" id="L108">        return ResponseEntity.ok(response);</span>
+    }
+
+
+
+    @GetMapping(&quot;level-list&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Level&gt;&gt;&gt; getLevelName() {
+<span class="nc" id="L115">        List&lt;Level&gt; levelList = approvalFlowService.findLevelName();</span>
+<span class="nc bnc" id="L116" title="All 4 branches missed.">        if (levelList == null || levelList.isEmpty()) {</span>
+<span class="nc" id="L117">            ApiResponse&lt;List&lt;Level&gt;&gt; response =</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;APPROVAL-FLOW-LEVEL-NOT-AVAILABLE&quot;, &quot;Information&quot;);
+<span class="nc" id="L119">            return ResponseEntity.ok(response);</span>
+        }
+<span class="nc" id="L121">        ApiResponse&lt;List&lt;Level&gt;&gt; response =</span>
+                new ApiResponse&lt;&gt;(levelList, true, &quot;APPROVAL-FLOW-LEVEL-FETCHED&quot;, &quot;SUCCESS&quot;);
+<span class="nc" id="L123">        return ResponseEntity.ok(response);</span>
+    }
+
+    @GetMapping(&quot;level-list-mapping&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;DesignationDTO&gt;&gt;&gt; getDesignationBasedOnLevelMapping(
+            @RequestParam(&quot;levelId&quot;) Integer levelId) {
+<span class="nc bnc" id="L129" title="All 2 branches missed.">        if (levelId == null) {</span>
+<span class="nc" id="L130">            ApiResponse&lt;List&lt;DesignationDTO&gt;&gt; response =</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;APPROVAL-FLOW-LEVEL-MAPPING-NOT-AVAILABLE&quot;, &quot;FAILURE&quot;);
+<span class="nc" id="L132">            return ResponseEntity.ok(response);</span>
+        }
+<span class="nc" id="L134">        List&lt;DesignationDTO&gt; designationList = approvalFlowService.findDesignationBasedOnLevelMapping(levelId);</span>
+<span class="nc bnc" id="L135" title="All 4 branches missed.">        if (designationList == null || designationList.isEmpty()) {</span>
+<span class="nc" id="L136">            ApiResponse&lt;List&lt;DesignationDTO&gt;&gt; response =</span>
+<span class="nc" id="L137">                    new ApiResponse&lt;&gt;(Collections.emptyList(), false, &quot;DESIGNATIONS-NOT-FOUND&quot;, &quot;INFO&quot;);</span>
+<span class="nc" id="L138">            return ResponseEntity.ok(response);</span>
+        }
+<span class="nc" id="L140">        ApiResponse&lt;List&lt;DesignationDTO&gt;&gt; response =</span>
+                new ApiResponse&lt;&gt;(designationList, true, &quot;DESIGNATIONS-FETCHED-SUCCESSFULLY&quot;, &quot;SUCCESS&quot;);
+<span class="nc" id="L142">        return ResponseEntity.ok(response);</span>
+    }
+
+    @GetMapping(&quot;employee-list-designation&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;EmployeeDTO&gt;&gt;&gt; getEmployeesBasedOnDesignations(
+            @RequestParam(&quot;designationsId&quot;) Integer[] designationsId) {
+<span class="nc bnc" id="L148" title="All 4 branches missed.">        if (designationsId == null || designationsId.length == 0) {</span>
+<span class="nc" id="L149">            ApiResponse&lt;List&lt;EmployeeDTO&gt;&gt; response =</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;DESIGNATION-ID-REQUIRED&quot;, &quot;FAILURE&quot;);
+<span class="nc" id="L151">            return ResponseEntity.badRequest().body(response);</span>
+        }
+<span class="nc" id="L153">        List&lt;EmployeeDTO&gt; employees = approvalFlowService.findEmployeesBasedOnDesignations(designationsId);</span>
+<span class="nc bnc" id="L154" title="All 4 branches missed.">        if (employees == null || employees.isEmpty()) {</span>
+<span class="nc" id="L155">            ApiResponse&lt;List&lt;EmployeeDTO&gt;&gt; response =</span>
+<span class="nc" id="L156">                    new ApiResponse&lt;&gt;(Collections.emptyList(), false, &quot;NO-EMPLOYEES-FOUND&quot;, &quot;INFO&quot;);</span>
+<span class="nc" id="L157">            return ResponseEntity.ok(response);</span>
+        }
+<span class="nc" id="L159">        ApiResponse&lt;List&lt;EmployeeDTO&gt;&gt; response =</span>
+                new ApiResponse&lt;&gt;(employees, true, &quot;EMPLOYEES-FETCHED-SUCCESSFULLY&quot;, &quot;SUCCESS&quot;);
+<span class="nc" id="L161">        return ResponseEntity.ok(response);</span>
+    }
+    @GetMapping(&quot;/delegation/{approvalId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;ApprovalFlowDelegation&gt;&gt;&gt; getApprovalFlowDelegationListBasedOnApprovalId(
+            @PathVariable(&quot;approvalId&quot;) Integer approvalId) {
+
+<span class="nc" id="L167">        List&lt;ApprovalFlowDelegation&gt; approvalFlowDelegationList =</span>
+<span class="nc" id="L168">                approvalFlowService.findDelegationBasedOnApprovalFlow(approvalId);</span>
+<span class="nc bnc" id="L169" title="All 4 branches missed.">        if (approvalFlowDelegationList == null || approvalFlowDelegationList.isEmpty()) {</span>
+<span class="nc" id="L170">            ApiResponse&lt;List&lt;ApprovalFlowDelegation&gt;&gt; response =</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;APPROVAL-FLOW-NOT-AVAILABLE&quot;, &quot;Error&quot;);
+<span class="nc" id="L172">            return ResponseEntity.ok(response);</span>
+        }
+<span class="nc" id="L174">        ApiResponse&lt;List&lt;ApprovalFlowDelegation&gt;&gt; response =</span>
+                new ApiResponse&lt;&gt;(approvalFlowDelegationList, true, &quot;APPROVAL-FLOW-RETRIEVED-SUCCESSFULLY&quot;, &quot;Information&quot;);
+
+<span class="nc" id="L177">        return ResponseEntity.ok(response);</span>
+    }
+
+    @PostMapping(&quot;/saveOrUpdateApprovalFlowDelegation&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;ApprovalFlowDelegationDto&gt;&gt;&gt; saveAndUpdateApprovalFlowDelegation(
+            @RequestBody List&lt;ApprovalFlowDelegationDto&gt; approvalFlowDelegationDtos) {
+<span class="nc" id="L183">        List&lt;ApprovalFlowDelegationDto&gt; savedDtos = approvalFlowService.saveAndWorkFlowDelegation(approvalFlowDelegationDtos);</span>
+
+<span class="nc bnc" id="L185" title="All 4 branches missed.">        if (savedDtos == null || savedDtos.isEmpty()) {</span>
+<span class="nc" id="L186">            ApiResponse&lt;List&lt;ApprovalFlowDelegationDto&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;APPROVAL-FLOW-DELEGATION-NOT-AVAILABLE&quot;,
+                    &quot;Error&quot;
+            );
+<span class="nc" id="L192">            return ResponseEntity.ok(response);</span>
+        }
+
+<span class="nc bnc" id="L195" title="All 4 branches missed.">        String message = (savedDtos.stream().allMatch(d -&gt; d.getId() == null))</span>
+<span class="nc" id="L196">                ? &quot;APPROVAL-FLOW-DELEGATION-SAVED-SUCCESSFULLY&quot;</span>
+<span class="nc" id="L197">                : &quot;APPROVAL-FLOW-DELEGATION-UPDATED-SUCCESSFULLY&quot;;</span>
+
+<span class="nc" id="L199">        ApiResponse&lt;List&lt;ApprovalFlowDelegationDto&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                savedDtos,
+                true,
+                message,
+                &quot;Information&quot;
+        );
+<span class="nc" id="L205">        return ResponseEntity.ok(response);</span>
+    }
+    @GetMapping(&quot;/track/{requestNumber}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;WorkflowRequestDetailsDto&gt;&gt; getWorkflowDetailsByRequestNumber(
+            @PathVariable(&quot;requestNumber&quot;) String requestNumber) {
+<span class="nc" id="L210">        WorkflowRequestDetailsDto dto = approvalFlowService.getWorkflowDetailsByRequestNumber(requestNumber);</span>
+<span class="nc bnc" id="L211" title="All 2 branches missed.">        if (dto == null) {</span>
+<span class="nc" id="L212">            return ResponseEntity.ok(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;WORKFLOW-REQUEST-NOT-FOUND&quot;, &quot;Information&quot;)
+            );
+        }
+<span class="nc" id="L216">        return ResponseEntity.ok(</span>
+                new ApiResponse&lt;&gt;(dto, true, &quot;WORKFLOW-REQUEST-RETRIEVED-SUCCESSFULLY&quot;, &quot;Information&quot;)
+        );
+    }
+
+    @GetMapping(&quot;level-master-list&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; levelMasterList(
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;levelName&quot;, required = false) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;, required = false) String sortDir,
+            @RequestParam(value = &quot;searchKeyword&quot;, required = false) String searchKeyword,
+            @RequestParam(value = &quot;searchField&quot;, required = false) String searchField
+    ) {
+        try {
+<span class="nc" id="L231">            Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc" id="L232">            Map&lt;String, Object&gt; levelMasterList = approvalFlowService.getLevelMasterList(pageable, searchField, searchKeyword);</span>
+<span class="nc" id="L233">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(levelMasterList, true, &quot;LEVEL_MASTER_LIST_FETCHED_SUCCESS&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L234">        } catch (IllegalArgumentException e) {</span>
+<span class="nc" id="L235">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;LEVEL_MASTER_LIST_FETCHED_ERROR&quot;, &quot;ERROR&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+
+    @PostMapping(&quot;save-level-master&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Level&gt;&gt; saveLevelMaster(@RequestBody LevelMasterDTO dto) {
+        try {
+<span class="nc" id="L242">            Level level = approvalFlowService.saveLevelMaster(dto);</span>
+<span class="nc" id="L243">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(level, true, &quot;LEVEL_MASTER_SAVE_SUCCESS&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L244">        } catch (IllegalArgumentException e) {</span>
+<span class="nc" id="L245">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;LEVEL_MASTER_SAVE_ERROR&quot;, &quot;ERROR&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

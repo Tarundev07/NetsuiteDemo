@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmployeeDocumentController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.employement.employeeDocument</a> &gt; <span class="el_source">EmployeeDocumentController.java</span></div><h1>EmployeeDocumentController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.employement.employeeDocument;
+
+import com.atomicnorth.hrm.tenant.service.dto.employement.employeeDocument.EmployeeDocumentResponseDTO;
+import com.atomicnorth.hrm.tenant.service.dto.project.ProjectResponse.ProjectDocumentResponseDTO;
+import com.atomicnorth.hrm.tenant.service.employement.employeeDocument.EmployeeDocumentService;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import com.atomicnorth.hrm.util.commonClass.PaginatedResponse;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.servlet.http.HttpServletRequest;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.Map;
+
+<span class="nc" id="L28">@RequiredArgsConstructor</span>
+<span class="nc" id="L29">@Slf4j</span>
+@RestController
+@RequestMapping(&quot;/api/employees/documents&quot;)
+public class EmployeeDocumentController {
+
+    @Autowired
+    private EmployeeDocumentService service;
+
+    @PostMapping(&quot;/uploadProjectScannedDoc&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;String&gt;&gt; uploadProjectScannedDoc(
+            @RequestParam(&quot;doc&quot;) MultipartFile doc,
+            @RequestParam(&quot;employeeId&quot;) Integer employeeId,
+            @RequestParam(value = &quot;docType&quot;, required = false) String docType,
+            @RequestParam(value = &quot;docName&quot;, required = false) String docName,
+            @RequestParam(value = &quot;docNumber&quot;, required = false) String docNumber,
+            @RequestParam(value = &quot;remark&quot;, required = false) String remark,
+            @RequestParam(value = &quot;id&quot;, required = false) Integer id,
+            HttpServletRequest request) {
+
+        try {
+<span class="nc" id="L49">            log.info(&quot;Received doc upload/update request for projectRfNum: {}, docName: {}, id: {}&quot;, employeeId, docName, id);</span>
+
+            //  File size validation (max 2MB = 2 * 1024 * 1024 bytes)
+<span class="nc bnc" id="L52" title="All 4 branches missed.">            if (doc == null || doc.isEmpty()) {</span>
+<span class="nc" id="L53">                return ResponseEntity.ok().body(</span>
+                        new ApiResponse&lt;&gt;(null, false, &quot;FILE-MISSING&quot;, &quot;Error&quot;,
+<span class="nc" id="L55">                                List.of(&quot;No file uploaded. Please attach a valid document.&quot;)));</span>
+            }
+
+<span class="nc bnc" id="L58" title="All 2 branches missed.">            if (doc.getSize() &gt; 2 * 1024 * 1024) {</span>
+<span class="nc" id="L59">                return ResponseEntity.ok().body(</span>
+                        new ApiResponse&lt;&gt;(null, false, &quot;FILE-SIZE-EXCEEDED&quot;, &quot;Error&quot;,
+<span class="nc" id="L61">                                List.of(&quot;File size exceeds the maximum allowed limit of 2MB. Please upload a smaller file.&quot;)));</span>
+            }
+
+
+
+<span class="nc bnc" id="L66" title="All 2 branches missed.">            if (employeeId == null) {</span>
+<span class="nc" id="L67">                return ResponseEntity.ok().body(</span>
+                        new ApiResponse&lt;&gt;(null, false, &quot;EMPLOYEE-ID-MISSING&quot;, &quot;Error&quot;,
+<span class="nc" id="L69">                                List.of(&quot;Employee ID is required.&quot;)));</span>
+            }
+
+
+<span class="nc" id="L73">            String result = service.uploadEmployeeScannedDocument(</span>
+                    id, doc, employeeId, docType, docName, docNumber, remark, request);
+
+<span class="nc bnc" id="L76" title="All 2 branches missed.">            if (result.startsWith(&quot;Error&quot;)) {</span>
+<span class="nc" id="L77">                return ResponseEntity.ok().body(</span>
+<span class="nc" id="L78">                        new ApiResponse&lt;&gt;(null, false, &quot;FILE-UPLOAD-FAILURE&quot;, &quot;Error&quot;, List.of(result)));</span>
+            }
+
+<span class="nc" id="L81">            return ResponseEntity.ok(</span>
+                    new ApiResponse&lt;&gt;(result, true, &quot;FILE-UPLOAD-SUCCESS&quot;, &quot;Document uploaded successfully&quot;));
+
+<span class="nc" id="L84">        } catch (Exception ex) {</span>
+<span class="nc" id="L85">            log.error(&quot;Exception in uploadProjectScannedDoc&quot;, ex);</span>
+<span class="nc" id="L86">            return ResponseEntity.ok().body(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;OK&quot;, &quot;Error&quot;,
+<span class="nc" id="L88">                            List.of(&quot;Unexpected error occurred.&quot;, ex.getMessage())));</span>
+        }
+    }
+
+
+
+
+
+    @GetMapping(&quot;/getAllEmployeeDocuments&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;PaginatedResponse&lt;EmployeeDocumentResponseDTO&gt;&gt;&gt; getAllEmployeeDocuments(
+            @RequestParam(defaultValue = &quot;1&quot;) int pageNumber,
+            @RequestParam(defaultValue = &quot;10&quot;) int pageSize,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;id&quot;, required = false) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;, required = false) String sortDir,
+            @RequestParam(required = false) String searchColumn,
+            @RequestParam(required = false) String searchValue) {
+
+        try {
+<span class="nc bnc" id="L106" title="All 2 branches missed.">            if (pageNumber &lt; 1) {</span>
+<span class="nc" id="L107">                throw new IllegalArgumentException(&quot;Page number must be 1 or greater.&quot;);</span>
+            }
+
+<span class="nc" id="L110">            PaginatedResponse&lt;EmployeeDocumentResponseDTO&gt; paginatedDocs =</span>
+<span class="nc" id="L111">                    service.getAllEmployeeDocuments(pageNumber, pageSize, sortBy, sortDir, searchColumn, searchValue);</span>
+
+<span class="nc" id="L113">            ApiResponse&lt;PaginatedResponse&lt;EmployeeDocumentResponseDTO&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    paginatedDocs, true, &quot;EMPLOYEE-DOCUMENTS-RETRIEVED-SUCCESSFULLY&quot;, &quot;Information&quot;);
+
+<span class="nc" id="L116">            return ResponseEntity.ok(response);</span>
+
+<span class="nc" id="L118">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L119">            ApiResponse&lt;PaginatedResponse&lt;EmployeeDocumentResponseDTO&gt;&gt; warningResponse = new ApiResponse&lt;&gt;(</span>
+                    null, false, &quot;EMPLOYEE-DOCUMENTS-RETRIEVAL-FAILED&quot;, &quot;Warning&quot;,
+<span class="nc" id="L121">                    List.of(ex.getMessage()));</span>
+<span class="nc" id="L122">            return ResponseEntity.status(HttpStatus.OK).body(warningResponse);</span>
+
+<span class="nc" id="L124">        } catch (Exception ex) {</span>
+<span class="nc" id="L125">            ApiResponse&lt;PaginatedResponse&lt;EmployeeDocumentResponseDTO&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null, false, &quot;EMPLOYEE-DOCUMENTS-RETRIEVAL-FAILED&quot;, &quot;Error&quot;,
+<span class="nc" id="L127">                    List.of(ex.getMessage(), &quot;Please contact support.&quot;));</span>
+<span class="nc" id="L128">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+
+    @GetMapping(&quot;/download/**&quot;)
+    public ResponseEntity&lt;Resource&gt; downloadFile(HttpServletRequest request, @RequestHeader(&quot;Authorization&quot;) String token) {
+        try {
+            // 1. Token validation - aap apni logic yahan likh sakte hain
+<span class="nc bnc" id="L137" title="All 2 branches missed.">            if (!isValidToken(token)) {</span>
+<span class="nc" id="L138">                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();</span>
+            }
+
+            // 2. Extract the relative path after &quot;/download/&quot;
+<span class="nc" id="L142">            String requestURI = request.getRequestURI(); // /hr-management/api/project/download/PRC01/2025/05/16/filename.pdf</span>
+<span class="nc" id="L143">            String basePath = &quot;/api/employees/documents/download/&quot;;</span>
+<span class="nc" id="L144">            int index = requestURI.indexOf(basePath);</span>
+<span class="nc bnc" id="L145" title="All 2 branches missed.">            if (index == -1) {</span>
+<span class="nc" id="L146">                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();</span>
+            }
+<span class="nc" id="L148">            String relativeFilePath = requestURI.substring(index + basePath.length());</span>
+
+            // 3. Base directory jahan se serve karna hai
+<span class="nc" id="L151">            Path baseDir = Paths.get(&quot;src/main/resources/assets/employeeScannedDocuments&quot;).toAbsolutePath().normalize();</span>
+<span class="nc" id="L152">            Path resolvedPath = baseDir.resolve(relativeFilePath).normalize();</span>
+
+            // 4. Security check - ensure file is inside baseDir
+<span class="nc bnc" id="L155" title="All 2 branches missed.">            if (!resolvedPath.startsWith(baseDir)) {</span>
+<span class="nc" id="L156">                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();</span>
+            }
+
+            // 5. Check file existence
+<span class="nc" id="L160">            File file = resolvedPath.toFile();</span>
+<span class="nc bnc" id="L161" title="All 4 branches missed.">            if (!file.exists() || !file.isFile()) {</span>
+<span class="nc" id="L162">                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();</span>
+            }
+
+            // 6. Serve file as Resource
+<span class="nc" id="L166">            Resource resource = new UrlResource(file.toURI());</span>
+<span class="nc" id="L167">            String contentType = Files.probeContentType(resolvedPath);</span>
+<span class="nc bnc" id="L168" title="All 2 branches missed.">            if (contentType == null) contentType = &quot;application/octet-stream&quot;;</span>
+
+<span class="nc" id="L170">            return ResponseEntity.ok()</span>
+<span class="nc" id="L171">                    .contentType(MediaType.parseMediaType(contentType))</span>
+<span class="nc" id="L172">                    .header(HttpHeaders.CONTENT_DISPOSITION, &quot;attachment; filename=\&quot;&quot; + file.getName() + &quot;\&quot;&quot;)</span>
+<span class="nc" id="L173">                    .body(resource);</span>
+
+<span class="nc" id="L175">        } catch (Exception e) {</span>
+<span class="nc" id="L176">            e.printStackTrace();</span>
+<span class="nc" id="L177">            return ResponseEntity.status(HttpStatus.OK).build();</span>
+        }
+    }
+
+    // Dummy token validation method (aap apni real validation lagayen)
+    private boolean isValidToken(String token) {
+        // Token validation logic here
+<span class="nc bnc" id="L184" title="All 4 branches missed.">        return token != null &amp;&amp; token.startsWith(&quot;Bearer &quot;);</span>
+    }
+
+
+
+
+
+    @GetMapping(&quot;/employeeIdDocument&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getEmployeeIdDocument(
+            @RequestParam Integer employeeId,
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(required = false) String searchColumn,
+            @RequestParam(required = false) String searchValue,
+            @RequestParam(defaultValue = &quot;id&quot;) String sortBy,
+            @RequestParam(defaultValue = &quot;desc&quot;) String sortDir) {
+
+        try {
+<span class="nc" id="L202">            Map&lt;String, Object&gt; result = service.getEmployeeIdDocument(</span>
+                    employeeId, page, size, searchColumn, searchValue, sortBy, sortDir);
+
+<span class="nc" id="L205">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    result, true, &quot;PENDING_EXPENSE_REQUESTS_FETCHED&quot;, &quot;SUCCESS&quot;);
+
+<span class="nc" id="L208">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L209">        } catch (Exception ex) {</span>
+<span class="nc" id="L210">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null, false, &quot;DOCUMENTS-RETRIEVAL-FAILED&quot;, &quot;Error&quot;,
+<span class="nc" id="L212">                    List.of(ex.getMessage(), &quot;Please contact support.&quot;));</span>
+<span class="nc" id="L213">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+
+
+    //documentFetchByIdAndEmployeeId
+    @GetMapping(&quot;/getDocumentsByEmployee&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getDocumentsByProjectRfNum(
+            @RequestParam (required = true) Integer employeeId,
+            @RequestParam(required = true) Integer id,
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(required = false) String searchColumn,
+            @RequestParam(required = false) String searchValue,
+            @RequestParam(defaultValue = &quot;id&quot;) String sortBy,
+            @RequestParam(defaultValue = &quot;asc&quot;) String sortDir) {
+
+        try {
+<span class="nc" id="L232">            Map&lt;String, Object&gt; result = service.documentFetchByIdAndEmployeeId(</span>
+                    employeeId, id, page, size, searchColumn, searchValue, sortBy, sortDir);
+
+
+
+<span class="nc" id="L237">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    result, true, &quot;PENDING_EXPENSE_REQUESTS_FETCHED&quot;, &quot;SUCCESS&quot;);
+
+<span class="nc" id="L240">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L241">        } catch (Exception ex) {</span>
+<span class="nc" id="L242">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null, false, &quot;DOCUMENTS-RETRIEVAL-FAILED&quot;, &quot;Error&quot;,
+<span class="nc" id="L244">                    List.of(ex.getMessage(), &quot;Please contact support.&quot;));</span>
+<span class="nc" id="L245">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+
+
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

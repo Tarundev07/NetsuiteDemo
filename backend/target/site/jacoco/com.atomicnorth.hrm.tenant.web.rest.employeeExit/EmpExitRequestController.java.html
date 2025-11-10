@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmpExitRequestController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.employeeExit</a> &gt; <span class="el_source">EmpExitRequestController.java</span></div><h1>EmpExitRequestController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.employeeExit;
+
+import com.atomicnorth.hrm.tenant.domain.employeeExit.EmpExitApproval;
+import com.atomicnorth.hrm.tenant.service.dto.employeeExit.EmpExitApprovalDTO;
+import com.atomicnorth.hrm.tenant.service.dto.employeeExit.EmpExitRequestDTO;
+import com.atomicnorth.hrm.tenant.service.employeeExit.EmpExitRequestService;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping(&quot;/api/employee/exits&quot;)
+<span class="nc" id="L24">public class EmpExitRequestController {</span>
+
+<span class="nc" id="L26">    private final Logger log = LoggerFactory.getLogger(EmpExitRequestController.class);</span>
+
+    @Autowired
+    private EmpExitRequestService exitService;
+
+    @PostMapping
+    public ResponseEntity&lt;ApiResponse&lt;EmpExitRequestDTO&gt;&gt; saveorUpdateEmployeeExit(@RequestBody EmpExitRequestDTO dto) {
+        try {
+<span class="nc bnc" id="L34" title="All 2 branches missed.">            boolean isNew = dto.getId() == null;</span>
+<span class="nc" id="L35">            EmpExitRequestDTO saved = exitService.saveorUpdateEmployeeExit(dto);</span>
+<span class="nc" id="L36">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(</span>
+                    saved,
+                    true,
+<span class="nc bnc" id="L39" title="All 2 branches missed.">                    isNew ? &quot;CREATED_SUCCESS&quot; : &quot;UPDATED_SUCCESS&quot;,</span>
+                    &quot;SUCCESS&quot;
+            ));
+<span class="nc" id="L42">        } catch (Exception e) {</span>
+<span class="nc" id="L43">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;SAVE_OR_UPDATE_FAILED&quot;,
+                    &quot;FAILURE&quot;,
+<span class="nc" id="L48">                    Collections.singletonList(e.getMessage())</span>
+            ));
+        }
+    }
+
+    @GetMapping(&quot;/form/{employeeId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;EmpExitRequestDTO&gt;&gt; getExitFormInitialData(@PathVariable(&quot;employeeId&quot;) Integer employeeId) {
+        try {
+<span class="nc" id="L56">            EmpExitRequestDTO dto = exitService.getExitFormData(employeeId);</span>
+<span class="nc bnc" id="L57" title="All 2 branches missed.">            if (dto != null) {</span>
+<span class="nc" id="L58">                return ResponseEntity.ok(new ApiResponse&lt;&gt;(</span>
+                        dto,
+                        true,
+                        &quot;INITIAL_DATA_FETCHED_SUCCESS&quot;,
+                        &quot;SUCCESS&quot;
+                ));
+            }
+<span class="nc" id="L65">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(</span>
+                    null,
+                    true,
+                    &quot;INITIAL_DATA_FETCHED_SUCCESS&quot;,
+                    &quot;SUCCESS&quot;
+            ));
+<span class="nc" id="L71">        } catch (Exception e) {</span>
+<span class="nc" id="L72">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;INITIAL_DATA_FETCH_ERROR&quot;,
+                    &quot;FAILURE&quot;,
+<span class="nc" id="L77">                    Collections.singletonList(e.getMessage())</span>
+            ));
+        }
+    }
+
+    @GetMapping(&quot;/getApprovalsListByEmployeeId/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getApprovalsListByEmployeeId(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;id&quot;, required = false) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;, required = false) String sortDir,
+            @RequestParam(value = &quot;searchValue&quot;, required = false) String searchValue,
+            @RequestParam(value = &quot;searchColumn&quot;, required = false) String searchColumn
+    ) {
+        try {
+<span class="nc" id="L93">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; approvalsResponse =</span>
+<span class="nc" id="L94">                    exitService.getApprovals(id, searchColumn, searchValue, sortBy, sortDir, page - 1, size);</span>
+
+<span class="nc" id="L96">            return ResponseEntity.ok(approvalsResponse);</span>
+<span class="nc" id="L97">        } catch (Exception e) {</span>
+<span class="nc" id="L98">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L99">                    .body(new ApiResponse&lt;&gt;(null, false, &quot;APPROVAL_LIST_FETCHED_ERROR&quot;, &quot;Error&quot;,</span>
+<span class="nc" id="L100">                            Collections.singletonList(&quot;Error fetching approval list: &quot; + e.getMessage())));</span>
+        }
+    }
+
+
+    @GetMapping(&quot;/getExitById/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;EmpExitApprovalDTO&gt;&gt; getEmployeeExitById(@PathVariable(&quot;id&quot;) Integer id) {
+        try {
+<span class="nc" id="L108">            EmpExitApprovalDTO dto = exitService.getEmployeeExitById(id);</span>
+<span class="nc" id="L109">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(</span>
+                    dto,
+                    true,
+                    &quot;FETCHED_SUCCESS&quot;,
+                    &quot;SUCCESS&quot;
+            ));
+<span class="nc" id="L115">        } catch (Exception e) {</span>
+<span class="nc" id="L116">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;FETCH_ERROR&quot;,
+                    &quot;FAILURE&quot;,
+<span class="nc" id="L121">                    Collections.singletonList(e.getMessage())</span>
+            ));
+        }
+    }
+
+    @PatchMapping(&quot;/review/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;EmpExitApprovalDTO&gt;&gt; reviewExitRequest(
+            @PathVariable(&quot;id&quot;) Integer id,
+            @RequestBody EmpExitApprovalDTO requestDto) {
+        try {
+<span class="nc" id="L131">            EmpExitApprovalDTO dto = exitService.reviewExitRequest(id, requestDto);</span>
+<span class="nc" id="L132">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(</span>
+                    dto,
+                    true,
+                    &quot;REVIEW_SUCCESS&quot;,
+                    &quot;SUCCESS&quot;
+            ));
+<span class="nc" id="L138">        } catch (Exception e) {</span>
+<span class="nc" id="L139">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;REVIEW_ERROR&quot;,
+                    &quot;FAILURE&quot;,
+<span class="nc" id="L144">                    Collections.singletonList(e.getMessage())</span>
+            ));
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

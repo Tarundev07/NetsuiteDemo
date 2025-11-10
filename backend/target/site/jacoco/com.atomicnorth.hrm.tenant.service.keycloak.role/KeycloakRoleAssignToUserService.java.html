@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>KeycloakRoleAssignToUserService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.keycloak.role</a> &gt; <span class="el_source">KeycloakRoleAssignToUserService.java</span></div><h1>KeycloakRoleAssignToUserService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.keycloak.role;
+
+
+import com.atomicnorth.hrm.tenant.service.dto.keycloak.role.KeycloakRoleAssignToUserRequestDTO;
+import com.atomicnorth.hrm.tenant.service.dto.keycloak.role.KeycloakUserRoleDTO;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Mono;
+
+import java.util.List;
+
+
+<span class="nc" id="L23">@Slf4j</span>
+@Service
+public class KeycloakRoleAssignToUserService {
+
+    private final WebClient webClient;
+    private final ObjectMapper objectMapper;  //  JSON Serializer
+    private final PlatformTransactionManager transactionManager; // Manual Transaction Control
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+
+<span class="nc" id="L34">    public KeycloakRoleAssignToUserService(WebClient.Builder webClientBuilder, ObjectMapper objectMapper, PlatformTransactionManager transactionManager) {</span>
+<span class="nc" id="L35">        this.webClient = webClientBuilder.baseUrl(&quot;http://103.16.222.73:809&quot;).build();</span>
+<span class="nc" id="L36">        this.objectMapper = objectMapper;</span>
+<span class="nc" id="L37">        this.transactionManager = transactionManager;</span>
+<span class="nc" id="L38">    }</span>
+
+
+    public List&lt;KeycloakUserRoleDTO&gt; getUserRoles(String realm, String userId, String clientId, String accessToken) {
+<span class="nc" id="L42">        String url = String.format(&quot;/admin/realms/%s/users/%s/role-mappings/clients/%s&quot;, realm, userId, clientId);</span>
+
+<span class="nc" id="L44">        log.info(&quot;Calling Keycloak API: {}&quot;, &quot;http://103.16.222.73:809&quot; + url);</span>
+
+        try {
+<span class="nc" id="L47">            ResponseEntity&lt;List&lt;KeycloakUserRoleDTO&gt;&gt; response = webClient.get()</span>
+<span class="nc" id="L48">                    .uri(&quot;http://103.16.222.73:809&quot; + url)</span>
+<span class="nc" id="L49">                    .header(HttpHeaders.AUTHORIZATION, &quot;Bearer &quot; + accessToken)</span>
+<span class="nc" id="L50">                    .retrieve()</span>
+<span class="nc" id="L51">                    .toEntityList(KeycloakUserRoleDTO.class)</span>
+<span class="nc" id="L52">                    .block();</span>
+
+<span class="nc" id="L54">            log.info(&quot;Keycloak API Response: {}&quot;, response);</span>
+
+<span class="nc bnc" id="L56" title="All 4 branches missed.">            if (response != null &amp;&amp; response.getStatusCode().is2xxSuccessful()) {</span>
+<span class="nc" id="L57">                return response.getBody();</span>
+            } else {
+<span class="nc bnc" id="L59" title="All 2 branches missed.">                throw new WebClientResponseException(response != null ? response.getStatusCode().value() : 500,</span>
+                        &quot;Keycloak Error&quot;,
+                        null,
+                        null,
+                        null);
+            }
+<span class="nc" id="L65">        } catch (WebClientResponseException e) {</span>
+<span class="nc" id="L66">            log.error(&quot;Keycloak API Error: {}&quot;, e.getMessage());</span>
+<span class="nc" id="L67">            throw e;</span>
+        }
+    }
+
+    public boolean isRoleAlreadyAssigned(String realm, String userId, String clientId, List&lt;KeycloakRoleAssignToUserRequestDTO&gt; roles, String token) {
+        try {
+<span class="nc" id="L73">            List&lt;KeycloakRoleAssignToUserRequestDTO&gt; assignedRoles = webClient.get()</span>
+<span class="nc" id="L74">                    .uri(&quot;/admin/realms/{realm}/users/{userId}/role-mappings/clients/{clientId}&quot;, realm, userId, clientId)</span>
+<span class="nc" id="L75">                    .header(HttpHeaders.AUTHORIZATION, &quot;Bearer &quot; + token)</span>
+<span class="nc" id="L76">                    .retrieve()</span>
+<span class="nc" id="L77">                    .bodyToFlux(KeycloakRoleAssignToUserRequestDTO.class)</span>
+<span class="nc" id="L78">                    .collectList()</span>
+<span class="nc" id="L79">                    .block();</span>
+
+<span class="nc bnc" id="L81" title="All 4 branches missed.">            if (assignedRoles == null || assignedRoles.isEmpty()) {</span>
+<span class="nc" id="L82">                return false;</span>
+            }
+
+            // Check if all requested roles are already assigned
+<span class="nc" id="L86">            return roles.stream().allMatch(role -&gt; assignedRoles.stream().anyMatch(assigned -&gt; assigned.getId().equals(role.getId())));</span>
+<span class="nc" id="L87">        } catch (WebClientResponseException ex) {</span>
+<span class="nc" id="L88">            return false; // If Keycloak returns an error, assume the role is not assigned</span>
+        }
+    }
+
+
+    public void removeRoleFromUser(String realm, String userId, String clientId, List&lt;KeycloakRoleAssignToUserRequestDTO&gt; roles, String token) {
+<span class="nc" id="L94">        webClient.method(org.springframework.http.HttpMethod.DELETE)</span>
+<span class="nc" id="L95">                .uri(&quot;/admin/realms/{realm}/users/{userId}/role-mappings/clients/{clientId}&quot;, realm, userId, clientId)</span>
+<span class="nc" id="L96">                .header(HttpHeaders.AUTHORIZATION, &quot;Bearer &quot; + token)</span>
+<span class="nc" id="L97">                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)</span>
+<span class="nc" id="L98">                .body(Mono.just(roles), List.class)</span>
+<span class="nc" id="L99">                .retrieve()</span>
+<span class="nc" id="L100">                .toBodilessEntity()</span>
+<span class="nc" id="L101">                .block();</span>
+<span class="nc" id="L102">    }</span>
+
+
+    //USE
+    public boolean isKeycloakRoleMappingServiceAvailable(String realm, String userId, String clientId, String accessToken) {
+<span class="nc" id="L107">        String keycloakUrl = String.format(&quot;http://103.16.222.73:809/admin/realms/%s/users/%s/role-mappings/clients/%s&quot;,</span>
+                realm, userId, clientId);
+
+        //  Ensure token has &quot;Bearer &quot; prefix
+<span class="nc bnc" id="L111" title="All 2 branches missed.">        if (!accessToken.startsWith(&quot;Bearer &quot;)) {</span>
+<span class="nc" id="L112">            accessToken = &quot;Bearer &quot; + accessToken;</span>
+        }
+
+        try {
+<span class="nc" id="L116">            ResponseEntity&lt;String&gt; response = webClient.get()</span>
+<span class="nc" id="L117">                    .uri(keycloakUrl)</span>
+<span class="nc" id="L118">                    .header(HttpHeaders.AUTHORIZATION, accessToken) //  Set token correctly</span>
+<span class="nc" id="L119">                    .retrieve()</span>
+<span class="nc" id="L120">                    .toEntity(String.class)</span>
+<span class="nc" id="L121">                    .block();</span>
+
+            //  If response is 200, service is UP
+<span class="nc bnc" id="L124" title="All 4 branches missed.">            return response != null &amp;&amp; response.getStatusCode().is2xxSuccessful();</span>
+<span class="nc" id="L125">        } catch (WebClientResponseException ex) {</span>
+<span class="nc" id="L126">            System.out.println(&quot;Keycloak Role Mapping Service Down: &quot; + ex.getMessage());</span>
+<span class="nc" id="L127">            return false; //  Service is down or unauthorized</span>
+<span class="nc" id="L128">        } catch (Exception e) {</span>
+<span class="nc" id="L129">            System.out.println(&quot;Unexpected Error Checking Role Mapping Service: &quot; + e.getMessage());</span>
+<span class="nc" id="L130">            return false; //  Unexpected error</span>
+        }
+    }
+
+
+    @Transactional
+    public void assignRoleToKeycloak(String realm, String userId, String clientId,
+                                     List&lt;KeycloakRoleAssignToUserRequestDTO&gt; roles, String keycloakToken) {
+
+        // Step 1: Check if Role Mapping Service is Available
+<span class="nc bnc" id="L140" title="All 2 branches missed.">        if (!isKeycloakRoleMappingServiceAvailable(realm, userId, clientId, keycloakToken)) {</span>
+<span class="nc" id="L141">            throw new RuntimeException(&quot;Keycloak Role Mapping Service is Down. Try Again Later.&quot;);</span>
+        }
+
+        // Step 2: Assign Role in Keycloak (Only Keycloak Operation, No DB Changes)
+<span class="nc" id="L145">        String keycloakUrl = String.format(&quot;http://103.16.222.73:809/admin/realms/%s/users/%s/role-mappings/clients/%s&quot;,</span>
+                realm, userId, clientId);
+
+<span class="nc" id="L148">        webClient.post()</span>
+<span class="nc" id="L149">                .uri(keycloakUrl)</span>
+<span class="nc" id="L150">                .header(HttpHeaders.AUTHORIZATION, &quot;Bearer &quot; + keycloakToken)</span>
+<span class="nc" id="L151">                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)</span>
+<span class="nc" id="L152">                .bodyValue(roles)</span>
+<span class="nc" id="L153">                .retrieve()</span>
+<span class="nc" id="L154">                .toBodilessEntity()</span>
+<span class="nc" id="L155">                .block();</span>
+<span class="nc" id="L156">    }</span>
+
+
+    public boolean isKeycloakAvailable(String realm, String token) {
+<span class="nc" id="L160">        String url = &quot;/realms/&quot; + realm;</span>
+
+        try {
+<span class="nc" id="L163">            webClient.get()</span>
+<span class="nc" id="L164">                    .uri(url)</span>
+<span class="nc" id="L165">                    .header(HttpHeaders.AUTHORIZATION, &quot;Bearer &quot; + token)  //  Pass Token</span>
+<span class="nc" id="L166">                    .retrieve()</span>
+<span class="nc" id="L167">                    .bodyToMono(String.class)</span>
+<span class="nc" id="L168">                    .block();  // Sync call</span>
+
+<span class="nc" id="L170">            return true; // API is working</span>
+
+<span class="nc" id="L172">        } catch (WebClientResponseException ex) {</span>
+<span class="nc" id="L173">            return false; // API is down or unauthorized</span>
+
+<span class="nc" id="L175">        } catch (Exception e) {</span>
+<span class="nc" id="L176">            return false; // Any unexpected error</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

@@ -1,0 +1,960 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ApprovalFlowService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.approvalflow</a> &gt; <span class="el_source">ApprovalFlowService.java</span></div><h1>ApprovalFlowService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.approvalflow;
+
+import com.atomicnorth.hrm.exception.ResourceNotFoundException;
+import com.atomicnorth.hrm.tenant.domain.Department;
+import com.atomicnorth.hrm.tenant.domain.Employee;
+import com.atomicnorth.hrm.tenant.domain.EmployeeHierarchyView;
+import com.atomicnorth.hrm.tenant.domain.Group;
+import com.atomicnorth.hrm.tenant.domain.accessgroup.SesM00UserDivisionMaster;
+import com.atomicnorth.hrm.tenant.domain.approvalflow.ApprovalFlow;
+import com.atomicnorth.hrm.tenant.domain.approvalflow.ApprovalFlowDelegation;
+import com.atomicnorth.hrm.tenant.domain.approvalflow.ApprovalFlowFunctionMapping;
+import com.atomicnorth.hrm.tenant.domain.approvalflow.ApprovalFlowLevel;
+import com.atomicnorth.hrm.tenant.domain.approvalflow.ApprovalFlowLevelMapping;
+import com.atomicnorth.hrm.tenant.domain.approvalflow.ApprovalFlowRequestMapping;
+import com.atomicnorth.hrm.tenant.domain.approvalflow.Level;
+import com.atomicnorth.hrm.tenant.domain.approvalflow.WorkflowRequest;
+import com.atomicnorth.hrm.tenant.domain.approvalflow.WorkflowStatus;
+import com.atomicnorth.hrm.tenant.domain.designation.Designation;
+import com.atomicnorth.hrm.tenant.domain.roles.FunctionEntity;
+import com.atomicnorth.hrm.tenant.helper.Constant;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.DepartmentRepository;
+import com.atomicnorth.hrm.tenant.repository.EmployeeHierarchyViewRepository;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.repository.GroupRepo;
+import com.atomicnorth.hrm.tenant.repository.accessgroup.UserDivisionMasterRepository;
+import com.atomicnorth.hrm.tenant.repository.approvalflow.ApprovalFlowDelegationRepository;
+import com.atomicnorth.hrm.tenant.repository.approvalflow.ApprovalFlowFunctionMappingRepository;
+import com.atomicnorth.hrm.tenant.repository.approvalflow.ApprovalFlowLevelMappingRepository;
+import com.atomicnorth.hrm.tenant.repository.approvalflow.ApprovalFlowLevelRepository;
+import com.atomicnorth.hrm.tenant.repository.approvalflow.ApprovalFlowRepository;
+import com.atomicnorth.hrm.tenant.repository.approvalflow.ApprovalFlowRequestMappingRepository;
+import com.atomicnorth.hrm.tenant.repository.approvalflow.LevelRepository;
+import com.atomicnorth.hrm.tenant.repository.approvalflow.WorkFlowRequestRepository;
+import com.atomicnorth.hrm.tenant.repository.approvalflow.WorkflowStatusRepository;
+import com.atomicnorth.hrm.tenant.repository.designation.DesignationRepository;
+import com.atomicnorth.hrm.tenant.repository.roles.FunctionRepository;
+import com.atomicnorth.hrm.tenant.service.SequenceGeneratorService;
+import com.atomicnorth.hrm.tenant.service.dto.EmployeeDTO;
+import com.atomicnorth.hrm.tenant.service.dto.approvalflow.*;
+import com.atomicnorth.hrm.tenant.service.dto.designation.DesignationDTO;
+import com.atomicnorth.hrm.tenant.service.dto.employement.EmployeeBasicDetails;
+import com.atomicnorth.hrm.tenant.service.translation.SupraTranslationCommonServices;
+import com.atomicnorth.hrm.util.Enum.SequenceType;
+import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+
+import javax.persistence.EntityNotFoundException;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Path;
+import javax.persistence.criteria.Root;
+import javax.transaction.Transactional;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+@Service
+public class ApprovalFlowService {
+
+    private final ApprovalFlowRepository approvalFlowRepository;
+    private final ApprovalFlowFunctionMappingRepository approvalFlowFunctionMappingRepository;
+    private final ApprovalFlowLevelMappingRepository approvalFlowLevelMappingRepository;
+    private final ApprovalFlowDelegationRepository approvalFlowDelegationRepository;
+    private final ApprovalFlowLevelRepository approvalFlowLevelRepository;
+    private final LevelRepository levelRepository;
+    private final EmployeeRepository employeeRepository;
+    private final DesignationRepository designationRepository;
+    private final ApprovalFlowRequestMappingRepository approvalFlowRequestMappingRepository;
+    private final WorkFlowRequestRepository workflowRequestRepository;
+    private final EmployeeHierarchyViewRepository employeeHierarchyRepository;
+    private final WorkflowStatusRepository workflowStatusRepository;
+    private final UserDivisionMasterRepository divisionMasterRepository;
+    private final SequenceGeneratorService sequenceGeneratorService;
+    private final DepartmentRepository departmentRepository;
+    private final GroupRepo groupRepo;
+    private final FunctionRepository functionRepository;
+    private final SupraTranslationCommonServices translationCommonServices;
+    private final ModelMapper modelMapper;
+
+<span class="nc" id="L104">    public ApprovalFlowService(ApprovalFlowRepository approvalFlowRepository, ApprovalFlowFunctionMappingRepository approvalFlowFunctionMappingRepository, ApprovalFlowLevelMappingRepository approvalFlowLevelMappingRepository, ApprovalFlowDelegationRepository approvalFlowDelegationRepository, ApprovalFlowLevelRepository approvalFlowLevelRepository, LevelRepository levelRepository, EmployeeRepository employeeRepository, DesignationRepository designationRepository, ApprovalFlowRequestMappingRepository approvalFlowRequestMappingRepository, WorkFlowRequestRepository workflowRequestRepository, EmployeeHierarchyViewRepository employeeHierarchyRepository, WorkflowStatusRepository workflowStatusRepository, SequenceGeneratorService sequenceGeneratorService, DepartmentRepository departmentRepository, GroupRepo groupRepo, UserDivisionMasterRepository divisionMasterRepository, FunctionRepository functionRepository, SupraTranslationCommonServices translationCommonServices, ModelMapper modelMapper) {</span>
+<span class="nc" id="L105">        this.approvalFlowRepository = approvalFlowRepository;</span>
+<span class="nc" id="L106">        this.approvalFlowLevelMappingRepository = approvalFlowLevelMappingRepository;</span>
+<span class="nc" id="L107">        this.approvalFlowDelegationRepository = approvalFlowDelegationRepository;</span>
+<span class="nc" id="L108">        this.approvalFlowLevelRepository = approvalFlowLevelRepository;</span>
+<span class="nc" id="L109">        this.approvalFlowFunctionMappingRepository = approvalFlowFunctionMappingRepository;</span>
+<span class="nc" id="L110">        this.levelRepository = levelRepository;</span>
+<span class="nc" id="L111">        this.employeeRepository = employeeRepository;</span>
+<span class="nc" id="L112">        this.designationRepository = designationRepository;</span>
+<span class="nc" id="L113">        this.approvalFlowRequestMappingRepository = approvalFlowRequestMappingRepository;</span>
+<span class="nc" id="L114">        this.workflowRequestRepository = workflowRequestRepository;</span>
+<span class="nc" id="L115">        this.employeeHierarchyRepository = employeeHierarchyRepository;</span>
+<span class="nc" id="L116">        this.workflowStatusRepository = workflowStatusRepository;</span>
+<span class="nc" id="L117">        this.sequenceGeneratorService = sequenceGeneratorService;</span>
+<span class="nc" id="L118">        this.departmentRepository = departmentRepository;</span>
+<span class="nc" id="L119">        this.groupRepo = groupRepo;</span>
+<span class="nc" id="L120">        this.divisionMasterRepository = divisionMasterRepository;</span>
+<span class="nc" id="L121">        this.functionRepository = functionRepository;</span>
+<span class="nc" id="L122">        this.translationCommonServices = translationCommonServices;</span>
+<span class="nc" id="L123">        this.modelMapper = modelMapper;</span>
+<span class="nc" id="L124">    }</span>
+
+    public Map&lt;String, Object&gt; fetchApprovalFlow(Pageable pageable, String searchColumn, String searchValue) {
+        Page&lt;ApprovalFlow&gt; approvalFlowPage;
+<span class="nc bnc" id="L128" title="All 2 branches missed.">        if (&quot;approvalFlowName&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L129">            approvalFlowPage = approvalFlowRepository.findByApprovalFlowNameContainingIgnoreCase(searchValue, pageable);</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">        } else if (&quot;approvalFlowCode&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L131">            approvalFlowPage = approvalFlowRepository.findByApprovalFlowCodeContainingIgnoreCase(searchValue, pageable);</span>
+<span class="nc bnc" id="L132" title="All 4 branches missed.">        } else if (&quot;startDate&quot;.equalsIgnoreCase(searchColumn) || &quot;endDate&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L133">            LocalDate dateValue = LocalDate.parse(searchValue);</span>
+<span class="nc" id="L134">            Specification&lt;ApprovalFlow&gt; spec = (root, query, cb) -&gt; {</span>
+<span class="nc bnc" id="L135" title="All 2 branches missed.">                if (&quot;startDate&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L136">                    return cb.equal(root.get(&quot;startDate&quot;), dateValue);</span>
+                } else {
+<span class="nc" id="L138">                    return cb.equal(root.get(&quot;endDate&quot;), dateValue);</span>
+                }
+            };
+<span class="nc" id="L141">            approvalFlowPage = approvalFlowRepository.findAll(spec, pageable);</span>
+
+<span class="nc bnc" id="L143" title="All 4 branches missed.">        } else if (!searchColumn.isBlank() &amp;&amp; !searchValue.isBlank()) {</span>
+<span class="nc" id="L144">            Specification&lt;ApprovalFlow&gt; spec = (root, query, cb) -&gt;</span>
+<span class="nc" id="L145">                    cb.like(cb.lower(root.get(searchColumn)), &quot;%&quot; + searchValue.toLowerCase() + &quot;%&quot;);</span>
+<span class="nc" id="L146">            approvalFlowPage = approvalFlowRepository.findAll(spec, pageable);</span>
+<span class="nc" id="L147">        } else {</span>
+<span class="nc" id="L148">            pageable = resolveSortFields(pageable);</span>
+<span class="nc" id="L149">            approvalFlowPage = approvalFlowRepository.findAll(pageable);</span>
+        }
+<span class="nc" id="L151">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L152">        response.put(&quot;result&quot;, approvalFlowPage.getContent());</span>
+<span class="nc" id="L153">        response.put(&quot;currentPage&quot;, pageable.getPageNumber() + 1);</span>
+<span class="nc" id="L154">        response.put(&quot;pageSize&quot;, pageable.getPageSize());</span>
+<span class="nc" id="L155">        response.put(&quot;totalItems&quot;, approvalFlowPage.getTotalElements());</span>
+<span class="nc" id="L156">        response.put(&quot;totalPages&quot;, approvalFlowPage.getTotalPages());</span>
+<span class="nc" id="L157">        return response;</span>
+    }
+
+    private Pageable resolveSortFields(Pageable pageable) {
+<span class="nc bnc" id="L161" title="All 2 branches missed.">        if (pageable.getSort().isUnsorted()) {</span>
+<span class="nc" id="L162">            return PageRequest.of(</span>
+<span class="nc" id="L163">                    pageable.getPageNumber(),</span>
+<span class="nc" id="L164">                    pageable.getPageSize(),</span>
+<span class="nc" id="L165">                    Sort.by(&quot;approvalFlowId&quot;).ascending()</span>
+            );
+        }
+<span class="nc" id="L168">        List&lt;Sort.Order&gt; resolvedOrders = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L169" title="All 2 branches missed.">        for (Sort.Order order : pageable.getSort()) {</span>
+<span class="nc" id="L170">            String property = order.getProperty();</span>
+<span class="nc bnc" id="L171" title="All 6 branches missed.">            switch (property) {</span>
+                case &quot;approvalFlowId&quot;:
+<span class="nc" id="L173">                    property = &quot;approvalFlowId&quot;;</span>
+<span class="nc" id="L174">                    break;</span>
+                case &quot;approvalFlowName&quot;:
+<span class="nc" id="L176">                    property = &quot;approvalFlowName&quot;;</span>
+<span class="nc" id="L177">                    break;</span>
+                case &quot;approvalFlowCode&quot;:
+<span class="nc" id="L179">                    property = &quot;approvalFlowCode&quot;;</span>
+<span class="nc" id="L180">                    break;</span>
+                case &quot;startDate&quot;:
+<span class="nc" id="L182">                    property = &quot;startDate&quot;;</span>
+<span class="nc" id="L183">                    break;</span>
+                case &quot;endDate&quot;:
+<span class="nc" id="L185">                    property = &quot;endDate&quot;;</span>
+<span class="nc" id="L186">                    break;</span>
+                default:
+<span class="nc" id="L188">                    property = &quot;approvalFlowId&quot;;</span>
+            }
+<span class="nc" id="L190">            resolvedOrders.add(new Sort.Order(order.getDirection(), property));</span>
+<span class="nc" id="L191">        }</span>
+
+<span class="nc" id="L193">        return PageRequest.of(</span>
+<span class="nc" id="L194">                pageable.getPageNumber(),</span>
+<span class="nc" id="L195">                pageable.getPageSize(),</span>
+<span class="nc" id="L196">                Sort.by(resolvedOrders)</span>
+        );
+    }
+
+    public ApprovalFlowDto findApprovalFlow(Integer approvalId) {
+<span class="nc" id="L201">        Optional&lt;ApprovalFlow&gt; approvalFlow = approvalFlowRepository.findById(approvalId);</span>
+<span class="nc bnc" id="L202" title="All 2 branches missed.">        if (approvalFlow.isEmpty()) {</span>
+<span class="nc" id="L203">            return null;</span>
+        }
+
+<span class="nc" id="L206">        List&lt;ApprovalFlowFunctionMapping&gt; functionMappings =</span>
+<span class="nc" id="L207">                approvalFlowFunctionMappingRepository.findByApprovalFlowIdAndIsActive(approvalId, &quot;Y&quot;);</span>
+
+<span class="nc" id="L209">        List&lt;ApprovalFlowDelegation&gt; delegations =</span>
+<span class="nc" id="L210">                approvalFlowDelegationRepository.findByApprovalFlowIdAndIsActive(approvalId, &quot;Y&quot;);</span>
+<span class="nc" id="L211">        List&lt;ApprovalFlowRequestMapping&gt; requestMappings = approvalFlowRequestMappingRepository.findByApprovalFlowIdAndIsActive(approvalId, &quot;Y&quot;);</span>
+
+<span class="nc" id="L213">        List&lt;ApprovalFlowLevel&gt; levels =</span>
+<span class="nc" id="L214">                approvalFlowLevelRepository.findByApprovalFlowIdAndIsActive(approvalId, &quot;Y&quot;);</span>
+<span class="nc" id="L215">        ApprovalFlowDto dto = new ApprovalFlowDto();</span>
+<span class="nc" id="L216">        dto.approvalFlowId = approvalFlow.get().getApprovalFlowId();</span>
+<span class="nc" id="L217">        dto.approvalFlowName = approvalFlow.get().getApprovalFlowName();</span>
+<span class="nc" id="L218">        dto.approvalFlowCode = approvalFlow.get().getApprovalFlowCode();</span>
+<span class="nc" id="L219">        dto.startDate = approvalFlow.get().getStartDate();</span>
+<span class="nc" id="L220">        dto.endDate = approvalFlow.get().getEndDate();</span>
+<span class="nc" id="L221">        dto.creationDate = approvalFlow.get().getCreatedDate().atZone(ZoneId.systemDefault()).toLocalDateTime();</span>
+<span class="nc" id="L222">        dto.lastUpdatedDate = approvalFlow.get().getLastUpdatedDate().atZone(ZoneId.systemDefault()).toLocalDateTime();</span>
+<span class="nc" id="L223">        dto.createdBy = approvalFlow.get().getCreatedBy();</span>
+<span class="nc" id="L224">        dto.lastUpdateBy = approvalFlow.get().getLastUpdatedBy();</span>
+
+<span class="nc" id="L226">        dto.approvalFlowFunctionMappingList = functionMappings.stream()</span>
+<span class="nc" id="L227">                .map(this::mapToFunctionMappingDto)</span>
+<span class="nc" id="L228">                .collect(Collectors.toList());</span>
+<span class="nc" id="L229">        dto.approvalFlowRequestMappingList = requestMappings.stream().map(this::mapToRequestMappingDto).collect(Collectors.toList());</span>
+
+<span class="nc" id="L231">        requestMappings.stream()</span>
+<span class="nc" id="L232">                .findFirst()</span>
+<span class="nc" id="L233">                .ifPresent(firstReq -&gt; {</span>
+<span class="nc bnc" id="L234" title="All 2 branches missed.">                    if (firstReq.getRequestedBy() != null) {</span>
+<span class="nc" id="L235">                        dto.sourceCategory = firstReq.getRequestedBy();</span>
+                    }
+<span class="nc" id="L237">                });</span>
+<span class="nc" id="L238">        dto.approvalFlowDelegationList = delegations.stream()</span>
+<span class="nc" id="L239">                .map(this::mapToDelegationDto)</span>
+<span class="nc" id="L240">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L242">        dto.approvalFlowLevelList = levels.stream()</span>
+<span class="nc" id="L243">                .map(level -&gt; {</span>
+<span class="nc" id="L244">                    ApprovalFlowLevelDto levelDto = mapToLevelDto(level);</span>
+
+                    // Fetch and map level mappings
+<span class="nc" id="L247">                    Set&lt;Integer&gt; levelIds = Collections.singleton(level.getApprovalFlowLevelId());</span>
+<span class="nc" id="L248">                    List&lt;ApprovalFlowLevelMapping&gt; levelMappings =</span>
+<span class="nc" id="L249">                            approvalFlowLevelMappingRepository.findByApprovalFlowLevelIdIn(levelIds);</span>
+
+<span class="nc" id="L251">                    levelDto.approvalFlowLevelMappingList = levelMappings.stream()</span>
+<span class="nc" id="L252">                            .map(this::mapToLevelMappingDto)</span>
+<span class="nc" id="L253">                            .collect(Collectors.toList());</span>
+
+<span class="nc" id="L255">                    return levelDto;</span>
+                })
+<span class="nc" id="L257">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L259">        return dto;</span>
+    }
+
+    private ApprovalFlowRequestMappingDto mapToRequestMappingDto(ApprovalFlowRequestMapping approvalFlowRequestMapping) {
+<span class="nc" id="L263">        ApprovalFlowRequestMappingDto dto = new ApprovalFlowRequestMappingDto();</span>
+<span class="nc" id="L264">        dto.workFlowRequestMappingId = approvalFlowRequestMapping.getWorkFlowRequestMappingId();</span>
+<span class="nc" id="L265">        dto.requestId = approvalFlowRequestMapping.getRequestId();</span>
+<span class="nc" id="L266">        dto.isActive = approvalFlowRequestMapping.getIsActive();</span>
+<span class="nc" id="L267">        return dto;</span>
+    }
+
+    private ApprovalFlowFunctionMappingDto mapToFunctionMappingDto(ApprovalFlowFunctionMapping entity) {
+<span class="nc" id="L271">        ApprovalFlowFunctionMappingDto dto = new ApprovalFlowFunctionMappingDto();</span>
+<span class="nc" id="L272">        dto.functionId = entity.getFunctionId();</span>
+<span class="nc" id="L273">        dto.byPassFlag = entity.getByPassFlag();</span>
+<span class="nc" id="L274">        dto.workFlowFunctionMappingId = entity.getWorkFlowFunctionMappingId();</span>
+<span class="nc" id="L275">        dto.approvalFlowId = entity.getApprovalFlowId();</span>
+<span class="nc" id="L276">        dto.isActive = entity.getIsActive();</span>
+<span class="nc" id="L277">        return dto;</span>
+    }
+
+    private ApprovalFlowLevelDto mapToLevelDto(ApprovalFlowLevel entity) {
+<span class="nc" id="L281">        ApprovalFlowLevelDto dto = new ApprovalFlowLevelDto();</span>
+<span class="nc" id="L282">        dto.levelMasterId = entity.getLevelMasterId();</span>
+<span class="nc" id="L283">        dto.approvalFlowId = entity.getApprovalFlowId();</span>
+<span class="nc" id="L284">        dto.byPassFlag = entity.getByPassFlag();</span>
+<span class="nc" id="L285">        dto.turnAroundTime = entity.getTurnAroundTime();</span>
+<span class="nc" id="L286">        dto.approvalFlowLevelId = entity.getApprovalFlowLevelId();</span>
+<span class="nc" id="L287">        dto.isActive = entity.getIsActive();</span>
+<span class="nc" id="L288">        return dto;</span>
+    }
+
+    private ApprovalFlowDelegationDto mapToDelegationDto(ApprovalFlowDelegation entity) {
+<span class="nc" id="L292">        ApprovalFlowDelegationDto dto = new ApprovalFlowDelegationDto();</span>
+<span class="nc" id="L293">        dto.id = entity.getId();</span>
+<span class="nc" id="L294">        dto.delegationId = entity.getDelegationId();</span>
+<span class="nc" id="L295">        dto.approvalFlowId = entity.getApprovalFlowId();</span>
+<span class="nc" id="L296">        dto.employeeId = entity.getEmployeeId();</span>
+<span class="nc" id="L297">        dto.startDate = entity.getStartDate();</span>
+<span class="nc" id="L298">        dto.endDate = entity.getEndDate();</span>
+<span class="nc" id="L299">        dto.isActive = entity.getIsActive();</span>
+<span class="nc" id="L300">        return dto;</span>
+    }
+
+    private ApprovalFlowLevelMappingDto mapToLevelMappingDto(ApprovalFlowLevelMapping entity) {
+<span class="nc" id="L304">        ApprovalFlowLevelMappingDto dto = new ApprovalFlowLevelMappingDto();</span>
+<span class="nc" id="L305">        dto.approvalFlowLevelId = entity.getApprovalFlowLevelId();</span>
+<span class="nc" id="L306">        dto.approvalFlowLevelMappingId = entity.getApprovalFlowLevelMappingId();</span>
+<span class="nc" id="L307">        dto.orderBy = entity.getDisplayOrder();</span>
+<span class="nc" id="L308">        dto.mailActive = entity.getMailActive();</span>
+<span class="nc" id="L309">        dto.smsActive = entity.getSmsActive();</span>
+<span class="nc" id="L310">        dto.isActive = entity.getIsActive();</span>
+
+<span class="nc bnc" id="L312" title="All 2 branches missed.">        if (entity.getDesignationId() != null) {</span>
+<span class="nc" id="L313">            DesignationDTO desDto = new DesignationDTO();</span>
+<span class="nc" id="L314">            desDto.setId(entity.getDesignationId());</span>
+<span class="nc" id="L315">            desDto.setIsActive(entity.getIsActive());</span>
+<span class="nc" id="L316">            List&lt;EmployeeDTO&gt; employees = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L317" title="All 2 branches missed.">            if (entity.getEmployeeId() != null) {</span>
+<span class="nc" id="L318">                EmployeeDTO empDto = new EmployeeDTO();</span>
+<span class="nc" id="L319">                empDto.setEmployeeId(entity.getEmployeeId());</span>
+<span class="nc" id="L320">                empDto.setIsActive(entity.getIsActive());</span>
+<span class="nc" id="L321">                employees.add(empDto);</span>
+            }
+<span class="nc" id="L323">            desDto.setEmployees(employees);</span>
+<span class="nc" id="L324">            dto.setDesignation(Collections.singletonList(desDto));</span>
+        }
+<span class="nc" id="L326">        return dto;</span>
+    }
+
+    @Transactional
+    public ApprovalFlowDto saveOrUpdateApprovalFlow(ApprovalFlowDto dto) {
+<span class="nc" id="L331">        UserLoginDetail userLoginDetail = SessionHolder.getUserLoginDetail();</span>
+<span class="nc bnc" id="L332" title="All 2 branches missed.">        ApprovalFlow entity = dto.getApprovalFlowId() != null</span>
+<span class="nc" id="L333">                ? approvalFlowRepository.findById(dto.getApprovalFlowId())</span>
+<span class="nc" id="L334">                .orElseThrow(() -&gt; new RuntimeException(&quot;Approval Flow not found&quot;))</span>
+<span class="nc" id="L335">                : new ApprovalFlow();</span>
+
+<span class="nc" id="L337">        entity.setApprovalFlowName(dto.getApprovalFlowName());</span>
+<span class="nc bnc" id="L338" title="All 2 branches missed.">        if (dto.getApprovalFlowId() == null) {</span>
+<span class="nc" id="L339">            entity.setApprovalFlowCode(sequenceGeneratorService.generateSequence(SequenceType.WORKFLOW.toString(), null));</span>
+        }
+<span class="nc" id="L341">        entity.setStartDate(dto.getStartDate());</span>
+<span class="nc" id="L342">        entity.setEndDate(dto.getEndDate());</span>
+
+<span class="nc bnc" id="L344" title="All 2 branches missed.">        if (dto.getApprovalFlowId() != null) {</span>
+<span class="nc" id="L345">            entity.setLastUpdatedBy(String.valueOf(userLoginDetail.getEmpId()));</span>
+<span class="nc" id="L346">            entity.setLastUpdatedDate(Instant.now());</span>
+        } else {
+<span class="nc" id="L348">            entity.setCreatedBy(String.valueOf(userLoginDetail.getEmpId()));</span>
+<span class="nc" id="L349">            entity.setCreatedDate(Instant.now());</span>
+<span class="nc" id="L350">            entity.setLastUpdatedBy(String.valueOf(userLoginDetail.getEmpId()));</span>
+<span class="nc" id="L351">            entity.setLastUpdatedDate(Instant.now());</span>
+        }
+
+<span class="nc" id="L354">        ApprovalFlow savedFlow = approvalFlowRepository.save(entity);</span>
+<span class="nc" id="L355">        Integer flowId = savedFlow.getApprovalFlowId();</span>
+<span class="nc" id="L356">        dto.setApprovalFlowId(flowId);</span>
+
+<span class="nc bnc" id="L358" title="All 2 branches missed.">        if (dto.getApprovalFlowFunctionMappingList() != null) {</span>
+<span class="nc bnc" id="L359" title="All 2 branches missed.">            for (ApprovalFlowFunctionMappingDto f : dto.getApprovalFlowFunctionMappingList()) {</span>
+<span class="nc bnc" id="L360" title="All 2 branches missed.">                ApprovalFlowFunctionMapping mapping = f.getWorkFlowFunctionMappingId() != null</span>
+<span class="nc" id="L361">                        ? approvalFlowFunctionMappingRepository.findById(f.getWorkFlowFunctionMappingId())</span>
+<span class="nc" id="L362">                        .orElse(new ApprovalFlowFunctionMapping())</span>
+<span class="nc" id="L363">                        : new ApprovalFlowFunctionMapping();</span>
+
+<span class="nc" id="L365">                mapping.setApprovalFlowId(flowId);</span>
+<span class="nc" id="L366">                mapping.setFunctionId(f.getFunctionId());</span>
+<span class="nc" id="L367">                mapping.setByPassFlag(f.getByPassFlag());</span>
+<span class="nc" id="L368">                mapping.setIsActive(f.getIsActive());</span>
+<span class="nc" id="L369">                approvalFlowFunctionMappingRepository.save(mapping);</span>
+<span class="nc" id="L370">            }</span>
+        }
+
+<span class="nc bnc" id="L373" title="All 2 branches missed.">        if (dto.getApprovalFlowRequestMappingList() != null) {</span>
+<span class="nc bnc" id="L374" title="All 2 branches missed.">            for (ApprovalFlowRequestMappingDto r : dto.getApprovalFlowRequestMappingList()) {</span>
+<span class="nc bnc" id="L375" title="All 2 branches missed.">                ApprovalFlowRequestMapping mapping = r.getWorkFlowRequestMappingId() != null</span>
+<span class="nc" id="L376">                        ? approvalFlowRequestMappingRepository.findById(r.getWorkFlowRequestMappingId())</span>
+<span class="nc" id="L377">                        .orElse(new ApprovalFlowRequestMapping())</span>
+<span class="nc" id="L378">                        : new ApprovalFlowRequestMapping();</span>
+
+<span class="nc" id="L380">                mapping.setApprovalFlowId(flowId);</span>
+<span class="nc" id="L381">                mapping.setRequestedBy(dto.getSourceCategory());</span>
+<span class="nc" id="L382">                mapping.setRequestId(r.getRequestId());</span>
+<span class="nc" id="L383">                mapping.setByPassFlag(r.getByPassFlag());</span>
+<span class="nc" id="L384">                mapping.setIsActive(r.getIsActive());</span>
+<span class="nc" id="L385">                approvalFlowRequestMappingRepository.save(mapping);</span>
+<span class="nc" id="L386">            }</span>
+        }
+
+<span class="nc bnc" id="L389" title="All 2 branches missed.">        if (dto.getApprovalFlowLevelList() != null) {</span>
+<span class="nc bnc" id="L390" title="All 2 branches missed.">            for (ApprovalFlowLevelDto l : dto.getApprovalFlowLevelList()) {</span>
+<span class="nc bnc" id="L391" title="All 2 branches missed.">                ApprovalFlowLevel level = l.getApprovalFlowLevelId() != null</span>
+<span class="nc" id="L392">                        ? approvalFlowLevelRepository.findById(l.getApprovalFlowLevelId())</span>
+<span class="nc" id="L393">                        .orElse(new ApprovalFlowLevel())</span>
+<span class="nc" id="L394">                        : new ApprovalFlowLevel();</span>
+
+<span class="nc" id="L396">                level.setApprovalFlowId(flowId);</span>
+<span class="nc" id="L397">                level.setLevelMasterId(l.getLevelMasterId());</span>
+<span class="nc" id="L398">                level.setTurnAroundTime(l.getTurnAroundTime());</span>
+<span class="nc" id="L399">                level.setByPassFlag(l.getByPassFlag());</span>
+<span class="nc" id="L400">                level.setIsActive(l.getIsActive());</span>
+<span class="nc" id="L401">                ApprovalFlowLevel savedLevel = approvalFlowLevelRepository.save(level);</span>
+
+<span class="nc bnc" id="L403" title="All 2 branches missed.">                if (l.getApprovalFlowLevelMappingList() != null) {</span>
+<span class="nc" id="L404">                    Set&lt;String&gt; clearedPairs = new HashSet&lt;&gt;();</span>
+
+<span class="nc bnc" id="L406" title="All 2 branches missed.">                    for (ApprovalFlowLevelMappingDto lm : l.getApprovalFlowLevelMappingList()) {</span>
+<span class="nc bnc" id="L407" title="All 2 branches missed.">                        if (lm.getDesignation() != null) {</span>
+<span class="nc bnc" id="L408" title="All 2 branches missed.">                            for (DesignationDTO designation : lm.getDesignation()) {</span>
+<span class="nc bnc" id="L409" title="All 4 branches missed.">                                if (designation == null || designation.getId() == null) continue;</span>
+<span class="nc" id="L410">                                String pairKey = savedLevel.getApprovalFlowLevelId() + &quot;-&quot; + designation.getId();</span>
+<span class="nc bnc" id="L411" title="All 2 branches missed.">                                if (!clearedPairs.contains(pairKey)) {</span>
+<span class="nc" id="L412">                                    approvalFlowLevelMappingRepository</span>
+<span class="nc" id="L413">                                            .deleteByApprovalFlowLevelIdAndDesignationId(</span>
+<span class="nc" id="L414">                                                    savedLevel.getApprovalFlowLevelId(),</span>
+<span class="nc" id="L415">                                                    designation.getId()</span>
+                                            );
+<span class="nc" id="L417">                                    clearedPairs.add(pairKey);</span>
+                                }
+
+<span class="nc bnc" id="L420" title="All 2 branches missed.">                                if (designation.getEmployees() != null) {</span>
+<span class="nc bnc" id="L421" title="All 2 branches missed.">                                    for (EmployeeDTO employee : designation.getEmployees()) {</span>
+<span class="nc bnc" id="L422" title="All 4 branches missed.">                                        if (employee == null || employee.getEmployeeId() == null) continue;</span>
+<span class="nc" id="L423">                                        ApprovalFlowLevelMapping mapping = new ApprovalFlowLevelMapping();</span>
+<span class="nc" id="L424">                                        String parentStatus = l.getIsActive();</span>
+<span class="nc" id="L425">                                        String childStatus = lm.getIsActive();</span>
+<span class="nc" id="L426">                                        mapping.setIsActive(</span>
+<span class="nc bnc" id="L427" title="All 4 branches missed.">                                                &quot;Y&quot;.equals(parentStatus) &amp;&amp; &quot;Y&quot;.equals(childStatus) ? &quot;Y&quot; : &quot;N&quot;</span>
+                                        );
+<span class="nc" id="L429">                                        mapping.setApprovalFlowLevelId(savedLevel.getApprovalFlowLevelId());</span>
+<span class="nc" id="L430">                                        mapping.setDisplayOrder(lm.getOrderBy());</span>
+<span class="nc" id="L431">                                        mapping.setMailActive(lm.getMailActive());</span>
+<span class="nc" id="L432">                                        mapping.setSmsActive(lm.getSmsActive());</span>
+<span class="nc" id="L433">                                        mapping.setEmployeeId(employee.getEmployeeId());</span>
+<span class="nc" id="L434">                                        mapping.setDesignationId(designation.getId());</span>
+<span class="nc" id="L435">                                        approvalFlowLevelMappingRepository.save(mapping);</span>
+<span class="nc" id="L436">                                    }</span>
+                                }
+<span class="nc" id="L438">                            }</span>
+                        }
+<span class="nc" id="L440">                    }</span>
+                }
+<span class="nc" id="L442">            }</span>
+        }
+<span class="nc" id="L444">        return dto;</span>
+    }
+
+
+    public List&lt;Level&gt; findLevelName() {
+<span class="nc" id="L449">        return levelRepository.findByIsActive(&quot;Y&quot;);</span>
+    }
+
+    public List&lt;DesignationDTO&gt; findDesignationBasedOnLevelMapping(Integer levelId) {
+<span class="nc" id="L453">        List&lt;Designation&gt; designations = designationRepository.findByLevelMasterIdAndStatus(levelId, &quot;A&quot;);</span>
+<span class="nc" id="L454">        return designations.stream().map(des -&gt; new DesignationDTO(des.getId(), des.getDesignationName())).collect(Collectors.toList());</span>
+    }
+
+    public List&lt;EmployeeDTO&gt; findEmployeesBasedOnDesignations(Integer[] designationsId) {
+<span class="nc" id="L458">        List&lt;Integer&gt; designationIdList = Arrays.asList(designationsId);</span>
+<span class="nc" id="L459">        List&lt;EmployeeBasicDetails&gt; employees = employeeRepository.findByDesignationIdInAndIsActiveOrderByFirstNameAscLastNameAsc(designationIdList, &quot;Y&quot;);</span>
+<span class="nc" id="L460">        return employees.stream()</span>
+<span class="nc" id="L461">                .map(emp -&gt; {</span>
+<span class="nc" id="L462">                    String fullName = Stream.of(emp.getFirstName(), emp.getMiddleName(), emp.getLastName())</span>
+<span class="nc" id="L463">                            .filter(Objects::nonNull)</span>
+<span class="nc" id="L464">                            .collect(Collectors.joining(&quot; &quot;));</span>
+<span class="nc" id="L465">                    return new EmployeeDTO(emp.getEmployeeId(), fullName);</span>
+                })
+<span class="nc" id="L467">                .collect(Collectors.toList());</span>
+    }
+
+    @Async
+    @Transactional
+    public void addRequest(Integer functionId, Integer employeeId, String requestNumber) {
+<span class="nc" id="L473">        List&lt;Integer&gt; workflowIds = approvalFlowFunctionMappingRepository.findByFunctionIdAndIsActive(functionId, &quot;Y&quot;).stream()</span>
+<span class="nc" id="L474">                .map(ApprovalFlowFunctionMapping::getApprovalFlowId).collect(Collectors.toList());</span>
+
+<span class="nc bnc" id="L476" title="All 2 branches missed.">        if (workflowIds.isEmpty()) {</span>
+<span class="nc" id="L477">            throw new RuntimeException(&quot;No workflows mapped for functionId: &quot; + functionId);</span>
+        }
+
+<span class="nc" id="L480">        List&lt;ApprovalFlowRequestMapping&gt; requestMappings = approvalFlowRequestMappingRepository.findByApprovalFlowIdInAndIsActive(workflowIds, &quot;Y&quot;);</span>
+
+<span class="nc" id="L482">        EmployeeHierarchyView emp = employeeHierarchyRepository.findByEmployeeId(employeeId).orElseThrow(() -&gt; new IllegalArgumentException(&quot;Employee not found&quot;));</span>
+
+<span class="nc" id="L484">        Integer workflowId = requestMappings.stream().sorted(Comparator.comparingInt(this::priority)).filter(r -&gt; match(r, emp))</span>
+<span class="nc" id="L485">                .map(ApprovalFlowRequestMapping::getApprovalFlowId).findFirst().orElseThrow(() -&gt; new RuntimeException(&quot;No matching workflow found&quot;));</span>
+
+<span class="nc" id="L487">        WorkflowRequest request = new WorkflowRequest();</span>
+<span class="nc" id="L488">        request.setRequestNumber(requestNumber);</span>
+<span class="nc" id="L489">        request.setFunctionId(functionId);</span>
+<span class="nc" id="L490">        request.setRequestDate(new Date());</span>
+<span class="nc" id="L491">        request.setRequestStatus(&quot;Pending&quot;);</span>
+<span class="nc" id="L492">        request.setWorkflowMasterId(workflowId);</span>
+<span class="nc" id="L493">        request = workflowRequestRepository.save(request);</span>
+
+
+<span class="nc" id="L496">        List&lt;WorkflowStatus&gt; workflowStatuses = new ArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L498">        List&lt;ApprovalFlowLevel&gt; levels = approvalFlowLevelRepository.findByApprovalFlowIdAndIsActive(workflowId, &quot;Y&quot;);</span>
+
+<span class="nc bnc" id="L500" title="All 2 branches missed.">        for (ApprovalFlowLevel level : levels) {</span>
+<span class="nc" id="L501">            List&lt;ApprovalFlowLevelMapping&gt; levelMappings = approvalFlowLevelMappingRepository.findByApprovalFlowLevelIdOrderByDisplayOrder(level.getApprovalFlowLevelId());</span>
+
+<span class="nc bnc" id="L503" title="All 2 branches missed.">            for (ApprovalFlowLevelMapping levelMapping : levelMappings) {</span>
+<span class="nc" id="L504">                WorkflowStatus status = new WorkflowStatus();</span>
+<span class="nc" id="L505">                status.setWorkflowRequestId(request.getWorkflowRequestId());</span>
+<span class="nc" id="L506">                status.setLevel(level.getLevelMasterId());</span>
+<span class="nc" id="L507">                status.setDisplayOrder(levelMapping.getDisplayOrder());</span>
+<span class="nc" id="L508">                status.setAssignTo(levelMapping.getEmployeeId());</span>
+<span class="nc" id="L509">                status.setAssignDate(new Date());</span>
+<span class="nc" id="L510">                status.setStatus(&quot;Pending&quot;);</span>
+<span class="nc" id="L511">                workflowStatuses.add(status);</span>
+<span class="nc" id="L512">            }</span>
+<span class="nc" id="L513">        }</span>
+
+<span class="nc" id="L515">        workflowStatusRepository.saveAll(workflowStatuses);</span>
+<span class="nc" id="L516">    }</span>
+
+    private int priority(ApprovalFlowRequestMapping r) {
+<span class="nc bnc" id="L519" title="All 6 branches missed.">        switch (r.getRequestedBy().toUpperCase()) {</span>
+            case &quot;EMPLOYEE&quot;:
+<span class="nc" id="L521">                return 1;</span>
+            case &quot;EMPLOYEE_GROUP&quot;:
+<span class="nc" id="L523">                return 2;</span>
+            case &quot;DIVISION&quot;:
+<span class="nc" id="L525">                return 3;</span>
+            case &quot;DEPARTMENT&quot;:
+<span class="nc" id="L527">                return 4;</span>
+            case &quot;DESIGNATION&quot;:
+<span class="nc" id="L529">                return 5;</span>
+            default:
+<span class="nc" id="L531">                return Integer.MAX_VALUE;</span>
+        }
+    }
+
+    private boolean match(ApprovalFlowRequestMapping r, EmployeeHierarchyView emp) {
+<span class="nc bnc" id="L536" title="All 6 branches missed.">        switch (r.getRequestedBy().toUpperCase()) {</span>
+            case &quot;EMPLOYEE&quot;:
+<span class="nc" id="L538">                return r.getRequestId().equals(String.valueOf(emp.getEmployeeId()));</span>
+
+            case &quot;EMPLOYEE_GROUP&quot;:
+<span class="nc" id="L541">                return Arrays.asList(emp.getEmployeeGroup().split(&quot;,&quot;)).contains(r.getRequestId());</span>
+
+            case &quot;DIVISION&quot;:
+<span class="nc" id="L544">                return r.getRequestId().equals(String.valueOf(emp.getDivisionId()));</span>
+
+            case &quot;DEPARTMENT&quot;:
+<span class="nc" id="L547">                return r.getRequestId().equals(String.valueOf(emp.getDepartmentId()));</span>
+
+            case &quot;DESIGNATION&quot;:
+<span class="nc" id="L550">                return r.getRequestId().equals(String.valueOf(emp.getDesignationId()));</span>
+
+            default:
+<span class="nc" id="L553">                return false;</span>
+        }
+    }
+
+    @Transactional
+    public boolean updateStatus(String requestNumber, String statusUpdate) {
+<span class="nc" id="L559">        WorkflowRequest workflowRequest = workflowRequestRepository.findByRequestNumber(requestNumber)</span>
+<span class="nc" id="L560">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;No workflow request found for this request number&quot;));</span>
+
+<span class="nc" id="L562">        validateWorkflowState(workflowRequest);</span>
+
+<span class="nc" id="L564">        Integer empId = SessionHolder.getUserLoginDetail().getEmpId();</span>
+<span class="nc" id="L565">        List&lt;WorkflowStatus&gt; statuses = workflowStatusRepository.findByWorkflowRequestId(workflowRequest.getWorkflowRequestId()).stream()</span>
+<span class="nc" id="L566">                .sorted(Comparator.comparing(WorkflowStatus::getLevel).thenComparing(WorkflowStatus::getDisplayOrder)).collect(Collectors.toList());</span>
+<span class="nc" id="L567">        WorkflowStatus targetStatus = statuses.stream().filter(s -&gt; Constant.WORKFLOW_REQUEST_STATUS_PENDING.equalsIgnoreCase(s.getStatus())).findFirst().orElse(null);</span>
+
+<span class="nc bnc" id="L569" title="All 5 branches missed.">        switch (statusUpdate) {</span>
+            case Constant.WORKFLOW_REQUEST_STATUS_CANCELLED:
+<span class="nc" id="L571">                handleCancelled(workflowRequest, statuses, empId);</span>
+<span class="nc" id="L572">                return false;</span>
+
+            case Constant.WORKFLOW_REQUEST_STATUS_REVERSAL_PENDING:
+<span class="nc" id="L575">                handleReversalPending(workflowRequest, statuses, empId);</span>
+<span class="nc" id="L576">                return false;</span>
+
+            case Constant.WORKFLOW_REQUEST_STATUS_REVERSAL_APPROVED:
+<span class="nc" id="L579">                return handleReversalApproved(workflowRequest, statuses, targetStatus, empId);</span>
+
+            case Constant.WORKFLOW_REQUEST_STATUS_REVERSAL_REJECTED:
+<span class="nc" id="L582">                handleReversalRejected(workflowRequest, statuses, empId);</span>
+<span class="nc" id="L583">                return true;</span>
+
+            default:
+<span class="nc" id="L586">                return handleNormalFlow(workflowRequest, statuses, targetStatus, statusUpdate, empId);</span>
+        }
+    }
+
+    private void validateWorkflowState(WorkflowRequest workflowRequest) {
+<span class="nc bnc" id="L591" title="All 2 branches missed.">        if (Constant.WORKFLOW_REQUEST_STATUS_REJECTED.equalsIgnoreCase(workflowRequest.getRequestStatus()) ||</span>
+<span class="nc bnc" id="L592" title="All 2 branches missed.">                Constant.WORKFLOW_REQUEST_STATUS_CANCELLED.equalsIgnoreCase(workflowRequest.getRequestStatus())) {</span>
+<span class="nc" id="L593">            throw new IllegalArgumentException(&quot;Workflow is already &quot; + workflowRequest.getRequestStatus().toLowerCase() + &quot;.&quot;);</span>
+        }
+<span class="nc" id="L595">    }</span>
+
+    private void handleCancelled(WorkflowRequest request, List&lt;WorkflowStatus&gt; statuses, Integer empId) {
+<span class="nc" id="L598">        request.setRequestStatus(Constant.WORKFLOW_REQUEST_STATUS_CANCELLED);</span>
+<span class="nc" id="L599">        statuses.forEach(s -&gt; markStatus(s, Constant.WORKFLOW_REQUEST_STATUS_CANCELLED, empId));</span>
+<span class="nc" id="L600">        saveAll(request, statuses);</span>
+<span class="nc" id="L601">    }</span>
+
+    private void handleReversalPending(WorkflowRequest request, List&lt;WorkflowStatus&gt; statuses, Integer empId) {
+<span class="nc" id="L604">        request.setRequestStatus(Constant.WORKFLOW_REQUEST_STATUS_REVERSAL_PENDING);</span>
+<span class="nc" id="L605">        statuses.forEach(s -&gt; markStatus(s, Constant.WORKFLOW_REQUEST_STATUS_REVERSAL_PENDING, empId));</span>
+<span class="nc" id="L606">        saveAll(request, statuses);</span>
+<span class="nc" id="L607">    }</span>
+
+    private boolean handleReversalApproved(WorkflowRequest request, List&lt;WorkflowStatus&gt; statuses, WorkflowStatus targetStatus, Integer empId) {
+<span class="nc" id="L610">        boolean allApproved = false;</span>
+
+<span class="nc bnc" id="L612" title="All 2 branches missed.">        if (targetStatus != null) {</span>
+<span class="nc" id="L613">            int currentLevel = targetStatus.getLevel();</span>
+<span class="nc" id="L614">            Integer currentOrderBy = targetStatus.getDisplayOrder();</span>
+
+<span class="nc" id="L616">            statuses.stream()</span>
+<span class="nc bnc" id="L617" title="All 2 branches missed.">                    .filter(s -&gt; s.getLevel() == currentLevel</span>
+<span class="nc bnc" id="L618" title="All 2 branches missed.">                            &amp;&amp; Objects.equals(s.getDisplayOrder(), currentOrderBy)</span>
+<span class="nc bnc" id="L619" title="All 2 branches missed.">                            &amp;&amp; Constant.WORKFLOW_REQUEST_STATUS_REVERSAL_PENDING.equalsIgnoreCase(s.getStatus()))</span>
+<span class="nc" id="L620">                    .forEach(s -&gt; markStatus(s, Constant.WORKFLOW_REQUEST_STATUS_REVERSAL_APPROVED, empId));</span>
+
+<span class="nc" id="L622">            allApproved = statuses.stream()</span>
+<span class="nc" id="L623">                    .allMatch(s -&gt; Constant.WORKFLOW_REQUEST_STATUS_REVERSAL_APPROVED.equalsIgnoreCase(s.getStatus()));</span>
+
+<span class="nc bnc" id="L625" title="All 2 branches missed.">            if (allApproved) {</span>
+<span class="nc" id="L626">                request.setRequestStatus(Constant.WORKFLOW_REQUEST_STATUS_REVERSAL_APPROVED);</span>
+            }
+        }
+
+<span class="nc" id="L630">        saveAll(request, statuses);</span>
+<span class="nc" id="L631">        return allApproved;</span>
+    }
+
+    private void handleReversalRejected(WorkflowRequest request, List&lt;WorkflowStatus&gt; statuses, Integer empId) {
+<span class="nc" id="L635">        request.setRequestStatus(Constant.WORKFLOW_REQUEST_STATUS_APPROVED);</span>
+<span class="nc" id="L636">        statuses.forEach(s -&gt; markStatus(s, Constant.WORKFLOW_REQUEST_STATUS_APPROVED, empId));</span>
+<span class="nc" id="L637">        saveAll(request, statuses);</span>
+<span class="nc" id="L638">    }</span>
+
+    private boolean handleNormalFlow(WorkflowRequest request, List&lt;WorkflowStatus&gt; statuses,
+                                     WorkflowStatus targetStatus, String statusUpdate, Integer empId) {
+<span class="nc" id="L642">        boolean allApproved = false;</span>
+
+<span class="nc bnc" id="L644" title="All 2 branches missed.">        if (targetStatus != null) {</span>
+<span class="nc" id="L645">            int currentLevel = targetStatus.getLevel();</span>
+<span class="nc" id="L646">            Integer currentOrderBy = targetStatus.getDisplayOrder();</span>
+
+<span class="nc" id="L648">            statuses.stream()</span>
+<span class="nc bnc" id="L649" title="All 2 branches missed.">                    .filter(s -&gt; s.getLevel() == currentLevel</span>
+<span class="nc bnc" id="L650" title="All 2 branches missed.">                            &amp;&amp; Objects.equals(s.getDisplayOrder(), currentOrderBy)</span>
+<span class="nc bnc" id="L651" title="All 2 branches missed.">                            &amp;&amp; Constant.WORKFLOW_REQUEST_STATUS_PENDING.equalsIgnoreCase(s.getStatus()))</span>
+<span class="nc" id="L652">                    .forEach(s -&gt; markStatus(s, statusUpdate, empId));</span>
+
+<span class="nc bnc" id="L654" title="All 2 branches missed.">            if (Constant.WORKFLOW_REQUEST_STATUS_REJECTED.equalsIgnoreCase(statusUpdate)) {</span>
+<span class="nc" id="L655">                request.setRequestStatus(Constant.WORKFLOW_REQUEST_STATUS_REJECTED);</span>
+            } else {
+<span class="nc" id="L657">                allApproved = statuses.stream()</span>
+<span class="nc" id="L658">                        .allMatch(s -&gt; Constant.WORKFLOW_REQUEST_STATUS_APPROVED.equalsIgnoreCase(s.getStatus()));</span>
+<span class="nc bnc" id="L659" title="All 2 branches missed.">                if (allApproved) {</span>
+<span class="nc" id="L660">                    request.setRequestStatus(Constant.WORKFLOW_REQUEST_STATUS_APPROVED);</span>
+                }
+            }
+        }
+
+<span class="nc" id="L665">        saveAll(request, statuses);</span>
+<span class="nc" id="L666">        return allApproved;</span>
+    }
+
+    private void markStatus(WorkflowStatus status, String newStatus, Integer empId) {
+<span class="nc" id="L670">        status.setStatus(newStatus);</span>
+<span class="nc" id="L671">        status.setApprovalDate(LocalDate.now());</span>
+<span class="nc" id="L672">        status.setApprovalBy(empId);</span>
+<span class="nc" id="L673">    }</span>
+
+    private void saveAll(WorkflowRequest request, List&lt;WorkflowStatus&gt; statuses) {
+<span class="nc" id="L676">        workflowStatusRepository.saveAll(statuses);</span>
+<span class="nc" id="L677">        workflowRequestRepository.save(request);</span>
+<span class="nc" id="L678">    }</span>
+
+    public List&lt;ApprovalFlowDelegation&gt; findDelegationBasedOnApprovalFlow(Integer approvalId) {
+<span class="nc" id="L681">        List&lt;Integer&gt; employeeIds = approvalFlowLevelMappingRepository</span>
+<span class="nc" id="L682">                .findByApprovalFlowLevelIdIn(</span>
+<span class="nc" id="L683">                        approvalFlowLevelRepository.findByApprovalFlowIdAndIsActive(approvalId, &quot;Y&quot;)</span>
+<span class="nc" id="L684">                                .stream()</span>
+<span class="nc" id="L685">                                .map(ApprovalFlowLevel::getApprovalFlowLevelId)</span>
+<span class="nc" id="L686">                                .collect(Collectors.toSet())</span>
+                )
+<span class="nc" id="L688">                .stream()</span>
+<span class="nc" id="L689">                .map(ApprovalFlowLevelMapping::getEmployeeId)</span>
+<span class="nc" id="L690">                .collect(Collectors.toList());</span>
+<span class="nc" id="L691">        List&lt;ApprovalFlowDelegation&gt; existingDelegations =</span>
+<span class="nc" id="L692">                approvalFlowDelegationRepository.findByApprovalFlowId(approvalId);</span>
+<span class="nc" id="L693">        Map&lt;Integer, ApprovalFlowDelegation&gt; delegationMap = existingDelegations.stream()</span>
+<span class="nc" id="L694">                .collect(Collectors.toMap(</span>
+                        ApprovalFlowDelegation::getEmployeeId,
+<span class="nc" id="L696">                        d -&gt; d,</span>
+<span class="nc bnc" id="L697" title="All 2 branches missed.">                        (d1, d2) -&gt; d1.getDelegationId() != null ? d1 : d2</span>
+                ));
+<span class="nc" id="L699">        List&lt;ApprovalFlowDelegation&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L700" title="All 2 branches missed.">        for (Integer empId : employeeIds) {</span>
+            ApprovalFlowDelegation delegation;
+<span class="nc bnc" id="L702" title="All 2 branches missed.">            if (delegationMap.containsKey(empId)) {</span>
+<span class="nc" id="L703">                delegation = delegationMap.get(empId);</span>
+<span class="nc" id="L704">                delegation.setApprovalFlowId(approvalId);</span>
+            } else {
+<span class="nc" id="L706">                delegation = new ApprovalFlowDelegation();</span>
+<span class="nc" id="L707">                delegation.setApprovalFlowId(approvalId);</span>
+<span class="nc" id="L708">                delegation.setEmployeeId(empId);</span>
+            }
+<span class="nc bnc" id="L710" title="All 2 branches missed.">            if (delegation.getDelegationId() == null) {</span>
+<span class="nc" id="L711">                delegation.setId(null);</span>
+            }
+<span class="nc" id="L713">            result.add(delegation);</span>
+<span class="nc" id="L714">        }</span>
+<span class="nc" id="L715">        return result;</span>
+    }
+
+    public List&lt;WorkflowRequest&gt; getVisibleRequestsForUser(Integer userId, Integer functionId) {
+<span class="nc" id="L719">        List&lt;WorkflowStatus&gt; assignedStatuses = workflowStatusRepository.findByAssignTo(userId);</span>
+
+<span class="nc" id="L721">        List&lt;WorkflowRequest&gt; visibleRequests = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L723" title="All 2 branches missed.">        for (WorkflowStatus ws : assignedStatuses) {</span>
+<span class="nc" id="L724">            WorkflowRequest wr = workflowRequestRepository.findById(ws.getWorkflowRequestId()).orElse(null);</span>
+<span class="nc bnc" id="L725" title="All 2 branches missed.">            if (wr == null) continue;</span>
+
+<span class="nc bnc" id="L727" title="All 4 branches missed.">            if (functionId != null &amp;&amp; !functionId.equals(wr.getFunctionId())) continue;</span>
+
+<span class="nc" id="L729">            List&lt;WorkflowStatus&gt; allStatuses = workflowStatusRepository.findByWorkflowRequestId(ws.getWorkflowRequestId());</span>
+
+<span class="nc" id="L731">            boolean previousLevelsApproved = allStatuses.stream()</span>
+<span class="nc bnc" id="L732" title="All 2 branches missed.">                    .filter(s -&gt; s.getLevel() &lt; ws.getLevel())</span>
+<span class="nc bnc" id="L733" title="All 4 branches missed.">                    .allMatch(s -&gt; Constant.WORKFLOW_REQUEST_STATUS_APPROVED.equalsIgnoreCase(s.getStatus()) || Constant.WORKFLOW_REQUEST_STATUS_REVERSAL_APPROVED.equalsIgnoreCase(s.getStatus()));</span>
+
+<span class="nc bnc" id="L735" title="All 2 branches missed.">            if (!previousLevelsApproved) continue;</span>
+<span class="nc" id="L736">            boolean previousOrdersApproved = allStatuses.stream()</span>
+<span class="nc bnc" id="L737" title="All 4 branches missed.">                    .filter(s -&gt; s.getLevel().equals(ws.getLevel()) &amp;&amp; s.getDisplayOrder() &lt; ws.getDisplayOrder())</span>
+<span class="nc bnc" id="L738" title="All 4 branches missed.">                    .allMatch(s -&gt; Constant.WORKFLOW_REQUEST_STATUS_APPROVED.equalsIgnoreCase(s.getStatus())  || Constant.WORKFLOW_REQUEST_STATUS_REVERSAL_APPROVED.equalsIgnoreCase(s.getStatus()));</span>
+
+<span class="nc bnc" id="L740" title="All 2 branches missed.">            if (!previousOrdersApproved) continue;</span>
+
+<span class="nc" id="L742">            String userStatus = allStatuses.stream()</span>
+<span class="nc" id="L743">                    .filter(s -&gt; Objects.equals(s.getAssignTo(), userId))</span>
+<span class="nc" id="L744">                    .map(WorkflowStatus::getStatus)</span>
+<span class="nc" id="L745">                    .findFirst()</span>
+<span class="nc" id="L746">                    .orElse(null);</span>
+
+<span class="nc" id="L748">            wr.setUserStatus(userStatus);</span>
+<span class="nc" id="L749">            visibleRequests.add(wr);</span>
+<span class="nc" id="L750">        }</span>
+
+<span class="nc" id="L752">        return visibleRequests.stream().distinct().collect(Collectors.toList());</span>
+    }
+
+    public List&lt;ApprovalFlowDelegationDto&gt; saveAndWorkFlowDelegation(List&lt;ApprovalFlowDelegationDto&gt; delegationDtos) {
+<span class="nc" id="L756">        return delegationDtos.stream().map(dto -&gt; {</span>
+            ApprovalFlowDelegation entity;
+<span class="nc bnc" id="L758" title="All 2 branches missed.">            if (dto.getId() != null) {</span>
+<span class="nc" id="L759">                entity = approvalFlowDelegationRepository.findById(dto.getId()).orElse(new ApprovalFlowDelegation());</span>
+            } else {
+<span class="nc" id="L761">                entity = new ApprovalFlowDelegation();</span>
+            }
+<span class="nc" id="L763">            entity.setApprovalFlowId(dto.getApprovalFlowId());</span>
+<span class="nc" id="L764">            entity.setEmployeeId(dto.getEmployeeId());</span>
+<span class="nc" id="L765">            entity.setDelegationId(dto.getDelegationId());</span>
+<span class="nc" id="L766">            entity.setIsActive(dto.getIsActive());</span>
+<span class="nc" id="L767">            entity.setStartDate(dto.getStartDate());</span>
+<span class="nc" id="L768">            entity.setEndDate(dto.getEndDate());</span>
+<span class="nc" id="L769">            ApprovalFlowDelegation saved = approvalFlowDelegationRepository.save(entity);</span>
+<span class="nc" id="L770">            ApprovalFlowDelegationDto savedDto = new ApprovalFlowDelegationDto();</span>
+<span class="nc" id="L771">            savedDto.setId(saved.getId());</span>
+<span class="nc" id="L772">            savedDto.setApprovalFlowId(saved.getApprovalFlowId());</span>
+<span class="nc" id="L773">            savedDto.setEmployeeId(saved.getEmployeeId());</span>
+<span class="nc" id="L774">            savedDto.setDelegationId(saved.getDelegationId());</span>
+<span class="nc" id="L775">            savedDto.setIsActive(saved.getIsActive());</span>
+<span class="nc" id="L776">            savedDto.setStartDate(saved.getStartDate());</span>
+<span class="nc" id="L777">            savedDto.setEndDate(saved.getEndDate());</span>
+
+<span class="nc" id="L779">            return savedDto;</span>
+<span class="nc" id="L780">        }).collect(Collectors.toList());</span>
+    }
+
+    public String validateDuplicateRequestMappings(ApprovalFlowDto dto) {
+<span class="nc bnc" id="L784" title="All 2 branches missed.">        for (ApprovalFlowFunctionMappingDto functionMapping : dto.getApprovalFlowFunctionMappingList()) {</span>
+<span class="nc bnc" id="L785" title="All 2 branches missed.">            if (functionMapping.getIsActive().equalsIgnoreCase(&quot;Y&quot;)) {</span>
+<span class="nc" id="L786">                Integer functionId = functionMapping.getFunctionId();</span>
+<span class="nc" id="L787">                Optional&lt;FunctionEntity&gt; function = functionRepository.findById(functionId);</span>
+<span class="nc" id="L788">                String functionName = translationCommonServices.getDescription(1, function.get().getShortCode());</span>
+
+<span class="nc" id="L790">                List&lt;ApprovalFlowFunctionMapping&gt; functionMappings =</span>
+<span class="nc" id="L791">                        approvalFlowFunctionMappingRepository.findByFunctionIdAndIsActive(functionId, &quot;Y&quot;);</span>
+<span class="nc bnc" id="L792" title="All 4 branches missed.">                if (functionMappings == null || functionMappings.isEmpty()) {</span>
+<span class="nc" id="L793">                    continue;</span>
+                }
+<span class="nc" id="L795">                Integer approvalFlowId = functionMappings.get(0).getApprovalFlowId();</span>
+<span class="nc" id="L796">                ApprovalFlow flow = approvalFlowRepository.findByApprovalFlowId(approvalFlowId);</span>
+
+<span class="nc" id="L798">                String approvalFlowName = flow.getApprovalFlowName();</span>
+<span class="nc bnc" id="L799" title="All 2 branches missed.">                for (ApprovalFlowRequestMappingDto requestMapping : dto.getApprovalFlowRequestMappingList()) {</span>
+<span class="nc" id="L800">                    Long requestId = Long.valueOf(requestMapping.getRequestId());</span>
+<span class="nc" id="L801">                    List&lt;ApprovalFlowRequestMapping&gt; exists =</span>
+<span class="nc" id="L802">                            approvalFlowRequestMappingRepository.findByApprovalFlowIdAndRequestedByAndRequestIdAndIsActive(</span>
+                                    approvalFlowId,
+<span class="nc" id="L804">                                    dto.getSourceCategory(),</span>
+<span class="nc" id="L805">                                    requestMapping.getRequestId(),</span>
+                                    &quot;Y&quot;
+                            );
+
+<span class="nc bnc" id="L809" title="All 4 branches missed.">                    if (exists != null &amp;&amp; !exists.isEmpty()) {</span>
+<span class="nc bnc" id="L810" title="All 4 branches missed.">                        if (requestMapping.getWorkFlowRequestMappingId() != null &amp;&amp; exists.get(0).getWorkFlowRequestMappingId().equals(requestMapping.getWorkFlowRequestMappingId())) {</span>
+<span class="nc" id="L811">                            continue;</span>
+                        }
+<span class="nc" id="L813">                        String entityName = null;</span>
+<span class="nc bnc" id="L814" title="All 6 branches missed.">                        switch (dto.getSourceCategory().toUpperCase()) {</span>
+                            case &quot;DEPARTMENT&quot;:
+<span class="nc" id="L816">                                Department department = departmentRepository.findById(requestId)</span>
+<span class="nc" id="L817">                                        .orElse(null);</span>
+<span class="nc bnc" id="L818" title="All 2 branches missed.">                                if (department != null) {</span>
+<span class="nc" id="L819">                                    entityName = department.getDname();</span>
+                                }
+<span class="nc" id="L821">                                return &quot;Department '&quot; + entityName + &quot;' already exists for &quot; + functionName + &quot; function in '&quot; + approvalFlowName + &quot;'&quot;;</span>
+
+                            case &quot;DIVISION&quot;:
+<span class="nc" id="L824">                                SesM00UserDivisionMaster division = divisionMasterRepository.findByDivisionId(requestId)</span>
+<span class="nc" id="L825">                                        .orElse(null);</span>
+<span class="nc bnc" id="L826" title="All 2 branches missed.">                                if (division != null) {</span>
+<span class="nc" id="L827">                                    entityName = division.getName();</span>
+                                }
+<span class="nc" id="L829">                                return &quot;Division '&quot; + entityName + &quot;' already exists for &quot; + functionName + &quot;  function in  '&quot; + approvalFlowName + &quot;'&quot;;</span>
+
+                            case &quot;DESIGNATION&quot;:
+<span class="nc" id="L832">                                Designation designation = designationRepository.findById(Math.toIntExact(requestId))</span>
+<span class="nc" id="L833">                                        .orElse(null);</span>
+<span class="nc bnc" id="L834" title="All 2 branches missed.">                                if (designation != null) {</span>
+<span class="nc" id="L835">                                    entityName = designation.getDesignationName();</span>
+                                }
+<span class="nc" id="L837">                                return &quot;Designation '&quot; + entityName + &quot;' already exists for &quot; + functionName + &quot; function in '&quot; + approvalFlowName + &quot;'&quot;;</span>
+
+                            case &quot;EMPLOYEE&quot;:
+<span class="nc" id="L840">                                Employee employee = employeeRepository.findByEmployeeId(Math.toIntExact(requestId))</span>
+<span class="nc" id="L841">                                        .orElse(null);</span>
+<span class="nc bnc" id="L842" title="All 2 branches missed.">                                if (employee != null) {</span>
+<span class="nc" id="L843">                                    entityName = employee.getFirstName() + &quot; &quot; + employee.getLastName();</span>
+                                }
+<span class="nc" id="L845">                                return &quot;Employee '&quot; + entityName + &quot;' already exists for &quot; + functionName + &quot;  function in  '&quot; + approvalFlowName + &quot;'&quot;;</span>
+
+                            case &quot;EMPLOYEE_GROUP&quot;:
+<span class="nc" id="L848">                                Group group = groupRepo.findById(requestId)</span>
+<span class="nc" id="L849">                                        .orElse(null);</span>
+<span class="nc bnc" id="L850" title="All 2 branches missed.">                                if (group != null) {</span>
+<span class="nc" id="L851">                                    entityName = group.getGroupName();</span>
+                                }
+<span class="nc" id="L853">                                return &quot;Employee Group '&quot; + entityName + &quot;' already exists for &quot; + functionName + &quot;   function in  '&quot; + approvalFlowName + &quot;'&quot;;</span>
+
+                            default:
+<span class="nc" id="L856">                                return &quot;Duplicate entry exists for FunctionId &quot; + functionId</span>
+<span class="nc" id="L857">                                        + &quot;, RequestedBy &quot; + requestMapping.getRequestedBy()</span>
+<span class="nc" id="L858">                                        + &quot;, RequestId &quot; + requestMapping.getRequestId();</span>
+                        }
+                    }
+<span class="nc" id="L861">                }</span>
+            }
+<span class="nc" id="L863">        }</span>
+<span class="nc" id="L864">        return null;</span>
+    }
+
+    public WorkflowRequestDetailsDto getWorkflowDetailsByRequestNumber(String requestNumber) {
+<span class="nc" id="L868">        WorkflowRequest workflowRequest = workflowRequestRepository.findByRequestNumber(requestNumber)</span>
+<span class="nc" id="L869">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Workflow request with request number &quot; + requestNumber + &quot; not found.&quot;));</span>
+<span class="nc" id="L870">        List&lt;WorkflowStatus&gt; workflowStatuses = workflowStatusRepository.findByWorkflowRequestId(workflowRequest.getWorkflowRequestId());</span>
+
+<span class="nc" id="L872">        List&lt;WorkflowStatusDto&gt; StatusList = workflowStatuses.stream()</span>
+<span class="nc" id="L873">                .map(status -&gt; {</span>
+<span class="nc" id="L874">                    WorkflowStatusDto dto = new WorkflowStatusDto();</span>
+<span class="nc" id="L875">                    dto.setLevel(status.getLevel());</span>
+<span class="nc" id="L876">                    dto.setStatus(status.getStatus());</span>
+<span class="nc" id="L877">                    dto.setApprovalDate(status.getApprovalDate());</span>
+<span class="nc" id="L878">                    dto.setRemarks(status.getRemarks());</span>
+
+                    // map employee IDs to names
+<span class="nc" id="L881">                    dto.setAssignToName(getEmployeeNameById(status.getAssignTo()));</span>
+<span class="nc" id="L882">                    dto.setApprovalByName(getEmployeeNameById(status.getApprovalBy()));</span>
+<span class="nc bnc" id="L883" title="All 2 branches missed.">                    dto.setDelegationToName(status.getDelegationTo() != null</span>
+<span class="nc" id="L884">                            ? getEmployeeNameById(Integer.valueOf(status.getDelegationTo()))</span>
+<span class="nc" id="L885">                            : null);</span>
+<span class="nc" id="L886">                    dto.setDelegationDate(status.getDelegationDate());</span>
+<span class="nc" id="L887">                    dto.setMailSend(Boolean.valueOf(status.getMailSend()));</span>
+<span class="nc" id="L888">                    dto.setSmsSend(Boolean.valueOf(status.getSmsSend()));</span>
+<span class="nc" id="L889">                    return dto;</span>
+                })
+<span class="nc" id="L891">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L893">        WorkflowRequestDetailsDto responseDto = new WorkflowRequestDetailsDto();</span>
+<span class="nc" id="L894">        responseDto.setWorkflowRequest(workflowRequest);</span>
+<span class="nc" id="L895">        responseDto.setWorkflowStatusList(StatusList);</span>
+<span class="nc" id="L896">        return responseDto;</span>
+    }
+
+    private String getEmployeeNameById(Integer empId) {
+<span class="nc bnc" id="L900" title="All 2 branches missed.">        if (empId == null) return null;</span>
+<span class="nc" id="L901">        return employeeRepository.findById(empId)</span>
+<span class="nc" id="L902">                .map(emp -&gt; Stream.of(emp.getFirstName(), emp.getMiddleName(), emp.getLastName())</span>
+<span class="nc" id="L903">                        .filter(Objects::nonNull)</span>
+<span class="nc" id="L904">                        .collect(Collectors.joining(&quot; &quot;)))</span>
+<span class="nc" id="L905">                .orElse(&quot;Unknown&quot;);</span>
+    }
+
+    public Map&lt;String, Object&gt; getLevelMasterList(Pageable pageable, String searchColumn, String searchValue) {
+        Page&lt;Level&gt; levelPage;
+
+<span class="nc bnc" id="L911" title="All 8 branches missed.">        if (searchColumn != null &amp;&amp; !searchColumn.isEmpty() &amp;&amp; searchValue != null &amp;&amp; !searchValue.isEmpty()) {</span>
+<span class="nc" id="L912">            Specification&lt;Level&gt; spec = searchByColumn(searchColumn, searchValue);</span>
+<span class="nc" id="L913">            levelPage = levelRepository.findAll(spec, pageable);</span>
+<span class="nc" id="L914">        } else {</span>
+<span class="nc" id="L915">            levelPage = levelRepository.findAll(pageable);</span>
+        }
+
+<span class="nc" id="L918">        List&lt;LevelMasterDTO&gt; levelMasterDTOList = levelPage.getContent().stream().map(l -&gt; modelMapper.map(l, LevelMasterDTO.class)).collect(Collectors.toList());</span>
+
+<span class="nc" id="L920">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L921">        response.put(&quot;result&quot;, levelMasterDTOList);</span>
+<span class="nc" id="L922">        response.put(&quot;currentPage&quot;, pageable.getPageNumber() + 1);</span>
+<span class="nc" id="L923">        response.put(&quot;pageSize&quot;, pageable.getPageSize());</span>
+<span class="nc" id="L924">        response.put(&quot;totalItems&quot;, levelPage.getTotalElements());</span>
+<span class="nc" id="L925">        response.put(&quot;totalPages&quot;, levelPage.getTotalPages());</span>
+<span class="nc" id="L926">        return response;</span>
+    }
+
+    public static Specification&lt;Level&gt; searchByColumn(String column, String value) {
+<span class="nc" id="L930">        return (Root&lt;Level&gt; root, CriteriaQuery&lt;?&gt; query, CriteriaBuilder criteriaBuilder) -&gt; {</span>
+<span class="nc" id="L931">            Path&lt;?&gt; path = root.get(column);</span>
+
+<span class="nc bnc" id="L933" title="All 2 branches missed.">            if (path.getJavaType().equals(String.class)) {</span>
+<span class="nc" id="L934">                return criteriaBuilder.like(criteriaBuilder.lower(root.get(column)), &quot;%&quot; + value.toLowerCase() + &quot;%&quot;);</span>
+<span class="nc bnc" id="L935" title="All 2 branches missed.">            } else if (path.getJavaType().equals(Date.class)) {</span>
+                try {
+<span class="nc" id="L937">                    Date parsedDate = new SimpleDateFormat(&quot;yyyy-MM-dd&quot;).parse(value);</span>
+<span class="nc" id="L938">                    return criteriaBuilder.equal(root.get(column), parsedDate);</span>
+<span class="nc" id="L939">                } catch (ParseException e) {</span>
+<span class="nc" id="L940">                    throw new RuntimeException(&quot;Invalid date format for field: &quot; + column, e);</span>
+                }
+            } else {
+<span class="nc" id="L943">                return criteriaBuilder.equal(root.get(column), value);</span>
+            }
+        };
+    }
+
+    public Level saveLevelMaster(LevelMasterDTO dto) {
+        Level level;
+
+<span class="nc bnc" id="L951" title="All 2 branches missed.">        if (dto.getLevelId() != null) {</span>
+<span class="nc" id="L952">            level = levelRepository.findById(dto.getLevelId()).orElse(new Level());</span>
+        } else {
+<span class="nc" id="L954">            level = new Level();</span>
+        }
+<span class="nc" id="L956">        modelMapper.map(dto, level);</span>
+<span class="nc" id="L957">        return levelRepository.save(level);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

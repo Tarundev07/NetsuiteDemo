@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OnboardingController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.employement.employee_on_boarding</a> &gt; <span class="el_source">OnboardingController.java</span></div><h1>OnboardingController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.employement.employee_on_boarding;
+
+import com.atomicnorth.hrm.tenant.service.dto.employement.employee_on_boarding.OnboardingActivitesDTO;
+import com.atomicnorth.hrm.tenant.service.dto.employement.employee_on_boarding.OnboardingApplicantDTO;
+import com.atomicnorth.hrm.tenant.service.employement.employee_on_boarding.OnboardingService;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.persistence.EntityNotFoundException;
+import javax.validation.Valid;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping(&quot;/api/onboarding&quot;)
+<span class="nc" id="L23">@RequiredArgsConstructor</span>
+public class OnboardingController {
+
+    @Autowired
+    private OnboardingService onboardingService;
+
+    @PostMapping(&quot;/saveOrUpdateOnboarding&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;OnboardingApplicantDTO&gt;&gt; saveOrUpdateOnboarding(@Valid @RequestBody OnboardingApplicantDTO request) {
+        try {
+<span class="nc" id="L32">            OnboardingApplicantDTO onboardingApplicantDTO = onboardingService.saveOrUpdateJobApplicantAndOnboarding(request);</span>
+
+<span class="nc" id="L34">            ApiResponse&lt;OnboardingApplicantDTO&gt; response = new ApiResponse&lt;&gt;(</span>
+                    onboardingApplicantDTO,
+                    true,
+                    &quot;ONBOARDING-SAVE-OR-UPDATE-SUCCESS&quot;,
+                    &quot;Information&quot;
+            );
+<span class="nc" id="L40">            return ResponseEntity.status(HttpStatus.CREATED).body(response);</span>
+<span class="nc" id="L41">        } catch (EntityNotFoundException ex) {</span>
+<span class="nc" id="L42">            ApiResponse&lt;OnboardingApplicantDTO&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;ONBOARDING-SAVE-OR-UPDATE-FAILURE&quot;,
+                    &quot;Warning&quot;,
+<span class="nc" id="L47">                    List.of(ex.getMessage())</span>
+            );
+<span class="nc" id="L49">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+<span class="nc" id="L50">        } catch (Exception ex) {</span>
+<span class="nc" id="L51">            ApiResponse&lt;OnboardingApplicantDTO&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;ONBOARDING-SAVE-OR-UPDATE-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L56">                    List.of(ex.getMessage(), &quot;Please contact support.&quot;)</span>
+            );
+<span class="nc" id="L58">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getAllOnboardingApplicant&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getAllOnboardingApplicant(
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(required = false) String searchColumn,
+            @RequestParam(required = false) String searchValue,
+            @RequestParam(defaultValue = &quot;onboardingId&quot;) String sortBy,
+            @RequestParam(defaultValue = &quot;desc&quot;) String sortDir
+    ) {
+        try {
+<span class="nc" id="L72">            Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc" id="L73">            Map&lt;String, Object&gt; responseData =</span>
+<span class="nc" id="L74">                    onboardingService.getOnboardingData(pageable, searchColumn, searchValue);</span>
+
+<span class="nc" id="L76">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    responseData, true, &quot;ONBOARDING-FETCHED-SUCCESS&quot;, &quot;Information&quot;);
+
+<span class="nc" id="L79">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+
+<span class="nc" id="L81">        } catch (Exception ex) {</span>
+<span class="nc" id="L82">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+<span class="nc" id="L83">                    null, false, &quot;ONBOARDING-FETCH-FAILURE&quot;, &quot;Error&quot;, List.of(ex.getMessage()));</span>
+
+<span class="nc" id="L85">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getOnboardingById/{onboardingId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;OnboardingApplicantDTO&gt;&gt; getOnboardingById(
+            @PathVariable(required = true) Integer onboardingId) {
+        try {
+<span class="nc" id="L93">            OnboardingApplicantDTO responseData = onboardingService.getOnboardingById(onboardingId);</span>
+
+<span class="nc" id="L95">            ApiResponse&lt;OnboardingApplicantDTO&gt; response = new ApiResponse&lt;&gt;(</span>
+                    responseData, true, &quot;ONBOARDING-FETCHED-SUCCESS&quot;, &quot;Information&quot;
+            );
+
+<span class="nc" id="L99">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L100">        } catch (Exception ex) {</span>
+<span class="nc" id="L101">            ApiResponse&lt;OnboardingApplicantDTO&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+<span class="nc" id="L102">                    null, false, &quot;ONBOARDING-FETCH-FAILURE&quot;, &quot;Error&quot;, List.of(ex.getMessage())</span>
+            );
+<span class="nc" id="L104">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getOnboardingActivityById/{onboardingId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;OnboardingActivitesDTO&gt;&gt;&gt; getOnboardingActivityById(
+            @PathVariable(required = true) Integer onboardingId) {
+        try {
+<span class="nc" id="L112">            List&lt;OnboardingActivitesDTO&gt; responseData = onboardingService.getOnboardingActivityById(onboardingId);</span>
+
+<span class="nc" id="L114">            ApiResponse&lt;List&lt;OnboardingActivitesDTO&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    responseData, true, &quot;ONBOARDING-ACTIVITY-FETCHED-SUCCESS&quot;, &quot;Information&quot;
+            );
+
+<span class="nc" id="L118">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L119">        } catch (Exception ex) {</span>
+<span class="nc" id="L120">            ApiResponse&lt;List&lt;OnboardingActivitesDTO&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+<span class="nc" id="L121">                    null, false, &quot;ONBOARDING-ACTIVITY-FETCH-FAILURE&quot;, &quot;Error&quot;, List.of(ex.getMessage())</span>
+            );
+<span class="nc" id="L123">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @PatchMapping(&quot;/onboardingActivityUpdate/{status}/{onboardActivityId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;OnboardingActivitesDTO&gt;&gt; updateOnboardActivity(
+            @PathVariable(required = true) String status, @PathVariable(required = true) Integer onboardActivityId) {
+        try {
+<span class="nc" id="L131">            OnboardingActivitesDTO ActivityDto  = onboardingService.updateOnboardingActivity(onboardActivityId, status);</span>
+
+<span class="nc" id="L133">            ApiResponse&lt;OnboardingActivitesDTO&gt; response = new ApiResponse&lt;&gt;(</span>
+                    ActivityDto , true, &quot;ONBOARDING-ACTIVITY-UPDATED-SUCCESS&quot;, &quot;Information&quot;
+            );
+
+<span class="nc" id="L137">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L138">        } catch (Exception ex) {</span>
+<span class="nc" id="L139">            ApiResponse&lt;OnboardingActivitesDTO&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+<span class="nc" id="L140">                    null, false, &quot;ONBOARDING-ACTIVITY-UPDATED-FAILURE&quot;, &quot;Error&quot;, List.of(ex.getMessage())</span>
+            );
+<span class="nc" id="L142">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

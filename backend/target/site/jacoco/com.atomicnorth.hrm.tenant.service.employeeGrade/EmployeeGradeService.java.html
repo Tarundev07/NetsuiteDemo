@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmployeeGradeService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.employeeGrade</a> &gt; <span class="el_source">EmployeeGradeService.java</span></div><h1>EmployeeGradeService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.employeeGrade;
+
+import com.atomicnorth.hrm.exception.ResourceNotFoundException;
+import com.atomicnorth.hrm.tenant.domain.SalaryElementGroup;
+import com.atomicnorth.hrm.tenant.domain.employeeGrade.EmployeeGrade;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.SalaryElementGroupRepository;
+import com.atomicnorth.hrm.tenant.repository.employeeGrade.EmployeeGradeRepository;
+import com.atomicnorth.hrm.tenant.service.SequenceGeneratorService;
+import com.atomicnorth.hrm.tenant.service.dto.employeeGrade.EmployeeGradeDTO;
+import com.atomicnorth.hrm.util.Enum.SequenceType;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+
+import javax.persistence.EntityNotFoundException;
+import javax.persistence.criteria.Join;
+import javax.persistence.criteria.JoinType;
+import javax.transaction.Transactional;
+import java.lang.reflect.Field;
+import java.time.Instant;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L34">public class EmployeeGradeService {</span>
+
+    @Autowired
+    EmployeeGradeRepository gradeRepository;
+
+    @Autowired
+    SalaryElementGroupRepository salaryElementGroupRepository;
+
+    @Autowired
+    private SequenceGeneratorService sequenceGeneratorService;
+
+    @Transactional
+    public EmployeeGradeDTO saveUpdate(EmployeeGradeDTO gradeDTO) {
+<span class="nc" id="L47">        UserLoginDetail token = SessionHolder.getUserLoginDetail();</span>
+
+        //  UPDATE Case
+<span class="nc bnc" id="L50" title="All 2 branches missed.">        if (gradeDTO.getId() != null) {</span>
+<span class="nc" id="L51">            Optional&lt;EmployeeGrade&gt; optionalGrade = gradeRepository.findById(gradeDTO.getId());</span>
+<span class="nc bnc" id="L52" title="All 2 branches missed.">            if (optionalGrade.isEmpty()) {</span>
+<span class="nc" id="L53">                throw new EntityNotFoundException(&quot;Employee Grade with ID &quot; + gradeDTO.getId() + &quot; does not exist.&quot;);</span>
+            }
+
+<span class="nc" id="L56">            EmployeeGrade existingGrade = optionalGrade.get();</span>
+
+<span class="nc bnc" id="L58" title="All 2 branches missed.">            if (gradeRepository.existsByGradeNameAndIdNot(gradeDTO.getGradeName(), gradeDTO.getId())) {</span>
+<span class="nc" id="L59">                throw new IllegalArgumentException(&quot;Grade name '&quot; + gradeDTO.getGradeName() + &quot;' already exists.&quot;);</span>
+            }
+
+<span class="nc" id="L62">            existingGrade.setGradeName(gradeDTO.getGradeName());</span>
+<span class="nc" id="L63">            existingGrade.setSalaryStructuredId(gradeDTO.getSalaryStructuredId());</span>
+<span class="nc" id="L64">            existingGrade.setIsActive(gradeDTO.getIsActive());</span>
+<span class="nc" id="L65">            existingGrade.setLastUpdatedBy(String.valueOf(token.getUsername()));</span>
+<span class="nc" id="L66">            existingGrade.setLastUpdatedDate(Instant.now());</span>
+
+<span class="nc" id="L68">            EmployeeGrade updatedGrade = gradeRepository.save(existingGrade);</span>
+<span class="nc" id="L69">            return new EmployeeGradeDTO(updatedGrade);</span>
+        }
+
+<span class="nc bnc" id="L72" title="All 2 branches missed.">        if (gradeRepository.existsByGradeName(gradeDTO.getGradeName())) {</span>
+<span class="nc" id="L73">            throw new IllegalArgumentException(&quot;Grade name '&quot; + gradeDTO.getGradeName() + &quot;' already exists.&quot;);</span>
+        }
+
+<span class="nc" id="L76">        String newGradeCode = sequenceGeneratorService.generateSequence(SequenceType.GRADE.toString(), null);</span>
+
+<span class="nc" id="L78">        EmployeeGrade grade = new EmployeeGrade();</span>
+<span class="nc" id="L79">        grade.setGradeName(gradeDTO.getGradeName());</span>
+<span class="nc" id="L80">        grade.setSalaryStructuredId(gradeDTO.getSalaryStructuredId());</span>
+<span class="nc" id="L81">        grade.setGradeCode(newGradeCode);</span>
+<span class="nc" id="L82">        grade.setIsActive(gradeDTO.getIsActive());</span>
+<span class="nc" id="L83">        grade.setCreatedBy(String.valueOf(token.getUsername()));</span>
+<span class="nc" id="L84">        grade.setLastUpdatedBy(String.valueOf(token.getUsername()));</span>
+
+<span class="nc" id="L86">        EmployeeGrade savedGrade = gradeRepository.save(grade);</span>
+<span class="nc" id="L87">        return new EmployeeGradeDTO(savedGrade);</span>
+    }
+
+    public Map&lt;String, Object&gt; getPaginatedEmployeeGrades(Pageable pageable, String searchColumn, String searchValue) {
+<span class="nc" id="L91">        Specification&lt;EmployeeGrade&gt; spec = (root, query, criteriaBuilder) -&gt; {</span>
+<span class="nc bnc" id="L92" title="All 6 branches missed.">            if (searchColumn != null &amp;&amp; searchValue != null &amp;&amp; !searchValue.isEmpty()) {</span>
+<span class="nc" id="L93">                String normalizedSearchValue = searchValue.trim();</span>
+
+<span class="nc bnc" id="L95" title="All 2 branches missed.">                if (&quot;isActive&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc bnc" id="L96" title="All 2 branches missed.">                    if (&quot;active&quot;.contains(normalizedSearchValue.toLowerCase())) {</span>
+<span class="nc" id="L97">                        normalizedSearchValue = &quot;A&quot;;</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">                    } else if (&quot;inactive&quot;.contains(normalizedSearchValue.toLowerCase())) {</span>
+<span class="nc" id="L99">                        normalizedSearchValue = &quot;I&quot;;</span>
+                    }
+                }
+
+<span class="nc" id="L103">                final String finalSearchValue = normalizedSearchValue;</span>
+
+                try {
+<span class="nc bnc" id="L106" title="All 2 branches missed.">                    if (&quot;salaryStructuredName&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L107">                        Join&lt;EmployeeGrade, SalaryElementGroup&gt; join = root.join(&quot;salaryElementGroup&quot;, JoinType.LEFT);</span>
+<span class="nc" id="L108">                        return criteriaBuilder.like(</span>
+<span class="nc" id="L109">                                criteriaBuilder.lower(join.get(&quot;groupName&quot;)),</span>
+<span class="nc" id="L110">                                &quot;%&quot; + finalSearchValue.toLowerCase() + &quot;%&quot;</span>
+                        );
+                    } else {
+<span class="nc" id="L113">                        Field field = EmployeeGrade.class.getDeclaredField(searchColumn);</span>
+<span class="nc" id="L114">                        Class&lt;?&gt; fieldType = field.getType();</span>
+
+<span class="nc bnc" id="L116" title="All 2 branches missed.">                        if (fieldType.equals(String.class)) {</span>
+<span class="nc" id="L117">                            return criteriaBuilder.like(</span>
+<span class="nc" id="L118">                                    criteriaBuilder.lower(root.get(searchColumn)),</span>
+<span class="nc" id="L119">                                    &quot;%&quot; + finalSearchValue.toLowerCase() + &quot;%&quot;</span>
+                            );
+<span class="nc bnc" id="L121" title="All 4 branches missed.">                        } else if (Number.class.isAssignableFrom(fieldType) || fieldType.equals(int.class)) {</span>
+<span class="nc" id="L122">                            return criteriaBuilder.equal(root.get(searchColumn), Integer.parseInt(finalSearchValue));</span>
+                        }
+                    }
+<span class="nc" id="L125">                } catch (NoSuchFieldException | SecurityException | NumberFormatException e) {</span>
+<span class="nc" id="L126">                    throw new IllegalArgumentException(&quot;Invalid search column or value type: &quot; + e.getMessage());</span>
+<span class="nc" id="L127">                }</span>
+            }
+<span class="nc" id="L129">            return criteriaBuilder.conjunction();</span>
+        };
+
+<span class="nc" id="L132">        Page&lt;EmployeeGrade&gt; gradePage = gradeRepository.findAll(spec, pageable);</span>
+
+<span class="nc" id="L134">        List&lt;EmployeeGradeDTO&gt; gradeDTOList = gradePage.getContent()</span>
+<span class="nc" id="L135">                .stream()</span>
+<span class="nc" id="L136">                .map(grade -&gt; {</span>
+<span class="nc" id="L137">                    EmployeeGradeDTO dto = new EmployeeGradeDTO(grade);</span>
+
+<span class="nc" id="L139">                    salaryElementGroupRepository.findById(Long.valueOf(grade.getSalaryStructuredId()))</span>
+<span class="nc" id="L140">                            .ifPresent(group -&gt; dto.setSalaryStructuredName(group.getGroupName()));</span>
+
+<span class="nc" id="L142">                    return dto;</span>
+                })
+<span class="nc" id="L144">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L146">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L147">        response.put(&quot;result&quot;, gradeDTOList);</span>
+<span class="nc" id="L148">        response.put(&quot;currentPage&quot;, gradePage.getNumber() + 1);</span>
+<span class="nc" id="L149">        response.put(&quot;totalItems&quot;, gradePage.getTotalElements());</span>
+<span class="nc" id="L150">        response.put(&quot;totalPages&quot;, gradePage.getTotalPages());</span>
+
+<span class="nc" id="L152">        return response;</span>
+    }
+
+    @Transactional
+    public EmployeeGradeDTO updateEmployeeGrade(Integer id, EmployeeGradeDTO dto) {
+<span class="nc" id="L157">        UserLoginDetail token = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L158">        EmployeeGrade existingGrade = gradeRepository.findById(id)</span>
+<span class="nc" id="L159">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Employee Grade with id &quot; + id + &quot; not found.&quot;));</span>
+
+<span class="nc" id="L161">        boolean isGradeCodeExists = gradeRepository.existsByGradeCodeAndIdNot(dto.getGradeCode(), id);</span>
+<span class="nc bnc" id="L162" title="All 2 branches missed.">        if (isGradeCodeExists) {</span>
+<span class="nc" id="L163">            throw new IllegalArgumentException(dto.getGradeCode() + &quot; code already exists for another record.&quot;);</span>
+        }
+
+<span class="nc bnc" id="L166" title="All 2 branches missed.">        if (dto.getGradeName() != null) existingGrade.setGradeName(dto.getGradeName());</span>
+<span class="nc bnc" id="L167" title="All 2 branches missed.">        if (dto.getGradeCode() != null) existingGrade.setGradeCode(dto.getGradeCode());</span>
+<span class="nc bnc" id="L168" title="All 2 branches missed.">        if (dto.getSalaryStructuredId() != null) existingGrade.setSalaryStructuredId(dto.getSalaryStructuredId());</span>
+<span class="nc bnc" id="L169" title="All 2 branches missed.">        if (dto.getIsActive() != null) existingGrade.setIsActive(dto.getIsActive());</span>
+<span class="nc" id="L170">        existingGrade.setLastUpdatedBy(String.valueOf(token.getUsername()));</span>
+<span class="nc" id="L171">        EmployeeGrade save = gradeRepository.save(existingGrade);</span>
+<span class="nc" id="L172">        return new EmployeeGradeDTO(save);</span>
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; findEmpGradeNameAndId() {
+<span class="nc" id="L176">        return gradeRepository.findAll().stream()</span>
+<span class="nc" id="L177">                .filter(x -&gt; &quot;A&quot;.equalsIgnoreCase(x.getIsActive())</span>
+<span class="nc" id="L178">                ).sorted(Comparator.comparing(EmployeeGrade::getGradeName, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))</span>
+<span class="nc" id="L179">                .map(x -&gt; {</span>
+<span class="nc" id="L180">                    Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L181">                    result.put(&quot;id&quot;, x.getId());</span>
+<span class="nc" id="L182">                    result.put(&quot;gradeName&quot;, x.getGradeName());</span>
+<span class="nc" id="L183">                    return result;</span>
+<span class="nc" id="L184">                }).collect(Collectors.toList());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

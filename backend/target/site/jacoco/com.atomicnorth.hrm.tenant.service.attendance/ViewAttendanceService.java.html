@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ViewAttendanceService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.attendance</a> &gt; <span class="el_source">ViewAttendanceService.java</span></div><h1>ViewAttendanceService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.attendance;
+
+import com.atomicnorth.hrm.tenant.domain.Employee;
+import com.atomicnorth.hrm.tenant.domain.LeaveRequest;
+import com.atomicnorth.hrm.tenant.domain.attendance.AttendanceMoaf;
+import com.atomicnorth.hrm.tenant.domain.attendance.SupraShiftDetailEntity;
+import com.atomicnorth.hrm.tenant.domain.attendance.SupraShiftEntity;
+import com.atomicnorth.hrm.tenant.domain.holiday.HolidaysCalendarDay;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.repository.LeaveRequestRepository;
+import com.atomicnorth.hrm.tenant.repository.attendance.AttendanceMoafRepo;
+import com.atomicnorth.hrm.tenant.service.EmployeeService;
+import com.atomicnorth.hrm.tenant.service.dto.attendance.AttendanceMoafDTO;
+import com.atomicnorth.hrm.tenant.service.project.ProjectService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L40">public class ViewAttendanceService {</span>
+<span class="nc" id="L41">    private final Logger logger = LoggerFactory.getLogger(ViewAttendanceService.class);</span>
+<span class="nc" id="L42">    SimpleDateFormat sdf2 = new SimpleDateFormat(&quot;yyyy-MM-dd&quot;);</span>
+<span class="nc" id="L43">    SimpleDateFormat sdf = new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss&quot;);</span>
+
+    @Autowired
+    private ShiftAssignmentsServices shiftAssignmentsServices;
+
+    @Autowired
+    private AttendanceMoafRepo attendanceMoafRepo;
+
+    @Autowired
+    private EmployeeRepository employeeRepository;
+
+    @Autowired
+    private ProjectService projectService;
+
+    @Autowired
+    private EmployeeService employeeService;
+    @Autowired
+    private LeaveRequestRepository leaveRequestRepository;
+
+    public Map&lt;String, Object&gt; fetchAttendance(Integer empId, String firstDate, String lastDate, Pageable pageable, String searchField, String searchKeyword, String sortBy, String sortDir) throws ParseException {
+<span class="nc bnc" id="L63" title="All 2 branches missed.">        if (empId == null) {</span>
+<span class="nc" id="L64">            empId = SessionHolder.getUserLoginDetail().getEmpId();</span>
+        }
+<span class="nc" id="L66">        Date from = sdf2.parse(firstDate);</span>
+<span class="nc" id="L67">        Date to = sdf2.parse(lastDate);</span>
+
+<span class="nc" id="L69">        LocalDate start = from.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();</span>
+<span class="nc" id="L70">        LocalDate end = to.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();</span>
+
+<span class="nc" id="L72">        List&lt;AttendanceMoaf&gt; rawAttendanceMoafList = attendanceMoafRepo.findByEmployeeIdAndMoafDateBetween(empId, start, end, Pageable.unpaged()).getContent();</span>
+
+<span class="nc" id="L74">        Map&lt;LocalDate, AttendanceMoaf&gt; attendanceMoafMap = rawAttendanceMoafList.stream().collect(Collectors.toMap(</span>
+                AttendanceMoaf::getMoafDate,
+<span class="nc" id="L76">                moaf -&gt; moaf,</span>
+<span class="nc" id="L77">                (existing, replacement) -&gt; replacement</span>
+        ));
+
+<span class="nc" id="L80">        Map&lt;LocalDate, HolidaysCalendarDay&gt; holidayList = projectService.getHolidayList(empId, from, to);</span>
+<span class="nc bnc" id="L81" title="All 2 branches missed.">        if (holidayList == null) {</span>
+<span class="nc" id="L82">            holidayList = employeeService.getHolidayList(empId);</span>
+        }
+
+<span class="nc" id="L85">        Map&lt;String, SupraShiftDetailEntity&gt; weekOffList = shiftAssignmentsServices.getWeekOffList(empId, from, to);</span>
+<span class="nc bnc" id="L86" title="All 2 branches missed.">        if (weekOffList.isEmpty()) {</span>
+<span class="nc" id="L87">            weekOffList = shiftAssignmentsServices.getDefaultWeekOffs();</span>
+        }
+
+<span class="nc" id="L90">        Map&lt;Integer, Employee&gt; employeeMap = employeeRepository.findAll().stream().collect(Collectors.toMap(</span>
+                Employee::getEmployeeId,
+<span class="nc" id="L92">                emp -&gt; emp</span>
+        ));
+
+<span class="nc" id="L95">        SupraShiftEntity defaultShift = shiftAssignmentsServices.getDefaultShift();</span>
+
+<span class="nc" id="L97">        Map&lt;String, SupraShiftDetailEntity&gt; shiftMap = shiftAssignmentsServices.getShiftMap(empId, from, to);</span>
+
+<span class="nc" id="L99">        List&lt;LeaveRequest&gt; leaves = leaveRequestRepository.findByEmpIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(empId, end, start);</span>
+
+<span class="nc" id="L101">        List&lt;AttendanceMoafDTO&gt; attendanceMoafDTO = buildResponse(attendanceMoafMap, weekOffList, holidayList, start, end, empId, employeeMap, defaultShift, leaves, shiftMap);</span>
+
+<span class="nc" id="L103">        List&lt;AttendanceMoafDTO&gt; filteredAttendanceMoafDTOList = applySearch(attendanceMoafDTO, searchField, searchKeyword);</span>
+
+<span class="nc" id="L105">        Comparator&lt;AttendanceMoafDTO&gt; comparator = getComparator(sortBy, sortDir);</span>
+<span class="nc bnc" id="L106" title="All 2 branches missed.">        if (comparator != null) {</span>
+<span class="nc" id="L107">            filteredAttendanceMoafDTOList.sort(comparator);</span>
+        }
+
+<span class="nc" id="L110">        int totalItems = filteredAttendanceMoafDTOList.size();</span>
+<span class="nc" id="L111">        int currentPage = pageable.getPageNumber();</span>
+<span class="nc" id="L112">        int pageSize = pageable.getPageSize();</span>
+<span class="nc" id="L113">        int totalPages = (int) Math.ceil((double) totalItems / pageSize);</span>
+
+<span class="nc" id="L115">        int startIndex = currentPage * pageSize;</span>
+<span class="nc" id="L116">        int endIndex = Math.min(startIndex + pageSize, totalItems);</span>
+
+        List&lt;AttendanceMoafDTO&gt; paginatedResult;
+<span class="nc bnc" id="L119" title="All 2 branches missed.">        if (startIndex &lt; totalItems) {</span>
+<span class="nc" id="L120">            paginatedResult = filteredAttendanceMoafDTOList.subList(startIndex, endIndex);</span>
+        } else {
+<span class="nc" id="L122">            paginatedResult = Collections.emptyList();</span>
+        }
+
+<span class="nc" id="L125">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L126">        response.put(&quot;result&quot;, paginatedResult);</span>
+<span class="nc" id="L127">        response.put(&quot;currentPage&quot;, currentPage + 1);</span>
+<span class="nc" id="L128">        response.put(&quot;pageSize&quot;, pageSize);</span>
+<span class="nc" id="L129">        response.put(&quot;totalItems&quot;, totalItems);</span>
+<span class="nc" id="L130">        response.put(&quot;totalPages&quot;, totalPages);</span>
+<span class="nc" id="L131">        return response;</span>
+    }
+
+    private List&lt;AttendanceMoafDTO&gt; applySearch(List&lt;AttendanceMoafDTO&gt; dtoList, String searchField, String searchKeyword) {
+<span class="nc bnc" id="L135" title="All 4 branches missed.">        if (!StringUtils.hasText(searchKeyword) || !StringUtils.hasText(searchField)) {</span>
+<span class="nc" id="L136">            return dtoList;</span>
+        }
+<span class="nc" id="L138">        DateTimeFormatter dtf = DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd&quot;);</span>
+<span class="nc" id="L139">        DateTimeFormatter dt = DateTimeFormatter.ofPattern(&quot;HH:mm&quot;);</span>
+
+<span class="nc" id="L141">        String lowerCaseSearchKeyword = searchKeyword.toLowerCase();</span>
+
+<span class="nc" id="L143">        return dtoList.stream()</span>
+<span class="nc" id="L144">                .filter(dto -&gt; {</span>
+<span class="nc bnc" id="L145" title="All 14 branches missed.">                    switch (searchField.toLowerCase()) {</span>
+                        case &quot;moafdate&quot;:
+<span class="nc bnc" id="L147" title="All 4 branches missed.">                            return dto.getMoafDate() != null &amp;&amp; dto.getMoafDate().format(dtf).toLowerCase().contains(lowerCaseSearchKeyword);</span>
+                        case &quot;status&quot;:
+<span class="nc bnc" id="L149" title="All 4 branches missed.">                            return dto.getStatus() != null &amp;&amp; dto.getStatus().toLowerCase().contains(lowerCaseSearchKeyword);</span>
+                        case &quot;employeeid&quot;:
+<span class="nc bnc" id="L151" title="All 4 branches missed.">                            return dto.getEmployeeId() != null &amp;&amp; String.valueOf(dto.getEmployeeId()).toLowerCase().contains(lowerCaseSearchKeyword);</span>
+                        case &quot;intime&quot;:
+<span class="nc bnc" id="L153" title="All 4 branches missed.">                            return dto.getInTime() != null &amp;&amp; dto.getInTime().format(dt).contains(lowerCaseSearchKeyword);</span>
+                        case &quot;outtime&quot;:
+<span class="nc bnc" id="L155" title="All 4 branches missed.">                            return dto.getOutTime() != null &amp;&amp; dto.getOutTime().format(dt).contains(lowerCaseSearchKeyword);</span>
+                        case &quot;deficithours&quot;:
+<span class="nc bnc" id="L157" title="All 4 branches missed.">                            return dto.getDeficitHours() != null &amp;&amp; dto.getDeficitHours().contains(lowerCaseSearchKeyword);</span>
+                        case &quot;punchedhours&quot;:
+<span class="nc bnc" id="L159" title="All 4 branches missed.">                            return dto.getPunchedHours() != null &amp;&amp; dto.getPunchedHours().contains(lowerCaseSearchKeyword);</span>
+                        case &quot;category&quot;:
+<span class="nc bnc" id="L161" title="All 4 branches missed.">                            return dto.getCategory() != null &amp;&amp; dto.getCategory().toLowerCase().contains(lowerCaseSearchKeyword);</span>
+                        case &quot;direction&quot;:
+<span class="nc bnc" id="L163" title="All 4 branches missed.">                            return dto.getDirection() != null &amp;&amp; dto.getDirection().toLowerCase().contains(lowerCaseSearchKeyword);</span>
+                        case &quot;reason&quot;:
+<span class="nc bnc" id="L165" title="All 4 branches missed.">                            return dto.getReason() != null &amp;&amp; dto.getReason().toLowerCase().contains(lowerCaseSearchKeyword);</span>
+                        case &quot;createdby&quot;:
+<span class="nc bnc" id="L167" title="All 4 branches missed.">                            return dto.getCreatedBy() != null &amp;&amp; dto.getCreatedBy().toLowerCase().contains(lowerCaseSearchKeyword);</span>
+                        case &quot;shift&quot;:
+<span class="nc bnc" id="L169" title="All 4 branches missed.">                            return dto.getShift() != null &amp;&amp; dto.getShift().toLowerCase().contains(lowerCaseSearchKeyword);</span>
+                        case &quot;extrahours&quot;:
+<span class="nc bnc" id="L171" title="All 4 branches missed.">                            return dto.getExtraHours() != null &amp;&amp; dto.getExtraHours().toLowerCase().contains(lowerCaseSearchKeyword);</span>
+                        default:
+<span class="nc" id="L173">                            return true;</span>
+                    }
+                })
+<span class="nc" id="L176">                .collect(Collectors.toList());</span>
+    }
+
+    private Comparator&lt;AttendanceMoafDTO&gt; getComparator(String field, String direction) {
+        Comparator&lt;AttendanceMoafDTO&gt; comparator;
+
+<span class="nc bnc" id="L182" title="All 13 branches missed.">        switch (field) {</span>
+            case &quot;moafDate&quot;:
+<span class="nc" id="L184">                comparator = Comparator.comparing(AttendanceMoafDTO::getMoafDate, Comparator.nullsLast(Comparator.naturalOrder()));</span>
+<span class="nc" id="L185">                break;</span>
+            case &quot;status&quot;:
+<span class="nc" id="L187">                comparator = Comparator.comparing(AttendanceMoafDTO::getStatus, Comparator.nullsLast(String::compareToIgnoreCase));</span>
+<span class="nc" id="L188">                break;</span>
+            case &quot;employeeId&quot;:
+<span class="nc" id="L190">                comparator = Comparator.comparing(AttendanceMoafDTO::getEmployeeId, Comparator.nullsLast(Comparator.naturalOrder()));</span>
+<span class="nc" id="L191">                break;</span>
+            case &quot;inTime&quot;:
+<span class="nc" id="L193">                comparator = Comparator.comparing(AttendanceMoafDTO::getInTime, Comparator.nullsLast(Comparator.naturalOrder()));</span>
+<span class="nc" id="L194">                break;</span>
+            case &quot;outTime&quot;:
+<span class="nc" id="L196">                comparator = Comparator.comparing(AttendanceMoafDTO::getOutTime, Comparator.nullsLast(Comparator.naturalOrder()));</span>
+<span class="nc" id="L197">                break;</span>
+            case &quot;category&quot;:
+<span class="nc" id="L199">                comparator = Comparator.comparing(AttendanceMoafDTO::getCategory, Comparator.nullsLast(String::compareToIgnoreCase));</span>
+<span class="nc" id="L200">                break;</span>
+            case &quot;direction&quot;:
+<span class="nc" id="L202">                comparator = Comparator.comparing(AttendanceMoafDTO::getDirection, Comparator.nullsLast(String::compareToIgnoreCase));</span>
+<span class="nc" id="L203">                break;</span>
+            case &quot;reason&quot;:
+<span class="nc" id="L205">                comparator = Comparator.comparing(AttendanceMoafDTO::getReason, Comparator.nullsLast(String::compareToIgnoreCase));</span>
+<span class="nc" id="L206">                break;</span>
+            case &quot;createdBy&quot;:
+<span class="nc" id="L208">                comparator = Comparator.comparing(AttendanceMoafDTO::getCreatedBy, Comparator.nullsLast(String::compareToIgnoreCase));</span>
+<span class="nc" id="L209">                break;</span>
+            case &quot;shift&quot;:
+<span class="nc" id="L211">                comparator = Comparator.comparing(AttendanceMoafDTO::getShift, Comparator.nullsLast(String::compareToIgnoreCase));</span>
+<span class="nc" id="L212">                break;</span>
+            case &quot;extrahours&quot;:
+<span class="nc" id="L214">                comparator = Comparator.comparing(AttendanceMoafDTO::getExtraHours, Comparator.nullsLast(String::compareToIgnoreCase));</span>
+<span class="nc" id="L215">                break;</span>
+            case &quot;deficithours&quot;:
+<span class="nc" id="L217">                comparator = Comparator.comparing(AttendanceMoafDTO::getDeficitHours, Comparator.nullsLast(String::compareToIgnoreCase));</span>
+<span class="nc" id="L218">                break;</span>
+            default:
+<span class="nc" id="L220">                comparator = Comparator.comparing(AttendanceMoafDTO::getMoafDate, Comparator.nullsLast(Comparator.naturalOrder()));</span>
+        }
+
+<span class="nc bnc" id="L223" title="All 2 branches missed.">        if (&quot;desc&quot;.equalsIgnoreCase(direction)) {</span>
+<span class="nc" id="L224">            comparator = comparator.reversed();</span>
+        }
+
+<span class="nc" id="L227">        return comparator;</span>
+    }
+
+    private List&lt;AttendanceMoafDTO&gt; buildResponse(Map&lt;LocalDate, AttendanceMoaf&gt; moafMap, Map&lt;String, SupraShiftDetailEntity&gt; weekOffList, Map&lt;LocalDate, HolidaysCalendarDay&gt; holidays, LocalDate start, LocalDate end, Integer empId, Map&lt;Integer, Employee&gt; employeeMap, SupraShiftEntity defaultShift, List&lt;LeaveRequest&gt; leaves, Map&lt;String, SupraShiftDetailEntity&gt; shiftMap) {
+<span class="nc" id="L231">        List&lt;AttendanceMoafDTO&gt; moafDTOS = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L232">        String lookupMeaning = employeeService.getLookupMeaning(&quot;STANDARD_WORK_HOURS&quot;, &quot;DEFAULT_SHIFT_HOURS&quot;, &quot;9:00&quot;);</span>
+
+<span class="nc bnc" id="L234" title="All 2 branches missed.">        for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {</span>
+<span class="nc" id="L235">            AttendanceMoafDTO attendanceMoafDTO = new AttendanceMoafDTO();</span>
+<span class="nc" id="L236">            attendanceMoafDTO.setMoafDate(date);</span>
+<span class="nc" id="L237">            attendanceMoafDTO.setPunchedHours(&quot;00:00&quot;);</span>
+<span class="nc" id="L238">            attendanceMoafDTO.setDeficitHours(&quot;09:00&quot;);</span>
+<span class="nc" id="L239">            attendanceMoafDTO.setExtraHours(&quot;00:00&quot;);</span>
+<span class="nc" id="L240">            attendanceMoafDTO.setEmployeeId(empId);</span>
+<span class="nc" id="L241">            Employee employee = employeeMap.getOrDefault(empId, null);</span>
+<span class="nc" id="L242">            attendanceMoafDTO.setEmployeeNumber(employee.getEmployeeNumber());</span>
+<span class="nc" id="L243">            attendanceMoafDTO.setEmployeeName(employee.getFullName() + &quot; (&quot; + employee.getEmployeeNumber() + &quot;)&quot;);</span>
+<span class="nc" id="L244">            String dayOfWeek = date.getDayOfWeek().toString();</span>
+<span class="nc" id="L245">            SupraShiftDetailEntity supraShiftDetail = shiftMap.get(dayOfWeek);</span>
+<span class="nc bnc" id="L246" title="All 2 branches missed.">            if (supraShiftDetail != null) {</span>
+<span class="nc" id="L247">                SupraShiftEntity supraShift = supraShiftDetail.getSupraShift();</span>
+<span class="nc" id="L248">                attendanceMoafDTO.setShift(supraShift.getShiftCode() + &quot; (&quot; + supraShift.getGeneralStartTime() + &quot;-&quot; + supraShift.getGeneralEndTime() + &quot;)&quot;);</span>
+<span class="nc" id="L249">            } else {</span>
+<span class="nc bnc" id="L250" title="All 2 branches missed.">                if (defaultShift != null)</span>
+<span class="nc" id="L251">                    attendanceMoafDTO.setShift(defaultShift.getShiftCode() + &quot; (&quot; + defaultShift.getGeneralStartTime() + &quot;-&quot; + defaultShift.getGeneralEndTime() + &quot;)&quot;);</span>
+<span class="nc" id="L252">                else attendanceMoafDTO.setShift(&quot;NA&quot;);</span>
+            }
+<span class="nc bnc" id="L254" title="All 2 branches missed.">            if (holidays.containsKey(date)) {</span>
+<span class="nc" id="L255">                attendanceMoafDTO.setStatus(&quot;Holiday&quot;);</span>
+            } else {
+<span class="nc bnc" id="L257" title="All 2 branches missed.">                if (weekOffList.containsKey(dayOfWeek)) {</span>
+<span class="nc" id="L258">                    attendanceMoafDTO.setStatus(&quot;Week-Off&quot;);</span>
+<span class="nc bnc" id="L259" title="All 2 branches missed.">                } else if (isOnLeave(date, leaves)) {</span>
+<span class="nc" id="L260">                    String leaveStatus = getLeaveStatusForDate(date, leaves);</span>
+<span class="nc" id="L261">                    attendanceMoafDTO.setStatus(leaveStatus);</span>
+<span class="nc bnc" id="L262" title="All 2 branches missed.">                } else if (moafMap.containsKey(date)) {</span>
+<span class="nc" id="L263">                    AttendanceMoaf moaf = moafMap.get(date);</span>
+<span class="nc" id="L264">                    attendanceMoafDTO.setStatus(moaf.getStatus());</span>
+<span class="nc" id="L265">                    attendanceMoafDTO.setInTime(moaf.getInTime());</span>
+<span class="nc" id="L266">                    attendanceMoafDTO.setOutTime(moaf.getOutTime());</span>
+<span class="nc" id="L267">                    attendanceMoafDTO.setFormRfNum(moaf.getFormRfNum());</span>
+<span class="nc" id="L268">                    attendanceMoafDTO.setCategory(moaf.getCategory());</span>
+<span class="nc" id="L269">                    attendanceMoafDTO.setDirection(moaf.getDirection());</span>
+<span class="nc" id="L270">                    attendanceMoafDTO.setReason(moaf.getReason());</span>
+<span class="nc" id="L271">                    attendanceMoafDTO.setEmployeeId(moaf.getEmployeeId());</span>
+<span class="nc" id="L272">                    attendanceMoafDTO.setCreatedBy(moaf.getCreatedBy());</span>
+<span class="nc" id="L273">                    calculateHours(moaf.getInTime(), moaf.getOutTime(), attendanceMoafDTO, lookupMeaning);</span>
+<span class="nc" id="L274">                } else {</span>
+<span class="nc" id="L275">                    attendanceMoafDTO.setStatus(&quot;Absent&quot;);</span>
+                }
+            }
+
+<span class="nc" id="L279">            moafDTOS.add(attendanceMoafDTO);</span>
+        }
+<span class="nc" id="L281">        return moafDTOS;</span>
+    }
+
+    public void calculateHours(LocalDateTime inTime, LocalDateTime outTime, AttendanceMoafDTO attendanceMoafDTO, String lookupMeaning) {
+<span class="nc bnc" id="L285" title="All 6 branches missed.">        if (inTime != null &amp;&amp; outTime != null &amp;&amp; lookupMeaning != null) {</span>
+<span class="nc" id="L286">            long totalPunchedMinutes = Duration.between(inTime, outTime).toMinutes();</span>
+<span class="nc" id="L287">            String punchedFormatted = String.format(&quot;%02d:%02d&quot;, totalPunchedMinutes / 60, totalPunchedMinutes % 60);</span>
+<span class="nc" id="L288">            attendanceMoafDTO.setPunchedHours(punchedFormatted);</span>
+
+<span class="nc" id="L290">            int standardMinutes = 540;</span>
+            try {
+<span class="nc" id="L292">                String[] parts = lookupMeaning.split(&quot;:&quot;);</span>
+<span class="nc" id="L293">                int hours = Integer.parseInt(parts[0]);</span>
+<span class="nc" id="L294">                int minutes = Integer.parseInt(parts[1]);</span>
+<span class="nc" id="L295">                standardMinutes = hours * 60 + minutes;</span>
+<span class="nc" id="L296">            } catch (Exception e) {</span>
+<span class="nc" id="L297">                standardMinutes = 540;</span>
+<span class="nc" id="L298">            }</span>
+
+<span class="nc" id="L300">            int minutesDifference = (int) totalPunchedMinutes - standardMinutes;</span>
+
+<span class="nc bnc" id="L302" title="All 2 branches missed.">            int deficitMinutes = minutesDifference &lt; 0 ? Math.abs(minutesDifference) : 0;</span>
+<span class="nc" id="L303">            int extraMinutes = Math.max(minutesDifference, 0);</span>
+
+<span class="nc" id="L305">            String deficitFormatted = String.format(&quot;%02d:%02d&quot;, deficitMinutes / 60, deficitMinutes % 60);</span>
+<span class="nc" id="L306">            String extraFormatted = String.format(&quot;%02d:%02d&quot;, extraMinutes / 60, extraMinutes % 60);</span>
+
+<span class="nc" id="L308">            attendanceMoafDTO.setDeficitHours(deficitFormatted);</span>
+<span class="nc" id="L309">            attendanceMoafDTO.setExtraHours(extraFormatted);</span>
+        }
+<span class="nc" id="L311">    }</span>
+
+    private boolean isOnLeave(LocalDate date, List&lt;LeaveRequest&gt; leaves) {
+<span class="nc" id="L314">        return leaves.stream().anyMatch(lr -&gt;</span>
+<span class="nc bnc" id="L315" title="All 2 branches missed.">                !date.isBefore(lr.getStartDate()) &amp;&amp;</span>
+<span class="nc bnc" id="L316" title="All 2 branches missed.">                        !date.isAfter(lr.getEndDate()));</span>
+    }
+
+    private String getLeaveStatusForDate(LocalDate date, List&lt;LeaveRequest&gt; leaves) {
+<span class="nc" id="L320">        return leaves.stream()</span>
+<span class="nc bnc" id="L321" title="All 4 branches missed.">                .filter(lr -&gt; !date.isBefore(lr.getStartDate()) &amp;&amp; !date.isAfter(lr.getEndDate()))</span>
+<span class="nc" id="L322">                .map(lr -&gt; {</span>
+<span class="nc bnc" id="L323" title="All 4 branches missed.">                    switch (lr.getStatus().toUpperCase()) {</span>
+                        case &quot;PENDING&quot;:
+<span class="nc" id="L325">                            return &quot;Leave Applied&quot;;</span>
+                        case &quot;REJECTED&quot;:
+<span class="nc" id="L327">                            return &quot;Leave Rejected&quot;;</span>
+                        case &quot;APPROVED&quot;:
+<span class="nc" id="L329">                            return &quot;On Leave&quot;;</span>
+                        default:
+<span class="nc" id="L331">                            return &quot;Leave Applied&quot;;</span>
+                    }
+<span class="nc" id="L333">                }).findFirst().orElse(&quot;Leave Applied&quot;);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

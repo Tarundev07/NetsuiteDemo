@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JobApplicantDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.dto.employement.employee_job_applicant</a> &gt; <span class="el_source">JobApplicantDTO.java</span></div><h1>JobApplicantDTO.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.dto.employement.employee_job_applicant;
+
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
+
+import javax.validation.constraints.*;
+import java.math.BigDecimal;
+import java.util.Date;
+
+<span class="nc bnc" id="L11" title="All 254 branches missed.">@Data</span>
+public class JobApplicantDTO {
+
+<span class="nc" id="L14">    private Integer id;</span>
+
+    @NotNull(message = &quot;Applicant name cannot be empty or null&quot;)
+    @Pattern(regexp = &quot;^[A-Za-z ]+$&quot;, message = &quot;Applicant name can only contain letters and spaces&quot;)
+    @Size(min = 2, max = 100, message = &quot;Applicant name must be between 2 and 100 characters&quot;)
+<span class="nc" id="L19">    private String applicantName;</span>
+
+<span class="nc" id="L21">    private Integer jobOpeningId;</span>
+
+<span class="nc" id="L23">    private String jobOpeningName;</span>
+
+    @NotNull(message = &quot;Email address cannot be null&quot;)
+    @Email(message = &quot;Invalid email format&quot;)
+<span class="nc" id="L27">    private String emailAddress;</span>
+
+    @NotNull(message = &quot;Designation cannot be null&quot;)
+<span class="nc" id="L30">    private Integer designationId;</span>
+
+<span class="nc" id="L32">    private String designationName;</span>
+
+<span class="nc" id="L34">    private Integer departmentId;</span>
+
+<span class="nc" id="L36">    private String departmentName;</span>
+
+<span class="nc" id="L38">    private String contactCountryCode;</span>
+
+    @NotNull(message = &quot;Phone number cannot be null&quot;)
+    @Pattern(regexp = &quot;^[0-9]{10}$&quot;, message = &quot;Phone number must be 10 digits&quot;)
+<span class="nc" id="L42">    private String phoneNumber;</span>
+
+    @NotNull(message = &quot;Status cannot be null&quot;)
+<span class="nc" id="L45">    private String status;</span>
+
+    @NotNull(message = &quot;Country cannot be null&quot;)
+<span class="nc" id="L48">    private Integer country;</span>
+
+<span class="nc" id="L50">    private String countryName;</span>
+
+    @NotNull(message = &quot;Source cannot be null&quot;)
+<span class="nc" id="L53">    private String source;</span>
+
+<span class="nc" id="L55">    private String sourceDetail;</span>
+
+    @Min(value = 1, message = &quot;Applicant rating must be at least 1&quot;)
+    @Max(value = 5, message = &quot;Applicant rating cannot exceed 5&quot;)
+<span class="nc" id="L59">    private Integer applicantRating;</span>
+
+<span class="nc" id="L61">    private String coverLetter;</span>
+
+<span class="nc" id="L63">    private String resumeLink;</span>
+
+<span class="nc" id="L65">    private String resumeAttachment;</span>
+
+    @NotNull(message = &quot;Currency cannot be null&quot;)
+<span class="nc" id="L68">    private String currency;</span>
+
+    @NotNull(message = &quot;Lower range cannot be null&quot;)
+    @Digits(integer = 10, fraction = 2, message = &quot;Invalid lower range format&quot;)
+<span class="nc" id="L72">    private BigDecimal lowerRange;</span>
+
+    @NotNull(message = &quot;Upper range cannot be null&quot;)
+    @Digits(integer = 10, fraction = 2, message = &quot;Invalid upper range format&quot;)
+<span class="nc" id="L76">    private BigDecimal upperRange;</span>
+
+<span class="nc" id="L78">    private String flag;</span>
+
+    @PastOrPresent(message = &quot;Creation date cannot be in the future&quot;)
+<span class="nc" id="L81">    private Date creationDate;</span>
+
+<span class="nc" id="L83">    private String createdBy;</span>
+
+<span class="nc" id="L85">    private String lastUpdatedBy;</span>
+
+    @PastOrPresent(message = &quot;Last updated date cannot be in the future&quot;)
+<span class="nc" id="L88">    private Date lastUpdatedDate;</span>
+
+    @JsonProperty(&quot;cAttribute1&quot;)
+<span class="nc" id="L91">    private String cAttribute1;</span>
+
+    @JsonProperty(&quot;cAttribute2&quot;)
+<span class="nc" id="L94">    private String cAttribute2;</span>
+
+<span class="nc" id="L96">    private Boolean isApplicantOffer;</span>
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DataSourceConfig.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.master.domain</a> &gt; <span class="el_source">DataSourceConfig.java</span></div><h1>DataSourceConfig.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.master.domain;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Table;
+import javax.validation.constraints.NotNull;
+import java.io.Serializable;
+import java.util.Objects;
+
+@Entity
+@Table(name = &quot;data_source_config&quot;)
+public class DataSourceConfig implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    @Id
+    private String id;
+
+    @NotNull
+    @Column(name = &quot;name&quot;, nullable = false)
+    private String name;
+
+    @NotNull
+    @Column(name = &quot;url&quot;, nullable = false)
+    private String url;
+
+    @NotNull
+    @Column(name = &quot;username&quot;, nullable = false)
+    private String username;
+
+    @NotNull
+    @Column(name = &quot;password&quot;, nullable = false)
+    private String password;
+
+    @NotNull
+    @Column(name = &quot;initialize&quot;, nullable = false)
+    private Boolean initialize;
+
+    @NotNull
+    @Column(name = &quot;driver_class_name&quot;, nullable = false)
+    private String driverClassName;
+
+<span class="nc" id="L44">    public DataSourceConfig() {</span>
+<span class="nc" id="L45">    }</span>
+
+<span class="nc" id="L47">    public DataSourceConfig(String id, String name, String url, String username, String password, Boolean initialize) {</span>
+<span class="nc" id="L48">        this.id = id;</span>
+<span class="nc" id="L49">        this.name = name;</span>
+<span class="nc" id="L50">        this.url = url;</span>
+<span class="nc" id="L51">        this.username = username;</span>
+<span class="nc" id="L52">        this.password = password;</span>
+<span class="nc" id="L53">        this.initialize = initialize;</span>
+<span class="nc" id="L54">    }</span>
+
+    public String getId() {
+<span class="nc" id="L57">        return id;</span>
+    }
+
+    public void setId(String id) {
+<span class="nc" id="L61">        this.id = id;</span>
+<span class="nc" id="L62">    }</span>
+
+    public String getName() {
+<span class="nc" id="L65">        return name;</span>
+    }
+
+    public void setName(String name) {
+<span class="nc" id="L69">        this.name = name;</span>
+<span class="nc" id="L70">    }</span>
+
+    public DataSourceConfig name(String name) {
+<span class="nc" id="L73">        this.name = name;</span>
+<span class="nc" id="L74">        return this;</span>
+    }
+
+    public String getUrl() {
+<span class="nc" id="L78">        return url;</span>
+    }
+
+    public void setUrl(String url) {
+<span class="nc" id="L82">        this.url = url;</span>
+<span class="nc" id="L83">    }</span>
+
+    public DataSourceConfig url(String url) {
+<span class="nc" id="L86">        this.url = url;</span>
+<span class="nc" id="L87">        return this;</span>
+    }
+
+    public String getUsername() {
+<span class="nc" id="L91">        return username;</span>
+    }
+
+    public void setUsername(String username) {
+<span class="nc" id="L95">        this.username = username;</span>
+<span class="nc" id="L96">    }</span>
+
+    public DataSourceConfig username(String username) {
+<span class="nc" id="L99">        this.username = username;</span>
+<span class="nc" id="L100">        return this;</span>
+    }
+
+    public String getPassword() {
+<span class="nc" id="L104">        return password;</span>
+    }
+
+    public void setPassword(String password) {
+<span class="nc" id="L108">        this.password = password;</span>
+<span class="nc" id="L109">    }</span>
+
+    public DataSourceConfig password(String password) {
+<span class="nc" id="L112">        this.password = password;</span>
+<span class="nc" id="L113">        return this;</span>
+    }
+
+    public Boolean isInitialize() {
+<span class="nc" id="L117">        return initialize;</span>
+    }
+
+    public DataSourceConfig initialize(Boolean initialize) {
+<span class="nc" id="L121">        this.initialize = initialize;</span>
+<span class="nc" id="L122">        return this;</span>
+    }
+
+    public void setInitialize(Boolean initialize) {
+<span class="nc" id="L126">        this.initialize = initialize;</span>
+<span class="nc" id="L127">    }</span>
+
+    @Override
+    public boolean equals(Object o) {
+<span class="nc bnc" id="L131" title="All 2 branches missed.">        if (this == o) {</span>
+<span class="nc" id="L132">            return true;</span>
+        }
+<span class="nc bnc" id="L134" title="All 4 branches missed.">        if (o == null || getClass() != o.getClass()) {</span>
+<span class="nc" id="L135">            return false;</span>
+        }
+<span class="nc" id="L137">        DataSourceConfig dataSourceConfig = (DataSourceConfig) o;</span>
+<span class="nc bnc" id="L138" title="All 4 branches missed.">        if (dataSourceConfig.getId() == null || getId() == null) {</span>
+<span class="nc" id="L139">            return false;</span>
+        }
+<span class="nc" id="L141">        return Objects.equals(getId(), dataSourceConfig.getId());</span>
+    }
+
+    @Override
+    public int hashCode() {
+<span class="nc" id="L146">        return Objects.hashCode(getId());</span>
+    }
+
+    public String getDriverClassName() {
+<span class="nc" id="L150">        return driverClassName;</span>
+    }
+
+    public void setDriverClassName(String driverClassName) {
+<span class="nc" id="L154">        this.driverClassName = driverClassName;</span>
+<span class="nc" id="L155">    }</span>
+
+    @Override
+    public String toString() {
+<span class="nc" id="L159">        return &quot;DataSourceConfig{&quot; +</span>
+<span class="nc" id="L160">                &quot;id=&quot; + getId() +</span>
+<span class="nc" id="L161">                &quot;, name='&quot; + getName() + &quot;'&quot; +</span>
+<span class="nc" id="L162">                &quot;, url='&quot; + getUrl() + &quot;'&quot; +</span>
+<span class="nc" id="L163">                &quot;, username='&quot; + getUsername() + &quot;'&quot; +</span>
+<span class="nc" id="L164">                &quot;, password='&quot; + getPassword() + &quot;'&quot; +</span>
+<span class="nc" id="L165">                &quot;, initialize='&quot; + isInitialize() + &quot;'&quot; +</span>
+                &quot;}&quot;;
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

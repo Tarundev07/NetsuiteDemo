@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>KeycloakRoleController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.keycloak.role</a> &gt; <span class="el_source">KeycloakRoleController.java</span></div><h1>KeycloakRoleController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.keycloak.role;
+
+
+import com.atomicnorth.hrm.tenant.service.dto.keycloak.role.KeycloakRoleRequestDTO;
+import com.atomicnorth.hrm.tenant.service.dto.keycloak.role.KeycloakRoleResponseDTO;
+import com.atomicnorth.hrm.tenant.service.keycloak.role.KeycloakRoleService;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Mono;
+
+import javax.validation.Valid;
+import java.util.List;
+
+@RestController
+@RequestMapping(&quot;/api/roles&quot;)
+<span class="nc" id="L23">@RequiredArgsConstructor</span>
+<span class="nc" id="L24">@Slf4j</span>
+public class KeycloakRoleController {
+
+    private final KeycloakRoleService keycloakRoleService;
+
+    @PostMapping(&quot;/create/{realm}/{clientId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;String&gt;&gt; createRole(
+            @PathVariable String realm,
+            @PathVariable String clientId,
+            @RequestHeader(&quot;keycloakToken&quot;) String keycloakToken,
+            @Valid @RequestBody KeycloakRoleRequestDTO roleRequest) {
+        try {
+<span class="nc" id="L36">            String responseMessage = keycloakRoleService.createRole(realm, clientId, roleRequest, keycloakToken);</span>
+
+<span class="nc" id="L38">            ApiResponse&lt;String&gt; response = new ApiResponse&lt;&gt;(</span>
+                    responseMessage,
+                    true,
+                    &quot;ROLE-CREATE-SUCCESS&quot;,
+                    &quot;Role has been created successfully.&quot;
+            );
+<span class="nc" id="L44">            return ResponseEntity.status(HttpStatus.CREATED).body(response);</span>
+
+<span class="nc" id="L46">        } catch (WebClientResponseException ex) {</span>
+<span class="nc" id="L47">            String errorMessage = extractKeycloakErrorMessage(ex);</span>
+
+<span class="nc" id="L49">            ApiResponse&lt;String&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;ROLE-CREATE-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L54">                    List.of(&quot;Failed to create role: &quot; + errorMessage)</span>
+            );
+<span class="nc" id="L56">            return ResponseEntity.status(ex.getStatusCode()).body(errorResponse);</span>
+
+<span class="nc" id="L58">        } catch (Exception ex) {</span>
+<span class="nc" id="L59">            log.error(&quot;Unexpected error: {}&quot;, ex.getMessage(), ex);</span>
+<span class="nc" id="L60">            ApiResponse&lt;String&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;ROLE-CREATE-ERROR&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L65">                    List.of(ex.getMessage(), &quot;Please contact support.&quot;)</span>
+            );
+<span class="nc" id="L67">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);</span>
+        }
+    }
+
+    private String extractKeycloakErrorMessage(WebClientResponseException ex) {
+        try {
+<span class="nc" id="L73">            String responseBody = ex.getResponseBodyAsString();</span>
+<span class="nc" id="L74">            ObjectMapper objectMapper = new ObjectMapper();</span>
+<span class="nc" id="L75">            JsonNode jsonNode = objectMapper.readTree(responseBody);</span>
+<span class="nc bnc" id="L76" title="All 2 branches missed.">            if (jsonNode.has(&quot;errorMessage&quot;)) {</span>
+<span class="nc" id="L77">                return jsonNode.get(&quot;errorMessage&quot;).asText();</span>
+<span class="nc bnc" id="L78" title="All 2 branches missed.">            } else if (jsonNode.has(&quot;error&quot;)) {</span>
+<span class="nc" id="L79">                return jsonNode.get(&quot;error&quot;).asText();</span>
+            }
+<span class="nc" id="L81">        } catch (Exception e) {</span>
+<span class="nc" id="L82">            return &quot;Unknown error occurred.&quot;;</span>
+<span class="nc" id="L83">        }</span>
+<span class="nc" id="L84">        return &quot;Unknown error occurred.&quot;;</span>
+    }
+
+
+    @GetMapping(&quot;/getAllRoles/{realm}/{clientId}&quot;)
+    public ResponseEntity&lt;Mono&lt;ApiResponse&lt;List&lt;KeycloakRoleResponseDTO&gt;&gt;&gt;&gt; getAllRoles(
+            @PathVariable String realm,
+            @PathVariable String clientId,
+            @RequestHeader(&quot;token&quot;) String token,
+            @RequestParam(required = false) String searchColumn,
+            @RequestParam(required = false) String searchValue,
+            @RequestParam(defaultValue = &quot;name&quot;) String sortBy,
+            @RequestParam(defaultValue = &quot;asc&quot;) String sortDir) {
+
+        try {
+<span class="nc" id="L99">            String accessToken = token.replace(&quot;Bearer &quot;, &quot;&quot;);</span>
+
+<span class="nc" id="L101">            Mono&lt;List&lt;KeycloakRoleResponseDTO&gt;&gt; roles = keycloakRoleService.getAllRoles(</span>
+                    realm, clientId, accessToken, searchColumn, searchValue, sortBy, sortDir);
+
+<span class="nc" id="L104">            ApiResponse&lt;List&lt;KeycloakRoleResponseDTO&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+<span class="nc" id="L105">                    roles.block(), // Blocking to return ResponseEntity</span>
+                    true,
+                    &quot;ROLE-FETCH-SUCCESS&quot;,
+                    &quot;Fetched roles successfully&quot;
+            );
+
+<span class="nc" id="L111">            return ResponseEntity.status(HttpStatus.OK).body(Mono.just(response));</span>
+<span class="nc" id="L112">        } catch (Exception ex) {</span>
+<span class="nc" id="L113">            ApiResponse&lt;List&lt;KeycloakRoleResponseDTO&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;ROLE-FETCH-FAILURE&quot;,
+                    &quot;Error fetching roles&quot;,
+<span class="nc" id="L118">                    List.of(ex.getMessage(), &quot;Please contact support.&quot;)</span>
+            );
+<span class="nc" id="L120">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Mono.just(errorResponse));</span>
+        }
+    }
+
+
+
+    /*TEST*/
+
+    @PostMapping(&quot;/createTest/{realm}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;String&gt;&gt; createRole(
+            @PathVariable String realm,
+            @RequestHeader(&quot;keycloakToken&quot;) String keycloakToken,
+            @Valid @RequestBody KeycloakRoleRequestDTO roleRequest) {
+        try {
+<span class="nc" id="L134">            String responseMessage = keycloakRoleService.createRealmRoleTest(realm, roleRequest, keycloakToken);</span>
+
+<span class="nc" id="L136">            ApiResponse&lt;String&gt; response = new ApiResponse&lt;&gt;(</span>
+                    responseMessage,
+                    true,
+                    &quot;ROLE-CREATE-SUCCESS&quot;,
+                    &quot;Role has been created successfully.&quot;
+            );
+<span class="nc" id="L142">            return ResponseEntity.status(HttpStatus.CREATED).body(response);</span>
+
+<span class="nc" id="L144">        } catch (WebClientResponseException ex) {</span>
+<span class="nc" id="L145">            String errorMessage = extractKeycloakErrorMessage(ex);</span>
+<span class="nc" id="L146">            ApiResponse&lt;String&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null, false, &quot;ROLE-CREATE-FAILURE&quot;, &quot;Error&quot;,
+<span class="nc" id="L148">                    List.of(&quot;Failed to create role: &quot; + errorMessage)</span>
+            );
+<span class="nc" id="L150">            return ResponseEntity.status(ex.getStatusCode()).body(errorResponse);</span>
+
+<span class="nc" id="L152">        } catch (Exception ex) {</span>
+<span class="nc" id="L153">            log.error(&quot;Unexpected error: {}&quot;, ex.getMessage(), ex);</span>
+<span class="nc" id="L154">            ApiResponse&lt;String&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null, false, &quot;ROLE-CREATE-ERROR&quot;, &quot;Error&quot;,
+<span class="nc" id="L156">                    List.of(ex.getMessage(), &quot;Please contact support.&quot;)</span>
+            );
+<span class="nc" id="L158">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);</span>
+        }
+    }
+
+
+    @PostMapping(&quot;/createRoleInKeycloak/{realm}/{clientId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;String&gt;&gt; createRoleInKeycloak(
+            @PathVariable String realm,
+            @PathVariable String clientId,
+            @RequestHeader(&quot;keycloakToken&quot;) String token,
+            @RequestParam(value = &quot;saveToDatabase&quot;, defaultValue = &quot;true&quot;) String saveToDatabaseStr, // String accept karega
+            @Valid @RequestBody KeycloakRoleRequestDTO roleRequest) {
+        try {
+            //  Convert String to Boolean
+<span class="nc" id="L172">            boolean saveToDatabase = Boolean.parseBoolean(saveToDatabaseStr);</span>
+
+            //  Check if &quot;Create Role&quot; service is available
+<span class="nc" id="L175">            boolean isServiceUp = keycloakRoleService.isKeycloakServiceAvailableForCreteRole(realm, clientId, token);</span>
+
+<span class="nc bnc" id="L177" title="All 2 branches missed.">            if (!isServiceUp) {</span>
+<span class="nc" id="L178">                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)</span>
+<span class="nc" id="L179">                        .body(new ApiResponse&lt;&gt;(null, false, &quot;SERVICE-DOWN&quot;, &quot;Create Role service is down. Try later.&quot;));</span>
+            }
+
+            //  Proceed if Create Role service is UP
+<span class="nc" id="L183">            String responseMessage = keycloakRoleService.createRoleInKeycloak(realm, clientId, roleRequest, token, saveToDatabase);</span>
+<span class="nc" id="L184">            return ResponseEntity.status(HttpStatus.CREATED)</span>
+<span class="nc" id="L185">                    .body(new ApiResponse&lt;&gt;(responseMessage, true, &quot;ROLE-CREATE-SUCCESS&quot;, &quot;Role has been created successfully.&quot;));</span>
+
+<span class="nc" id="L187">        } catch (Exception ex) {</span>
+<span class="nc" id="L188">            return ResponseEntity.status(HttpStatus.OK)</span>
+<span class="nc" id="L189">                    .body(new ApiResponse&lt;&gt;(null, false, &quot;ROLE-CREATE-ERROR&quot;, &quot;Error&quot;, List.of(ex.getMessage(), &quot;Please contact support.&quot;)));</span>
+        }
+    }
+
+
+    @PostMapping(&quot;/createRoleInKeycloakAndUpdate/{realm}/{clientId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;String&gt;&gt; createRoleInKeycloakFinal(
+            @PathVariable String realm,
+            @PathVariable String clientId,
+            @RequestHeader(&quot;keycloakToken&quot;) String token,
+            @RequestParam(value = &quot;saveToDatabase&quot;, defaultValue = &quot;true&quot;) boolean saveToDatabase,
+            @RequestParam(value = &quot;localRoleId&quot;, required = false) Long localRoleId,
+            @Valid @RequestBody KeycloakRoleRequestDTO roleRequest) {
+        try {
+            // Step 1: Check if Keycloak Role Creation Service is Available
+<span class="nc bnc" id="L204" title="All 2 branches missed.">            if (!keycloakRoleService.isKeycloakServiceAvailable(realm, clientId, token)) {</span>
+<span class="nc" id="L205">                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)</span>
+<span class="nc" id="L206">                        .body(new ApiResponse&lt;&gt;(null, false, &quot;SERVICE-DOWN&quot;, &quot;Keycloak Role service is down.&quot;));</span>
+            }
+
+            // Step 2: Create Role in Keycloak
+<span class="nc" id="L210">            String responseMessage = keycloakRoleService.createRoleTest(realm, clientId, roleRequest, token, saveToDatabase, localRoleId);</span>
+<span class="nc" id="L211">            return ResponseEntity.status(HttpStatus.CREATED)</span>
+<span class="nc" id="L212">                    .body(new ApiResponse&lt;&gt;(responseMessage, true, &quot;ROLE-CREATE-SUCCESS&quot;, &quot;Role created successfully.&quot;));</span>
+
+<span class="nc" id="L214">        } catch (Exception ex) {</span>
+<span class="nc" id="L215">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L216">                    .body(new ApiResponse&lt;&gt;(null, false, &quot;ROLE-CREATE-ERROR&quot;, &quot;Error occurred while creating role.&quot;, List.of(ex.getMessage())));</span>
+        }
+    }
+
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

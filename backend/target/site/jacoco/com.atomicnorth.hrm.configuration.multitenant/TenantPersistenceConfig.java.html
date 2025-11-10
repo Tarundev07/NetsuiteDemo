@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TenantPersistenceConfig.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.configuration.multitenant</a> &gt; <span class="el_source">TenantPersistenceConfig.java</span></div><h1>TenantPersistenceConfig.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.configuration.multitenant;
+
+import org.hibernate.MultiTenancyStrategy;
+import org.hibernate.cfg.AvailableSettings;
+import org.hibernate.context.spi.CurrentTenantIdentifierResolver;
+import org.hibernate.engine.jdbc.connections.spi.MultiTenantConnectionProvider;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.boot.autoconfigure.orm.jpa.JpaProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.orm.hibernate5.SpringBeanContainer;
+import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.orm.jpa.JpaVendorAdapter;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
+
+import javax.persistence.EntityManagerFactory;
+import java.util.HashMap;
+import java.util.Map;
+
+@Configuration
+@EnableJpaRepositories(
+        basePackages = {&quot;com.atomicnorth.hrm.tenant.repository&quot;},
+        entityManagerFactoryRef = &quot;tenantEntityManagerFactory&quot;,
+        transactionManagerRef = &quot;tenantTransactionManager&quot;
+)
+@EnableConfigurationProperties(JpaProperties.class)
+public class TenantPersistenceConfig {
+
+    private final ConfigurableListableBeanFactory beanFactory;
+    private final JpaProperties jpaProperties;
+
+    @Autowired
+<span class="nc" id="L39">    public TenantPersistenceConfig(ConfigurableListableBeanFactory beanFactory, JpaProperties jpaProperties) {</span>
+<span class="nc" id="L40">        this.beanFactory = beanFactory;</span>
+<span class="nc" id="L41">        this.jpaProperties = jpaProperties;</span>
+<span class="nc" id="L42">    }</span>
+
+    @Primary
+    @Bean
+    public LocalContainerEntityManagerFactoryBean tenantEntityManagerFactory(MultiTenantConnectionProvider connectionProvider, CurrentTenantIdentifierResolver tenantResolver) {
+<span class="nc" id="L47">        LocalContainerEntityManagerFactoryBean emfBean = new LocalContainerEntityManagerFactoryBean();</span>
+//        emfBean.setPersistenceUnitName(&quot;tenant-persistence-unit&quot;);
+<span class="nc" id="L49">        emfBean.setPackagesToScan(&quot;com.atomicnorth.hrm.tenant.domain&quot;);</span>
+
+<span class="nc" id="L51">        JpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();</span>
+<span class="nc" id="L52">        emfBean.setJpaVendorAdapter(vendorAdapter);</span>
+
+<span class="nc" id="L54">        Map&lt;String, Object&gt; properties = new HashMap&lt;&gt;(this.jpaProperties.getProperties());</span>
+        // properties.put(AvailableSettings.PHYSICAL_NAMING_STRATEGY, &quot;org.springframework.boot.orm.jpa.hibernate.SpringPhysicalNamingStrategy&quot;);
+<span class="nc" id="L56">        properties.put(AvailableSettings.IMPLICIT_NAMING_STRATEGY, &quot;org.springframework.boot.orm.jpa.hibernate.SpringImplicitNamingStrategy&quot;);</span>
+<span class="nc" id="L57">        properties.put(AvailableSettings.BEAN_CONTAINER, new SpringBeanContainer(this.beanFactory));</span>
+<span class="nc" id="L58">        properties.put(AvailableSettings.MULTI_TENANT, MultiTenancyStrategy.DATABASE);</span>
+<span class="nc" id="L59">        properties.put(AvailableSettings.MULTI_TENANT_CONNECTION_PROVIDER, connectionProvider);</span>
+<span class="nc" id="L60">        properties.put(AvailableSettings.MULTI_TENANT_IDENTIFIER_RESOLVER, tenantResolver);</span>
+<span class="nc" id="L61">        emfBean.setJpaPropertyMap(properties);</span>
+
+<span class="nc" id="L63">        return emfBean;</span>
+    }
+
+    @Primary
+    @Bean
+    public JpaTransactionManager tenantTransactionManager(@Qualifier(&quot;tenantEntityManagerFactory&quot;) EntityManagerFactory emf) {
+<span class="nc" id="L69">        JpaTransactionManager tenantTransactionManager = new JpaTransactionManager();</span>
+<span class="nc" id="L70">        tenantTransactionManager.setEntityManagerFactory(emf);</span>
+<span class="nc" id="L71">        return tenantTransactionManager;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

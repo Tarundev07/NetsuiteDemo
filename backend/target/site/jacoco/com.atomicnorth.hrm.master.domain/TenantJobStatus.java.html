@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TenantJobStatus.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.master.domain</a> &gt; <span class="el_source">TenantJobStatus.java</span></div><h1>TenantJobStatus.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.master.domain;;
+
+import lombok.Data;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+import java.time.LocalDateTime;
+<span class="nc bnc" id="L12" title="All 54 branches missed.">@Data</span>
+@Entity
+@Table(name = &quot;tenant_job_status&quot;)
+public class TenantJobStatus {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = &quot;ID&quot;)
+    private Integer id;
+
+    @Column(name = &quot;CONFIG_ID&quot;, nullable = false)
+    private String configId; // Tenant ID, maps to data_source_config.id
+
+    @Column(name = &quot;JOB_CODE&quot;, nullable = false)
+    private String jobCode; // Job identifier like LEAVE_UPDATE
+
+    @Column(name = &quot;CRON_EXPRESSION&quot;, nullable = false)
+    private String cronExpression; // Cron schedule
+
+<span class="nc" id="L31">    @Column(name = &quot;IS_STATUS&quot;, length = 1)</span>
+    private String status = &quot;Y&quot;; // 'Y' = active, 'N' = stopped
+
+    @Column(name = &quot;LAST_JOB_RUN&quot;)
+    private LocalDateTime lastJobRun; // Last execution timestamp
+
+    // ================= Constructors =================
+
+<span class="nc" id="L39">    public TenantJobStatus() {</span>
+<span class="nc" id="L40">    }</span>
+
+<span class="nc" id="L42">    public TenantJobStatus(String configId, String jobCode, String cronExpression, String status) {</span>
+<span class="nc" id="L43">        this.configId = configId;</span>
+<span class="nc" id="L44">        this.jobCode = jobCode;</span>
+<span class="nc" id="L45">        this.cronExpression = cronExpression;</span>
+<span class="nc" id="L46">        this.status = status;</span>
+<span class="nc" id="L47">    }</span>
+
+    public Integer getId() {
+<span class="nc" id="L50">        return id;</span>
+    }
+
+    public void setId(Integer id) {
+<span class="nc" id="L54">        this.id = id;</span>
+<span class="nc" id="L55">    }</span>
+
+    public String getConfigId() {
+<span class="nc" id="L58">        return configId;</span>
+    }
+
+    public void setConfigId(String configId) {
+<span class="nc" id="L62">        this.configId = configId;</span>
+<span class="nc" id="L63">    }</span>
+
+    public String getJobCode() {
+<span class="nc" id="L66">        return jobCode;</span>
+    }
+
+    public void setJobCode(String jobCode) {
+<span class="nc" id="L70">        this.jobCode = jobCode;</span>
+<span class="nc" id="L71">    }</span>
+
+    public String getCronExpression() {
+<span class="nc" id="L74">        return cronExpression;</span>
+    }
+
+    public void setCronExpression(String cronExpression) {
+<span class="nc" id="L78">        this.cronExpression = cronExpression;</span>
+<span class="nc" id="L79">    }</span>
+
+    public String getStatus() {
+<span class="nc" id="L82">        return status;</span>
+    }
+
+    public void setStatus(String status) {
+<span class="nc" id="L86">        this.status = status;</span>
+<span class="nc" id="L87">    }</span>
+
+    public LocalDateTime getLastJobRun() {
+<span class="nc" id="L90">        return lastJobRun;</span>
+    }
+
+    public void setLastJobRun(LocalDateTime lastJobRun) {
+<span class="nc" id="L94">        this.lastJobRun = lastJobRun;</span>
+<span class="nc" id="L95">    }</span>
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

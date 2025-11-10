@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AttendanceMoaf.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.domain.attendance</a> &gt; <span class="el_source">AttendanceMoaf.java</span></div><h1>AttendanceMoaf.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.domain.attendance;
+
+import com.atomicnorth.hrm.tenant.domain.AbstractAuditingEntity;
+import com.atomicnorth.hrm.tenant.domain.Employee;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.Data;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+<span class="nc bnc" id="L20" title="All 94 branches missed.">@Data</span>
+@Entity
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@Table(name = &quot;ses_m07_attendance_moaf&quot;)
+public class AttendanceMoaf extends AbstractAuditingEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = &quot;FORM_RF_NUM&quot;)
+<span class="nc" id="L28">    private Integer formRfNum;</span>
+
+    @Column(name = &quot;MOAF_DATE&quot;)
+<span class="nc" id="L31">    private LocalDate moafDate;</span>
+
+    @Column(name = &quot;REQUEST_NUMBER&quot;)
+<span class="nc" id="L34">    private String requestNumber;</span>
+
+    @Column(name = &quot;DIRECTION&quot;)
+<span class="nc" id="L37">    private String direction;</span>
+
+    @Column(name = &quot;IN_TIME&quot;)
+<span class="nc" id="L40">    private LocalDateTime inTime;</span>
+
+    @Column(name = &quot;OUT_TIME&quot;)
+<span class="nc" id="L43">    private LocalDateTime outTime;</span>
+
+    @Column(name = &quot;EMPLOYEE_ID&quot;, length = 50)
+<span class="nc" id="L46">    private Integer employeeId;</span>
+
+    @Column(name = &quot;STATUS&quot;, length = 50)
+<span class="nc" id="L49">    private String status;</span>
+
+    @Column(name = &quot;REASON&quot;, length = 200)
+<span class="nc" id="L52">    private String reason;</span>
+
+    @Column(name = &quot;CATEGORY&quot;, length = 50)
+<span class="nc" id="L55">    private String category;</span>
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = &quot;EMPLOYEE_ID&quot;, insertable = false, updatable = false)
+<span class="nc" id="L59">    private Employee employee;</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

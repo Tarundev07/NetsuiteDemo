@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CommonFeatures.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.util.commonClass</a> &gt; <span class="el_source">CommonFeatures.java</span></div><h1>CommonFeatures.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.util.commonClass;
+
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Component;
+
+import java.sql.Types;
+
+@Component
+<span class="nc" id="L12">public class CommonFeatures {</span>
+    /*
+        @Autowired
+        private JdbcTemplate jdbcTemplate;
+
+        //commonFeatures.callGenerateCodeProcedure(typeId, moduleId, functionId, &quot;LT&quot;, &quot;M&quot;);
+        //
+        public String callGenerateCodeProcedure(int moduleId, int functionId, String content, String contentType) {
+            try {
+                UserLoginDetail user= SessionHolder.getUserLoginDetail();
+                String schemaName = &quot;tenant_1&quot;; // Replace with the actual schema name
+                String procedureName = schemaName + &quot;.generate_final_code&quot;;
+
+                String generatedCode = jdbcTemplate.queryForObject(
+                        &quot;CALL &quot; + procedureName + &quot;(?, ?, ?, ?)&quot;,
+                        new Object[]{moduleId, functionId, content, contentType},
+                        new int[]{Types.INTEGER, Types.INTEGER, Types.VARCHAR, Types.VARCHAR},
+                        String.class);
+                return generatedCode;
+            } catch (Exception e) {
+                // Log the exception for debugging purposes
+                e.printStackTrace();
+                // Return an error message or handle the exception according to your application's logic
+                return &quot;Error occurred while generating code: &quot; + e.getMessage();
+            }
+        }*/
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    //commonFeatures.callGenerateCodeProcedure(typeId, moduleId, functionId, &quot;LT&quot;, &quot;M&quot;);
+
+    public String callGenerateCodeProcedure(int typeId, int moduleId, int functionId, String content, String contentType) {
+        try {
+<span class="nc" id="L45">            UserLoginDetail user = SessionHolder.getUserLoginDetail();</span>
+
+<span class="nc" id="L47">            String tenantId = user.getSubject();</span>
+<span class="nc" id="L48">            String schemaName = &quot;tenant_1&quot;;</span>
+<span class="nc" id="L49">            System.out.println(schemaName);</span>
+<span class="nc" id="L50">            String procedureName = schemaName + &quot;.generate_final_code&quot;;</span>
+
+<span class="nc" id="L52">            String generatedCode = jdbcTemplate.queryForObject(</span>
+                    &quot;CALL &quot; + procedureName + &quot;(?,?, ?, ?, ?)&quot;,
+<span class="nc" id="L54">                    new Object[]{typeId, moduleId, functionId, content, contentType},</span>
+                    new int[]{Types.INTEGER, Types.INTEGER, Types.INTEGER, Types.VARCHAR, Types.VARCHAR},
+                    String.class);
+<span class="nc" id="L57">            return generatedCode;</span>
+<span class="nc" id="L58">        } catch (Exception e) {</span>
+<span class="nc" id="L59">            e.printStackTrace();</span>
+<span class="nc" id="L60">            return &quot;Error occurred while generating code: &quot; + e.getMessage();</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

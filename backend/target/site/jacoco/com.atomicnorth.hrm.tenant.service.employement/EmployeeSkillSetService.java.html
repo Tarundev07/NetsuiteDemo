@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmployeeSkillSetService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.employement</a> &gt; <span class="el_source">EmployeeSkillSetService.java</span></div><h1>EmployeeSkillSetService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.employement;
+
+import com.atomicnorth.hrm.tenant.domain.employement.EmployeeSkillSetEntity;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.employement.EmployeeSkillSetRepo;
+import com.atomicnorth.hrm.tenant.service.dto.employement.EmployeeSkillSetDTO;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L19">@Slf4j</span>
+<span class="nc" id="L20">public class EmployeeSkillSetService {</span>
+
+    @Autowired
+    private EmployeeSkillSetRepo employeeSkillSetRepo;
+
+    public List&lt;EmployeeSkillSetDTO&gt; saveOrUpdateSkills(List&lt;EmployeeSkillSetDTO&gt; skillSetDTOS) {
+<span class="nc" id="L26">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L27">        List&lt;EmployeeSkillSetDTO&gt; updatedDTOs = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L29" title="All 2 branches missed.">        for (EmployeeSkillSetDTO dto : skillSetDTOS) {</span>
+<span class="nc bnc" id="L30" title="All 2 branches missed.">            EmployeeSkillSetEntity employeeSkillSetEntity = dto.getEmployeeSkillId() != null</span>
+<span class="nc" id="L31">                    ? employeeSkillSetRepo.findById(dto.getEmployeeSkillId()).orElse(new EmployeeSkillSetEntity())</span>
+<span class="nc" id="L32">                    : new EmployeeSkillSetEntity();</span>
+
+<span class="nc" id="L34">            mapToEntity(dto, employeeSkillSetEntity);</span>
+
+<span class="nc bnc" id="L36" title="All 2 branches missed.">            if (employeeSkillSetEntity.getEmployeeSkillId() == null) {</span>
+<span class="nc" id="L37">                employeeSkillSetEntity.setCreatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L38">                employeeSkillSetEntity.setCreatedDate(Instant.now());</span>
+            }
+<span class="nc" id="L40">            employeeSkillSetEntity.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L41">            employeeSkillSetEntity.setLastUpdatedDate(Instant.now());</span>
+
+<span class="nc" id="L43">            EmployeeSkillSetEntity savedEntity = employeeSkillSetRepo.save(employeeSkillSetEntity);</span>
+
+<span class="nc" id="L45">            dto.setEmployeeSkillId(savedEntity.getEmployeeSkillId());</span>
+<span class="nc" id="L46">            updatedDTOs.add(dto);</span>
+<span class="nc" id="L47">        }</span>
+
+<span class="nc" id="L49">        return updatedDTOs;</span>
+    }
+
+    private void mapToEntity(EmployeeSkillSetDTO dto, EmployeeSkillSetEntity entity) {
+<span class="nc" id="L53">        entity.setUsername(dto.getUsername());</span>
+<span class="nc" id="L54">        entity.setIsActive(dto.getIsActive());</span>
+<span class="nc" id="L55">        entity.setEmployeeSkillId(dto.getEmployeeSkillId());</span>
+<span class="nc" id="L56">        entity.setSkillId(dto.getSkillId());</span>
+<span class="nc" id="L57">        entity.setSkillVersionId(dto.getSkillVersionId());</span>
+<span class="nc" id="L58">        entity.setExperienceInMonths(dto.getExperienceInMonths());</span>
+<span class="nc" id="L59">        entity.setSkillProficiencyCode(dto.getSkillProficiencyCode());</span>
+<span class="nc" id="L60">        entity.setSkillCategoryName(dto.getSkillCategoryName());</span>
+<span class="nc" id="L61">        entity.setSkillCategoryCode(dto.getSkillCategoryCode());</span>
+<span class="nc" id="L62">    }</span>
+
+    @Transactional(readOnly = true)
+    public List&lt;EmployeeSkillSetDTO&gt; getAllAddressesByUsername(Integer username) {
+<span class="nc" id="L66">        List&lt;EmployeeSkillSetEntity&gt; addresses = employeeSkillSetRepo.findByUsername(username);</span>
+<span class="nc" id="L67">        return addresses.stream()</span>
+<span class="nc" id="L68">                .map(this::mapToResponseDTO)</span>
+<span class="nc" id="L69">                .collect(Collectors.toList());</span>
+    }
+
+    private EmployeeSkillSetDTO mapToResponseDTO(EmployeeSkillSetEntity savedAddress) {
+<span class="nc" id="L73">        EmployeeSkillSetDTO responseDTO = new EmployeeSkillSetDTO();</span>
+<span class="nc" id="L74">        responseDTO.setUsername(savedAddress.getUsername());</span>
+<span class="nc" id="L75">        responseDTO.setEmployeeSkillId(savedAddress.getEmployeeSkillId());</span>
+<span class="nc" id="L76">        responseDTO.setSkillId(savedAddress.getSkillId());</span>
+<span class="nc" id="L77">        responseDTO.setSkillVersionId(savedAddress.getSkillVersionId());</span>
+<span class="nc" id="L78">        responseDTO.setLastUsedDate(savedAddress.getLastUsedDate());</span>
+<span class="nc" id="L79">        responseDTO.setExperienceInMonths(savedAddress.getExperienceInMonths());</span>
+<span class="nc" id="L80">        responseDTO.setSkillProficiencyCode(savedAddress.getSkillProficiencyCode());</span>
+<span class="nc" id="L81">        responseDTO.setSkillCategoryName(savedAddress.getSkillCategoryName());</span>
+<span class="nc" id="L82">        responseDTO.setSkillCategoryCode(savedAddress.getSkillCategoryCode());</span>
+<span class="nc" id="L83">        responseDTO.setCreatedDate(savedAddress.getCreatedDate());</span>
+<span class="nc" id="L84">        responseDTO.setCreatedBy(savedAddress.getCreatedBy());</span>
+<span class="nc" id="L85">        responseDTO.setLastUpdatedBy(savedAddress.getLastUpdatedBy());</span>
+<span class="nc" id="L86">        responseDTO.setLastUpdatedDate(savedAddress.getLastUpdatedDate());</span>
+<span class="nc" id="L87">        responseDTO.setIsActive(savedAddress.getIsActive());</span>
+<span class="nc" id="L88">        return responseDTO;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

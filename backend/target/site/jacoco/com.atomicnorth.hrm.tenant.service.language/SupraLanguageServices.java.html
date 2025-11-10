@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SupraLanguageServices.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.language</a> &gt; <span class="el_source">SupraLanguageServices.java</span></div><h1>SupraLanguageServices.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.language;
+
+import com.atomicnorth.hrm.tenant.domain.language.SupraLanguageEntity;
+import com.atomicnorth.hrm.tenant.repository.language.SupraLanguageRepo;
+import com.atomicnorth.hrm.tenant.service.dto.language.SupraLanguageDTO;
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L15">public class SupraLanguageServices {</span>
+    @Autowired
+    private SupraLanguageRepo supraLanguageRepo;
+
+    @Autowired
+    private ModelMapper modelMapper;
+
+    public List&lt;SupraLanguageDTO&gt; getSupraLanguageDTO() {
+<span class="nc" id="L23">        List&lt;SupraLanguageEntity&gt; supraLanguages = supraLanguageRepo.findAll();</span>
+
+<span class="nc" id="L25">        return supraLanguages.stream()</span>
+<span class="nc" id="L26">                .map(supraLanguage -&gt; modelMapper.map(supraLanguage, SupraLanguageDTO.class))</span>
+<span class="nc" id="L27">                .collect(Collectors.toList());</span>
+    }
+
+    public Integer[] getSupraLanguageIds() {
+<span class="nc" id="L31">        List&lt;SupraLanguageEntity&gt; supraLanguages = supraLanguageRepo.findAll();</span>
+
+<span class="nc" id="L33">        List&lt;SupraLanguageDTO&gt; supraLanguagesDto = supraLanguages.stream()</span>
+<span class="nc" id="L34">                .map(supraLanguage -&gt; modelMapper.map(supraLanguage, SupraLanguageDTO.class))</span>
+<span class="nc" id="L35">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L37">        System.out.println(supraLanguagesDto);</span>
+
+<span class="nc" id="L39">        return supraLanguagesDto.stream()</span>
+<span class="nc" id="L40">                .map(SupraLanguageDTO::getLanguageId)</span>
+<span class="nc" id="L41">                .filter(Objects::nonNull)</span>
+<span class="nc" id="L42">                .toArray(Integer[]::new);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

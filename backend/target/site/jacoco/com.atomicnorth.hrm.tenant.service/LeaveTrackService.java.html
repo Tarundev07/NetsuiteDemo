@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LeaveTrackService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service</a> &gt; <span class="el_source">LeaveTrackService.java</span></div><h1>LeaveTrackService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service;
+
+import com.atomicnorth.hrm.tenant.domain.LeaveRequest;
+import com.atomicnorth.hrm.tenant.domain.User;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.repository.LeaveRequestRepository;
+import com.atomicnorth.hrm.tenant.repository.UserRepository;
+import com.atomicnorth.hrm.tenant.service.dto.TrackLeaveDTO;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+
+import javax.persistence.criteria.Predicate;
+import javax.transaction.Transactional;
+import java.lang.reflect.Field;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L31">public class LeaveTrackService {</span>
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private EmployeeRepository employeeRepository;
+
+    @Autowired
+    private LeaveRequestRepository leaveRequestRepository;
+
+    @Transactional
+    public Map&lt;String, Object&gt; getPaginatedTrackLeavesByEmpId(Integer empId, Pageable pageable, String searchColumn, String searchValue
+    ) {
+<span class="nc" id="L45">        Page&lt;LeaveRequest&gt; pageResult = leaveRequestRepository.findAll(</span>
+                (root, query, cb) -&gt; {
+<span class="nc" id="L47">                    Predicate predicate = cb.conjunction();</span>
+<span class="nc bnc" id="L48" title="All 2 branches missed.">                    if (empId != null) {</span>
+<span class="nc" id="L49">                        predicate = cb.and(predicate, cb.equal(root.get(&quot;empId&quot;), empId));</span>
+                    }
+<span class="nc bnc" id="L51" title="All 6 branches missed.">                    if (searchColumn != null &amp;&amp; searchValue != null &amp;&amp; !searchValue.isEmpty()) {</span>
+<span class="nc bnc" id="L52" title="All 6 branches missed.">                        switch (searchColumn) {</span>
+                            case &quot;empName&quot;: {
+<span class="nc" id="L54">                                List&lt;Long&gt; matchedEmpIds = employeeRepository</span>
+<span class="nc" id="L55">                                        .findAll()</span>
+<span class="nc" id="L56">                                        .stream()</span>
+<span class="nc" id="L57">                                        .filter(emp -&gt; {</span>
+<span class="nc" id="L58">                                            String fullName = employeeRepository</span>
+<span class="nc" id="L59">                                                    .findEmployeeFullNameById(Long.valueOf(emp.getEmployeeId()))</span>
+<span class="nc" id="L60">                                                    .orElse(&quot;&quot;)</span>
+<span class="nc" id="L61">                                                    .toLowerCase();</span>
+<span class="nc" id="L62">                                            return fullName.contains(searchValue.toLowerCase());</span>
+                                        })
+<span class="nc" id="L64">                                        .map(emp -&gt; Long.valueOf(emp.getEmployeeId()))</span>
+<span class="nc" id="L65">                                        .collect(Collectors.toList());</span>
+
+<span class="nc bnc" id="L67" title="All 2 branches missed.">                                if (!matchedEmpIds.isEmpty()) {</span>
+<span class="nc" id="L68">                                    predicate = cb.and(predicate, root.get(&quot;empId&quot;).in(matchedEmpIds));</span>
+                                } else {
+<span class="nc" id="L70">                                    predicate = cb.and(predicate, cb.equal(root.get(&quot;empId&quot;), -1)); // empty</span>
+                                }
+<span class="nc" id="L72">                                break;</span>
+                            }
+                            case &quot;createdBy&quot;:
+                            case &quot;lastUpdatedBy&quot;: {
+<span class="nc" id="L76">                                List&lt;Long&gt; matchedUserIds = userRepository</span>
+<span class="nc" id="L77">                                        .findAll()</span>
+<span class="nc" id="L78">                                        .stream()</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">                                        .filter(user -&gt; user.getDisplayName() != null</span>
+<span class="nc bnc" id="L80" title="All 2 branches missed.">                                                &amp;&amp; user.getDisplayName().toLowerCase().contains(searchValue.toLowerCase()))</span>
+<span class="nc" id="L81">                                        .map(User::getId)</span>
+<span class="nc" id="L82">                                        .collect(Collectors.toList());</span>
+
+<span class="nc bnc" id="L84" title="All 2 branches missed.">                                if (!matchedUserIds.isEmpty()) {</span>
+<span class="nc" id="L85">                                    predicate = cb.and(predicate, root.get(searchColumn).in(matchedUserIds));</span>
+                                } else {
+<span class="nc" id="L87">                                    predicate = cb.and(predicate, cb.equal(root.get(searchColumn), -1));</span>
+                                }
+<span class="nc" id="L89">                                break;</span>
+                            }
+                            case &quot;createdDate&quot;:
+                            case &quot;lastUpdatedDate&quot;: {
+                                try {
+                                    // input format yyyy-MM-dd
+<span class="nc" id="L95">                                    LocalDate searchDate = LocalDate.parse(searchValue, DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd&quot;));</span>
+
+<span class="nc" id="L97">                                    Instant startOfDay = searchDate.atStartOfDay(ZoneId.systemDefault()).toInstant();</span>
+<span class="nc" id="L98">                                    Instant endOfDay = searchDate.atTime(LocalTime.MAX).atZone(ZoneId.systemDefault()).toInstant();</span>
+
+<span class="nc" id="L100">                                    predicate = cb.and(predicate,</span>
+<span class="nc" id="L101">                                            cb.between(root.get(searchColumn), startOfDay, endOfDay));</span>
+<span class="nc" id="L102">                                } catch (DateTimeParseException e) {</span>
+<span class="nc" id="L103">                                    throw new IllegalArgumentException(&quot;Invalid date format for &quot; + searchColumn + &quot;. Expected yyyy-MM-dd&quot;);</span>
+<span class="nc" id="L104">                                }</span>
+                                break;
+                            }
+
+                            case &quot;leaveSummary&quot;:
+<span class="nc" id="L109">                                break;</span>
+                            case &quot;totalDays&quot;:
+                                try {
+<span class="nc" id="L112">                                    Double totalDaysValue = Double.parseDouble(searchValue);</span>
+<span class="nc" id="L113">                                    predicate = cb.and(predicate, cb.equal(root.get(&quot;totalDays&quot;), totalDaysValue));</span>
+<span class="nc" id="L114">                                } catch (NumberFormatException e) {</span>
+<span class="nc" id="L115">                                    throw new IllegalArgumentException(&quot;Invalid number format for totalDays: &quot; + searchValue);</span>
+<span class="nc" id="L116">                                }</span>
+                                break;
+                            default: {
+                                try {
+<span class="nc" id="L120">                                    Field field = LeaveRequest.class.getDeclaredField(searchColumn);</span>
+<span class="nc" id="L121">                                    Class&lt;?&gt; fieldType = field.getType();</span>
+
+<span class="nc" id="L123">                                    Predicate searchPredicate = null;</span>
+
+<span class="nc bnc" id="L125" title="All 2 branches missed.">                                    if (fieldType.equals(String.class)) {</span>
+<span class="nc" id="L126">                                        searchPredicate = cb.like(</span>
+<span class="nc" id="L127">                                                cb.lower(root.get(searchColumn)),</span>
+<span class="nc" id="L128">                                                &quot;%&quot; + searchValue.toLowerCase() + &quot;%&quot;</span>
+                                        );
+<span class="nc bnc" id="L130" title="All 2 branches missed.">                                    } else if (Number.class.isAssignableFrom(fieldType)</span>
+<span class="nc bnc" id="L131" title="All 2 branches missed.">                                            || fieldType.equals(int.class)</span>
+<span class="nc bnc" id="L132" title="All 2 branches missed.">                                            || fieldType.equals(long.class)</span>
+<span class="nc bnc" id="L133" title="All 2 branches missed.">                                            || fieldType.equals(double.class)) {</span>
+<span class="nc" id="L134">                                        searchPredicate = cb.equal(root.get(searchColumn), Integer.parseInt(searchValue));</span>
+                                    }
+
+<span class="nc bnc" id="L137" title="All 2 branches missed.">                                    if (searchPredicate != null) {</span>
+<span class="nc" id="L138">                                        predicate = cb.and(predicate, searchPredicate);</span>
+                                    }
+<span class="nc" id="L140">                                } catch (Exception e) {</span>
+<span class="nc" id="L141">                                    throw new IllegalArgumentException(&quot;Invalid search field: &quot; + searchColumn);</span>
+<span class="nc" id="L142">                                }</span>
+                                break;
+                            }
+                        }
+                    }
+
+<span class="nc" id="L148">                    return predicate;</span>
+                }, pageable
+        );
+<span class="nc" id="L151">        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(&quot;dd/MM&quot;).withZone(ZoneId.systemDefault());</span>
+<span class="nc" id="L152">        List&lt;TrackLeaveDTO&gt; dtoList = pageResult.getContent().stream().map(request -&gt; {</span>
+<span class="nc" id="L153">            String leaveSummary = request.getLeaveCode() + &quot;:&quot; + request.getStartDate().format(formatter) + &quot; - &quot; + request.getEndDate().format(formatter);</span>
+
+<span class="nc" id="L155">            User userTable = null;</span>
+<span class="nc bnc" id="L156" title="All 2 branches missed.">            if (request.getCreatedBy() != null) {</span>
+                try {
+<span class="nc" id="L158">                    userTable = userRepository.findById(Long.parseLong(request.getCreatedBy())).orElse(null);</span>
+<span class="nc" id="L159">                } catch (NumberFormatException e) {</span>
+                    // ignore
+<span class="nc" id="L161">                }</span>
+            }
+
+<span class="nc" id="L164">            TrackLeaveDTO dto = new TrackLeaveDTO();</span>
+<span class="nc" id="L165">            dto.setLeaveRfNum(request.getLeaveRfNum());</span>
+<span class="nc" id="L166">            dto.setLeaveSummary(leaveSummary);</span>
+<span class="nc" id="L167">            dto.setRequestNumber(request.getRequestNumber());</span>
+<span class="nc" id="L168">            dto.setEmpId(request.getEmpId());</span>
+
+<span class="nc bnc" id="L170" title="All 2 branches missed.">            if (request.getEmpId() != null) {</span>
+<span class="nc" id="L171">                dto.setEmpName(employeeRepository</span>
+<span class="nc" id="L172">                        .findEmployeeFullNameById(Long.valueOf(request.getEmpId()))</span>
+<span class="nc" id="L173">                        .orElse(&quot;Unknown Employee&quot;));</span>
+            }
+
+<span class="nc" id="L176">            dto.setStatus(request.getStatus());</span>
+<span class="nc" id="L177">            dto.setTotalDays(request.getTotalDays());</span>
+<span class="nc bnc" id="L178" title="All 2 branches missed.">            dto.setCreatedBy(userTable != null ? userTable.getDisplayName() : &quot;Unknown&quot;);</span>
+<span class="nc bnc" id="L179" title="All 2 branches missed.">            dto.setLastUpdatedBy(userTable != null ? userTable.getDisplayName() : &quot;Unknown&quot;);</span>
+<span class="nc" id="L180">            dto.setCreatedDate(request.getCreatedDate());</span>
+<span class="nc" id="L181">            dto.setLastUpdatedDate(request.getLastUpdatedDate());</span>
+
+<span class="nc" id="L183">            return dto;</span>
+<span class="nc" id="L184">        }).collect(Collectors.toList());</span>
+
+<span class="nc bnc" id="L186" title="All 8 branches missed.">        if (searchColumn != null &amp;&amp; searchValue != null &amp;&amp; !searchColumn.isBlank() &amp;&amp; !searchValue.isBlank()) {</span>
+<span class="nc" id="L187">            String lowerSearch = searchValue.toLowerCase();</span>
+<span class="nc bnc" id="L188" title="All 2 branches missed.">            if (&quot;leaveSummary&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L189">                dtoList = dtoList.stream()</span>
+<span class="nc bnc" id="L190" title="All 2 branches missed.">                        .filter(dto -&gt; dto.getLeaveSummary() != null &amp;&amp;</span>
+<span class="nc bnc" id="L191" title="All 2 branches missed.">                                dto.getLeaveSummary().toLowerCase().contains(lowerSearch))</span>
+<span class="nc" id="L192">                        .collect(Collectors.toList());</span>
+            }
+        }
+
+        // Sorting manually after DTO mapping (only if sorting by names)
+<span class="nc bnc" id="L197" title="All 2 branches missed.">        if (pageable.getSort() != null) {</span>
+<span class="nc bnc" id="L198" title="All 2 branches missed.">            for (Sort.Order order : pageable.getSort()) {</span>
+<span class="nc" id="L199">                Comparator&lt;TrackLeaveDTO&gt; comparator = null;</span>
+<span class="nc" id="L200">                String sortField = order.getProperty();</span>
+
+<span class="nc bnc" id="L202" title="All 4 branches missed.">                switch (sortField) {</span>
+                    case &quot;empName&quot;:
+<span class="nc" id="L204">                        comparator = Comparator.comparing(TrackLeaveDTO::getEmpName, Comparator.nullsLast(String::compareToIgnoreCase));</span>
+<span class="nc" id="L205">                        break;</span>
+                    case &quot;createdBy&quot;:
+<span class="nc" id="L207">                        comparator = Comparator.comparing(TrackLeaveDTO::getCreatedBy, Comparator.nullsLast(String::compareToIgnoreCase));</span>
+<span class="nc" id="L208">                        break;</span>
+                    case &quot;lastUpdatedBy&quot;:
+<span class="nc" id="L210">                        comparator = Comparator.comparing(TrackLeaveDTO::getLastUpdatedBy, Comparator.nullsLast(String::compareToIgnoreCase));</span>
+<span class="nc" id="L211">                        break;</span>
+                    default:
+                        break;
+                }
+
+<span class="nc bnc" id="L216" title="All 2 branches missed.">                if (comparator != null) {</span>
+<span class="nc bnc" id="L217" title="All 2 branches missed.">                    if (order.isDescending()) {</span>
+<span class="nc" id="L218">                        comparator = comparator.reversed();</span>
+                    }
+<span class="nc" id="L220">                    dtoList = dtoList.stream().sorted(comparator).collect(Collectors.toList());</span>
+                }
+<span class="nc" id="L222">            }</span>
+        }
+
+        // Manual pagination after sorting
+<span class="nc" id="L226">        int totalItems = dtoList.size();</span>
+<span class="nc" id="L227">        int start = Math.min(pageable.getPageNumber() * pageable.getPageSize(), totalItems);</span>
+<span class="nc" id="L228">        int end = Math.min(start + pageable.getPageSize(), totalItems);</span>
+<span class="nc" id="L229">        List&lt;TrackLeaveDTO&gt; paginatedList = dtoList.subList(start, end);</span>
+
+<span class="nc" id="L231">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L232">        response.put(&quot;result&quot;, paginatedList);</span>
+<span class="nc" id="L233">        response.put(&quot;currentPage&quot;, pageable.getPageNumber() + 1);</span>
+<span class="nc" id="L234">        response.put(&quot;totalItems&quot;, totalItems);</span>
+<span class="nc" id="L235">        response.put(&quot;totalPages&quot;, (int) Math.ceil((double) totalItems / pageable.getPageSize()));</span>
+<span class="nc" id="L236">        response.put(&quot;pageSize&quot;, pageable.getPageSize());</span>
+
+<span class="nc" id="L238">        return response;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

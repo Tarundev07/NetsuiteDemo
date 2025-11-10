@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CreateEmployee.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.dto.employement</a> &gt; <span class="el_source">CreateEmployee.java</span></div><h1>CreateEmployee.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.dto.employement;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.validation.constraints.NotBlank;
+import java.time.LocalDate;
+
+<span class="nc bnc" id="L11" title="All 238 branches missed.">@Data</span>
+<span class="nc" id="L12">@NoArgsConstructor</span>
+<span class="nc" id="L13">@AllArgsConstructor</span>
+public class CreateEmployee {
+<span class="nc" id="L15">    private Integer jobApplicantId;</span>
+<span class="nc" id="L16">    private String salutation;</span>
+<span class="nc" id="L17">    private String firstName;</span>
+<span class="nc" id="L18">    private String middleName;</span>
+<span class="nc" id="L19">    private String lastName;</span>
+<span class="nc" id="L20">    private String displayName;</span>
+<span class="nc" id="L21">    private String motherName;</span>
+<span class="nc" id="L22">    private String fatherName;</span>
+<span class="nc" id="L23">    private String spouseName;</span>
+<span class="nc" id="L24">    private String personalEmail;</span>
+<span class="nc" id="L25">    private String workEmail;</span>
+<span class="nc" id="L26">    private String primaryContactNumber;</span>
+<span class="nc" id="L27">    private String primaryContactCountryCode;</span>
+<span class="nc" id="L28">    private String secondaryContactNumber;</span>
+<span class="nc" id="L29">    private String secondaryContactCountryCode;</span>
+    @JsonFormat(pattern = &quot;yyyy-MM-dd&quot;)
+<span class="nc" id="L31">    private LocalDate dob;</span>
+    @JsonFormat(pattern = &quot;yyyy-MM-dd&quot;)
+<span class="nc" id="L33">    private LocalDate effectiveStartDate;</span>
+<span class="nc" id="L34">    private String employeeType;</span>
+<span class="nc" id="L35">    private Long departmentId;</span>
+<span class="nc" id="L36">    private Integer designationId;</span>
+<span class="nc" id="L37">    private Integer reportingManagerId;</span>
+<span class="nc" id="L38">    private Integer hrManagerId;</span>
+<span class="nc" id="L39">    private String nationality;</span>
+    @NotBlank(message = &quot;AadhaarNumber_cannot_be_blank&quot;)
+<span class="nc" id="L41">    private String aadhaarNumber;</span>
+    @NotBlank(message = &quot;PanNumber_cannot_be_blank&quot;)
+<span class="nc" id="L43">    private String panNumber;</span>
+<span class="nc" id="L44">    private String primaryEmergencyContactName;</span>
+<span class="nc" id="L45">    private String primaryEmergencyContactRelation;</span>
+<span class="nc" id="L46">    private String primaryEmergencyContactNumber;</span>
+<span class="nc" id="L47">    private String primaryEmergencyContactCountryCode;</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Reimbursement.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.reimbursement</a> &gt; <span class="el_source">Reimbursement.java</span></div><h1>Reimbursement.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.reimbursement;
+
+import com.atomicnorth.hrm.tenant.domain.reimbursement.ReimbursementRequest;
+import com.atomicnorth.hrm.tenant.domain.reimbursement.ReimbursementType;
+import com.atomicnorth.hrm.tenant.service.dto.reimbursement.ExpenseRequestDTO;
+import com.atomicnorth.hrm.tenant.service.dto.reimbursement.ReimbursementApprovalDTO;
+import com.atomicnorth.hrm.tenant.service.dto.reimbursement.ReimbursementRequestDTO;
+import com.atomicnorth.hrm.tenant.service.dto.reimbursement.RequestDTO;
+import com.atomicnorth.hrm.tenant.service.reimbursement.ReimbursementService;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.json.JSONArray;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.*;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.persistence.EntityNotFoundException;
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
+
+
+@RestController
+@RequestMapping(&quot;/api/reimbursement&quot;)
+<span class="nc" id="L30">public class Reimbursement {</span>
+
+<span class="nc" id="L32">    private final Logger log = LoggerFactory.getLogger(Reimbursement.class);</span>
+    @Autowired
+    private ReimbursementService reimbursementService;
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @GetMapping
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getReimbursementType() {
+        try {
+<span class="nc" id="L41">            List&lt;ReimbursementType&gt; reimbursementTypeList = reimbursementService.findAllReimbursementType();</span>
+<span class="nc" id="L42">            Map&lt;String, Object&gt; resultSet = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L43">            resultSet.put(&quot;result&quot;, reimbursementTypeList);</span>
+<span class="nc" id="L44">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    resultSet,
+                    true,
+                    &quot;REIMBURSEMENT-TYPE-LIST-SUCCESS&quot;,
+                    &quot;Success&quot;
+            );
+<span class="nc" id="L50">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L51">        } catch (Exception ex) {</span>
+<span class="nc" id="L52">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;REIMBURSEMENT-TYPE-LIST-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L57">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L59">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @PostMapping(value = &quot;/submitNewExpenseAction&quot;, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity&lt;?&gt; submitNewExpenseAction(
+            @RequestPart(&quot;expenseRequestdto&quot;) String expenseRequestDtoStr,
+            @RequestPart(value = &quot;file&quot;, required = false) MultipartFile[] files) {
+
+        try {
+<span class="nc" id="L69">            ObjectMapper objectMapper = new ObjectMapper();</span>
+<span class="nc" id="L70">            ExpenseRequestDTO expenseRequestDTO = objectMapper.readValue(expenseRequestDtoStr, ExpenseRequestDTO.class);</span>
+
+<span class="nc" id="L72">            String validation = reimbursementService.validateExxpenseRequestBean(expenseRequestDTO);</span>
+<span class="nc bnc" id="L73" title="All 2 branches missed.">            if (!&quot;success&quot;.equalsIgnoreCase(validation)) {</span>
+<span class="nc" id="L74">                return ResponseEntity.badRequest().body(Collections.singletonMap(&quot;error&quot;, validation));</span>
+            }
+
+<span class="nc" id="L77">            boolean status = reimbursementService.saveOrUpdateExpenseRequest(expenseRequestDTO, files, true);</span>
+<span class="nc bnc" id="L78" title="All 2 branches missed.">            if (status) {</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">                String message = (expenseRequestDTO.getSrno() == null) ? &quot;REQUEST_SUCCESSFULLY_CREATED&quot; : &quot;REQUEST_SUCCESSFULLY_UPDATED&quot;;</span>
+<span class="nc" id="L80">                return ResponseEntity.ok(new ApiResponse&lt;&gt;(expenseRequestDTO, true, message, &quot;SUCCESS&quot;));</span>
+            }
+
+<span class="nc" id="L83">        } catch (IOException e) {</span>
+<span class="nc" id="L84">            return ResponseEntity.badRequest().body(Collections.singletonMap(&quot;error&quot;, &quot;Invalid JSON: &quot; + e.getMessage()));</span>
+<span class="nc" id="L85">        } catch (Exception e) {</span>
+<span class="nc" id="L86">            log.error(&quot;Error while processing expense request&quot;, e);</span>
+<span class="nc" id="L87">        }</span>
+
+<span class="nc" id="L89">        return ResponseEntity.ok(new ApiResponse&lt;&gt;(false, false, &quot;REQUEST_FAILED&quot;, &quot;FAILURE&quot;));</span>
+    }
+
+    @GetMapping(&quot;/{requestid}/downloadReimbursement&quot;)
+    public ResponseEntity&lt;byte[]&gt; downloadExpense(@PathVariable Integer requestid) {
+<span class="nc" id="L94">        byte[] expense = reimbursementService.downloadExpense(requestid);</span>
+<span class="nc bnc" id="L95" title="All 2 branches missed.">        if (expense != null) {</span>
+<span class="nc" id="L96">            return ResponseEntity.ok()</span>
+<span class="nc" id="L97">                    .header(HttpHeaders.CONTENT_DISPOSITION, &quot;inline; filename=expense.pdf&quot;)</span>
+<span class="nc" id="L98">                    .contentType(MediaType.APPLICATION_PDF)</span>
+<span class="nc" id="L99">                    .body(expense);</span>
+        } else {
+<span class="nc" id="L101">            return ResponseEntity.notFound().build();</span>
+        }
+    }
+
+    @GetMapping(&quot;/requestNumber&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;String&gt;&gt; generateBillRequestNo() {
+        try {
+<span class="nc" id="L108">            String requestNumber = reimbursementService.findRMSRequestNumber();</span>
+<span class="nc" id="L109">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(requestNumber, true, &quot;REQUEST_NUMBER_GENERATED&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L110">        } catch (Exception e) {</span>
+<span class="nc" id="L111">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;REQUEST_NUMBER_GENERATION_FAILED&quot;, &quot;FAILURE&quot;, Collections.singletonList(e.getMessage())));</span>
+        }
+    }
+
+    @GetMapping(&quot;/getExpanseDetailByReqNumber&quot;)
+    public String getExpanseDetailByReqNumber1(@RequestParam(value = &quot;requestNumber&quot;, required = true) String requestNumber) {
+<span class="nc" id="L117">        List&lt;JSONArray&gt; jsonarr = Collections.singletonList(new JSONArray());</span>
+        try {
+<span class="nc" id="L119">            jsonarr = reimbursementService.getPendingRequestDetails(requestNumber);</span>
+<span class="nc" id="L120">        } catch (Exception e) {</span>
+<span class="nc" id="L121">            e.printStackTrace();</span>
+<span class="nc" id="L122">        }</span>
+<span class="nc" id="L123">        return jsonarr.toString();</span>
+    }
+
+    @GetMapping(&quot;/getAllExpenseTypes&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; getExpenseTypes() {
+        try {
+<span class="nc" id="L129">            List&lt;Map&lt;String, Object&gt;&gt; expenseTypes = reimbursementService.getExpenseTypes();</span>
+<span class="nc" id="L130">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(expenseTypes, true, &quot;EXPENSE_TYPES_FETCHED&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L131">        } catch (Exception e) {</span>
+<span class="nc" id="L132">            return ResponseEntity.status(HttpStatus.OK)</span>
+<span class="nc" id="L133">                    .body(new ApiResponse&lt;&gt;(null, false, &quot;EXPENSE_TYPES_FETCH_FAILED&quot;, &quot;FAILURE&quot;, Collections.singletonList(e.getMessage())));</span>
+        }
+    }
+
+    @GetMapping(&quot;/getPendingExpenseRequestList&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;ObjectNode&gt;&gt; getPendingRequestLists(
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;srNo&quot;) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;) String sortDir,
+            @RequestParam(value = &quot;searchField&quot;, required = false) String searchField,
+            @RequestParam(value = &quot;searchKeyword&quot;, required = false) String searchKeyword,
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size) {
+
+        try {
+<span class="nc" id="L147">            List&lt;ReimbursementRequestDTO&gt; requestList = reimbursementService.getAllReimbursementRequests();</span>
+<span class="nc" id="L148">            List&lt;Map&lt;String, Object&gt;&gt; fullData = requestList.stream()</span>
+<span class="nc" id="L149">                    .map(data -&gt; objectMapper.convertValue(data, new TypeReference&lt;Map&lt;String, Object&gt;&gt;() {</span>
+                    }))
+<span class="nc" id="L151">                    .collect(Collectors.toList());</span>
+<span class="nc bnc" id="L152" title="All 8 branches missed.">            if (searchField != null &amp;&amp; !searchField.isEmpty() &amp;&amp; searchKeyword != null &amp;&amp; !searchKeyword.isEmpty()) {</span>
+<span class="nc" id="L153">                fullData = fullData.stream()</span>
+<span class="nc bnc" id="L154" title="All 2 branches missed.">                        .filter(data -&gt; data.containsKey(searchField) &amp;&amp;</span>
+<span class="nc bnc" id="L155" title="All 2 branches missed.">                                data.get(searchField) != null &amp;&amp;</span>
+<span class="nc bnc" id="L156" title="All 2 branches missed.">                                data.get(searchField).toString().toLowerCase().contains(searchKeyword.toLowerCase()))</span>
+<span class="nc" id="L157">                        .collect(Collectors.toList());</span>
+            }
+            // Apply Sorting
+<span class="nc bnc" id="L160" title="All 4 branches missed.">            if (sortBy != null &amp;&amp; !sortBy.isEmpty()) {</span>
+<span class="nc" id="L161">                Comparator&lt;Map&lt;String, Object&gt;&gt; comparator = (data1, data2) -&gt; {</span>
+<span class="nc" id="L162">                    Object obj1 = data1.getOrDefault(sortBy, &quot;&quot;);</span>
+<span class="nc" id="L163">                    Object obj2 = data2.getOrDefault(sortBy, &quot;&quot;);</span>
+<span class="nc bnc" id="L164" title="All 2 branches missed.">                    if (obj1 == null) obj1 = &quot;&quot;;</span>
+<span class="nc bnc" id="L165" title="All 2 branches missed.">                    if (obj2 == null) obj2 = &quot;&quot;;</span>
+                    // Handle numeric comparisons
+<span class="nc bnc" id="L167" title="All 4 branches missed.">                    if (obj1 instanceof Number &amp;&amp; obj2 instanceof Number) {</span>
+<span class="nc" id="L168">                        return Double.compare(((Number) obj1).doubleValue(), ((Number) obj2).doubleValue());</span>
+                    }
+<span class="nc" id="L170">                    return obj1.toString().compareToIgnoreCase(obj2.toString());</span>
+                };
+                // Apply descending order if required
+<span class="nc bnc" id="L173" title="All 2 branches missed.">                if (&quot;desc&quot;.equalsIgnoreCase(sortDir)) {</span>
+<span class="nc" id="L174">                    comparator = comparator.reversed();</span>
+                }
+<span class="nc" id="L176">                fullData = fullData.stream().sorted(comparator).collect(Collectors.toList());</span>
+            }
+            // Apply Pagination
+<span class="nc" id="L179">            int totalItems = fullData.size();</span>
+<span class="nc" id="L180">            int totalPages = (int) Math.ceil((double) totalItems / size);</span>
+<span class="nc" id="L181">            int startIndex = Math.max(0, Math.min((page - 1) * size, totalItems));</span>
+<span class="nc" id="L182">            int endIndex = Math.min(startIndex + size, totalItems);</span>
+<span class="nc" id="L183">            List&lt;Map&lt;String, Object&gt;&gt; currentPageData = fullData.subList(startIndex, endIndex);</span>
+            // Response Data
+<span class="nc" id="L185">            ObjectNode responseData = objectMapper.createObjectNode();</span>
+<span class="nc" id="L186">            responseData.set(&quot;result&quot;, objectMapper.valueToTree(currentPageData));</span>
+<span class="nc" id="L187">            responseData.put(&quot;totalElements&quot;, totalItems);</span>
+<span class="nc" id="L188">            responseData.put(&quot;totalPages&quot;, totalPages);</span>
+<span class="nc" id="L189">            responseData.put(&quot;pageSize&quot;, size);</span>
+<span class="nc" id="L190">            responseData.put(&quot;currentPage&quot;, page);</span>
+<span class="nc" id="L191">            ApiResponse&lt;ObjectNode&gt; apiResponse = new ApiResponse&lt;&gt;(responseData, true, &quot;PENDING_EXPENSE_REQUESTS_FETCHED&quot;, &quot;SUCCESS&quot;);</span>
+<span class="nc" id="L192">            return ResponseEntity.ok(apiResponse);</span>
+<span class="nc" id="L193">        } catch (Exception e) {</span>
+<span class="nc" id="L194">            log.error(&quot;Error occurred while fetching pending expense request list&quot;, e);</span>
+<span class="nc" id="L195">            ApiResponse&lt;ObjectNode&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;PENDING_EXPENSE_REQUESTS_FETCH_FAILED&quot;, &quot;FAILURE&quot;, Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L196">            return new ResponseEntity&lt;&gt;(errorResponse, HttpStatus.OK);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getByRequestNumber&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; getReimbursementDetails(@RequestParam(&quot;requestNumber&quot;) String requestNumber) {
+        try {
+<span class="nc" id="L203">            List&lt;Map&lt;String, Object&gt;&gt; reimbursementData = reimbursementService.getReimbursementData(requestNumber);</span>
+<span class="nc" id="L204">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(reimbursementData, true, &quot;REIMBURSEMENT_FETCHED&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L205">        } catch (Exception e) {</span>
+<span class="nc" id="L206">            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse&lt;&gt;(null, false, &quot;REIMBURSEMENT_FETCH_FAILED&quot;, &quot;FAILURE&quot;, Collections.singletonList(e.getMessage())));</span>
+        }
+    }
+
+    @DeleteMapping(&quot;/softDelete/{requestId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; deleteRequestMapping(@PathVariable Integer requestId) {
+        try {
+<span class="nc" id="L213">            reimbursementService.deleteByRequestId(requestId);</span>
+<span class="nc" id="L214">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(null, true, &quot;ATMCMN_EXPENSE_MAPPING_DELETED&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L215">        } catch (EntityNotFoundException ex) {</span>
+<span class="nc" id="L216">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_REQUEST_MAPPING_NOT_FOUND&quot;, &quot;FAILURE&quot;, Collections.singletonList(&quot;Request Mapping not found with ID: &quot; + requestId)), HttpStatus.OK);</span>
+<span class="nc" id="L217">        } catch (Exception e) {</span>
+<span class="nc" id="L218">            log.error(&quot;Error occurred while deleting expense mapping&quot;, e);</span>
+<span class="nc" id="L219">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_EXPENSE_MAPPING_DELETE_ERROR&quot;, &quot;FAILURE&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+
+    @GetMapping(&quot;/getPendingExpenseByProjectId&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;ObjectNode&gt;&gt; getPendingRequestLists(
+            @RequestParam(value = &quot;projectId&quot;) Integer projectId,  // Added Project ID
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;srNo&quot;) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;) String sortDir,
+            @RequestParam(value = &quot;searchField&quot;, required = false) String searchField,
+            @RequestParam(value = &quot;searchKeyword&quot;, required = false) String searchKeyword,
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size) {
+
+        try {
+<span class="nc" id="L234">            List&lt;RequestDTO&gt; requestList = reimbursementService.getAllReimbursementRequests(projectId);</span>
+<span class="nc" id="L235">            List&lt;Map&lt;String, Object&gt;&gt; fullData = requestList.stream()</span>
+<span class="nc" id="L236">                    .map(data -&gt; objectMapper.convertValue(data, new TypeReference&lt;Map&lt;String, Object&gt;&gt;() {</span>
+                    }))
+<span class="nc" id="L238">                    .collect(Collectors.toList());</span>
+<span class="nc bnc" id="L239" title="All 8 branches missed.">            if (searchField != null &amp;&amp; !searchField.isEmpty() &amp;&amp; searchKeyword != null &amp;&amp; !searchKeyword.isEmpty()) {</span>
+<span class="nc" id="L240">                fullData = fullData.stream()</span>
+<span class="nc bnc" id="L241" title="All 2 branches missed.">                        .filter(data -&gt; data.containsKey(searchField) &amp;&amp;</span>
+<span class="nc bnc" id="L242" title="All 2 branches missed.">                                data.get(searchField) != null &amp;&amp;</span>
+<span class="nc bnc" id="L243" title="All 2 branches missed.">                                data.get(searchField).toString().toLowerCase().contains(searchKeyword.toLowerCase()))</span>
+<span class="nc" id="L244">                        .collect(Collectors.toList());</span>
+            }
+<span class="nc bnc" id="L246" title="All 4 branches missed.">            if (sortBy != null &amp;&amp; !sortBy.isEmpty()) {</span>
+<span class="nc" id="L247">                Comparator&lt;Map&lt;String, Object&gt;&gt; comparator = (data1, data2) -&gt; {</span>
+<span class="nc" id="L248">                    Object obj1 = data1.getOrDefault(sortBy, &quot;&quot;);</span>
+<span class="nc" id="L249">                    Object obj2 = data2.getOrDefault(sortBy, &quot;&quot;);</span>
+<span class="nc bnc" id="L250" title="All 2 branches missed.">                    if (obj1 == null) obj1 = &quot;&quot;;</span>
+<span class="nc bnc" id="L251" title="All 2 branches missed.">                    if (obj2 == null) obj2 = &quot;&quot;;</span>
+
+                    // Handle numeric sorting
+<span class="nc bnc" id="L254" title="All 4 branches missed.">                    if (obj1 instanceof Number &amp;&amp; obj2 instanceof Number) {</span>
+<span class="nc" id="L255">                        return Double.compare(((Number) obj1).doubleValue(), ((Number) obj2).doubleValue());</span>
+                    }
+<span class="nc" id="L257">                    return obj1.toString().compareToIgnoreCase(obj2.toString());</span>
+                };
+<span class="nc bnc" id="L259" title="All 2 branches missed.">                if (&quot;desc&quot;.equalsIgnoreCase(sortDir)) {</span>
+<span class="nc" id="L260">                    comparator = comparator.reversed();</span>
+                }
+<span class="nc" id="L262">                fullData = fullData.stream().sorted(comparator).collect(Collectors.toList());</span>
+            }
+
+            // Apply Pagination
+<span class="nc" id="L266">            int totalItems = fullData.size();</span>
+<span class="nc" id="L267">            int totalPages = (int) Math.ceil((double) totalItems / size);</span>
+<span class="nc" id="L268">            int startIndex = Math.max(0, Math.min((page - 1) * size, totalItems));</span>
+<span class="nc" id="L269">            int endIndex = Math.min(startIndex + size, totalItems);</span>
+<span class="nc" id="L270">            List&lt;Map&lt;String, Object&gt;&gt; currentPageData = fullData.subList(startIndex, endIndex);</span>
+
+            // Prepare Response Data
+<span class="nc" id="L273">            ObjectNode responseData = objectMapper.createObjectNode();</span>
+<span class="nc" id="L274">            responseData.set(&quot;result&quot;, objectMapper.valueToTree(currentPageData));</span>
+<span class="nc" id="L275">            responseData.put(&quot;totalElements&quot;, totalItems);</span>
+<span class="nc" id="L276">            responseData.put(&quot;totalPages&quot;, totalPages);</span>
+<span class="nc" id="L277">            responseData.put(&quot;pageSize&quot;, size);</span>
+<span class="nc" id="L278">            responseData.put(&quot;currentPage&quot;, page);</span>
+
+<span class="nc" id="L280">            ApiResponse&lt;ObjectNode&gt; apiResponse = new ApiResponse&lt;&gt;(responseData, true, &quot;PENDING_EXPENSE_REQUESTS_FETCHED&quot;, &quot;SUCCESS&quot;);</span>
+<span class="nc" id="L281">            return ResponseEntity.ok(apiResponse);</span>
+<span class="nc" id="L282">        } catch (Exception e) {</span>
+<span class="nc" id="L283">            log.error(&quot;Error occurred while fetching pending expense request list&quot;, e);</span>
+<span class="nc" id="L284">            ApiResponse&lt;ObjectNode&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;PENDING_EXPENSE_REQUESTS_FETCH_FAILED&quot;, &quot;FAILURE&quot;, Collections.singletonList(e.getMessage()));</span>
+<span class="nc" id="L285">            return new ResponseEntity&lt;&gt;(errorResponse, HttpStatus.OK);</span>
+        }
+    }
+
+     /* Get dynamic reimbursement requests with pagination and status counts.
+     *
+             * @param status Optional filter to get requests by their status
+     * @param page The page number to fetch
+     * @param size The page size (number of items per page)
+     * @return ResponseEntity containing the list of reimbursement requests and status counts
+     */
+    @GetMapping(&quot;/getRequests&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getReimbursementRequests(
+            @RequestParam(value = &quot;status&quot;, required = false) String status,
+            @RequestParam(value = &quot;startDate&quot;, required = false) Date startDate,
+            @RequestParam(value = &quot;endDate&quot;, required = false) Date endDate,
+            @RequestParam(required = false) String searchField,
+            @RequestParam(required = false) String searchKeyword,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortDir,
+            @RequestParam(value = &quot;page&quot;, defaultValue = &quot;1&quot;) int page,
+            @RequestParam(value = &quot;size&quot;, defaultValue = &quot;10&quot;) int size) {
+
+        try {
+<span class="nc" id="L309">            Map&lt;String, Object&gt; result = reimbursementService.getReimbursementRequests(status,startDate,endDate, searchField, searchKeyword, sortBy, sortDir, page, size);</span>
+
+<span class="nc" id="L311">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(result, true, &quot;REIMBURSEMENT_DATA_FETCHED&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L312">        } catch (Exception e) {</span>
+<span class="nc" id="L313">            log.error(&quot;Error fetching reimbursement requests&quot;, e);</span>
+<span class="nc" id="L314">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L315">                    .body(new ApiResponse&lt;&gt;(null, false, &quot;FETCH_FAILED&quot;, &quot;FAILURE&quot;, List.of(e.getMessage())));</span>
+        }
+    }
+
+    /**
+     * Approve a reimbursement request by its request number.
+     *
+     * @return ResponseEntity containing the approval status
+     */
+    @PostMapping(&quot;/bulk-approve&quot;)
+    public HttpEntity&lt;ApiResponse&lt;ReimbursementRequest&gt;&gt; bulkApproveRequests(@RequestBody ReimbursementApprovalDTO dto) {
+        try {
+<span class="nc" id="L327">            ReimbursementRequest result = reimbursementService.bulkApproveRequests(dto);</span>
+<span class="nc" id="L328">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(result, true, &quot;BULK_APPROVAL_PROCESSED&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L329">        } catch (Exception e) {</span>
+<span class="nc" id="L330">            log.error(&quot;Error during bulk approval&quot;, e);</span>
+<span class="nc" id="L331">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L332">                    .body(new ApiResponse&lt;&gt;(null, false, &quot;BULK_APPROVAL_FAILED&quot;, &quot;FAILURE&quot;, List.of(e.getMessage())));</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

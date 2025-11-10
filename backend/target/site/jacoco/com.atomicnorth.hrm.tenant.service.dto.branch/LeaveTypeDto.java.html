@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LeaveTypeDto.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.dto.branch</a> &gt; <span class="el_source">LeaveTypeDto.java</span></div><h1>LeaveTypeDto.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.dto.branch;
+
+import com.atomicnorth.hrm.tenant.domain.branch.LeaveTypes;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+<span class="nc bnc" id="L8" title="All 206 branches missed.">@Data</span>
+<span class="nc" id="L9">@AllArgsConstructor</span>
+<span class="nc" id="L10">@NoArgsConstructor</span>
+public class LeaveTypeDto {
+
+<span class="nc" id="L13">    private Integer id;</span>
+<span class="nc" id="L14">    private String leaveName;</span>
+<span class="nc" id="L15">    private String leaveCode;</span>
+<span class="nc" id="L16">    private String isFlexible;</span>
+<span class="nc" id="L17">    private String isCarryForward;</span>
+<span class="nc" id="L18">    private String isLeaveWithoutPay;</span>
+<span class="nc" id="L19">    private String isPartialPaidLeave;</span>
+<span class="nc" id="L20">    private String isOptionalLeave;</span>
+<span class="nc" id="L21">    private String allowNegativeBalance;</span>
+
+<span class="nc" id="L23">    private String allowOverApplication;</span>
+
+<span class="nc" id="L25">    private String includeHolidaysWithinLeaves;</span>
+<span class="nc" id="L26">    private String isCompensatoryLeaves;</span>
+<span class="nc" id="L27">    private Integer maximumLeave;</span>
+<span class="nc" id="L28">    private String allocationAllowedLeavePeriod;</span>
+<span class="nc" id="L29">    private Integer allowLeaveApplicationAfterWorkingDays;</span>
+
+<span class="nc" id="L31">    private Integer maximumConsecutiveLeaveAllowed;</span>
+<span class="nc" id="L32">    private Integer maxIncashableLeave;</span>
+<span class="nc" id="L33">    private Integer nonIncashableLeave;</span>
+<span class="nc" id="L34">    private String earningComponent;</span>
+<span class="nc" id="L35">    private Integer maxCarryForwardDays;</span>
+<span class="nc" id="L36">    private Integer applicable;</span>
+
+<span class="nc" id="L38">    private String allowEncashment;</span>
+<span class="nc" id="L39">    private String isEarnedleave;</span>
+<span class="nc" id="L40">    private String earnedLeaveFrequency;</span>
+<span class="nc" id="L41">    private String allocateOnDay;</span>
+
+<span class="nc" id="L43">    public LeaveTypeDto(LeaveTypes leaves) {</span>
+<span class="nc" id="L44">        this.id = leaves.getId();</span>
+<span class="nc" id="L45">        this.leaveName = leaves.getLeaveName();</span>
+<span class="nc" id="L46">        this.leaveCode = leaves.getLeaveCode();</span>
+<span class="nc" id="L47">        this.isFlexible = leaves.getIsFlexible();</span>
+<span class="nc" id="L48">        this.isCarryForward = leaves.getIsCarryForward();</span>
+<span class="nc" id="L49">        this.isLeaveWithoutPay = leaves.getIsLeaveWithoutPay();</span>
+<span class="nc" id="L50">        this.isPartialPaidLeave = leaves.getIsPartialPaidLeave();</span>
+<span class="nc" id="L51">        this.isOptionalLeave = leaves.getIsOptionalLeave();</span>
+<span class="nc" id="L52">        this.allowNegativeBalance = leaves.getAllowNegativeBalance();</span>
+<span class="nc" id="L53">        this.allowOverApplication = leaves.getAllowOverApplication();</span>
+<span class="nc" id="L54">        this.includeHolidaysWithinLeaves = leaves.getIncludeHolidaysWithinLeaves();</span>
+<span class="nc" id="L55">        this.isCompensatoryLeaves = leaves.getIsCompensatoryLeaves();</span>
+<span class="nc" id="L56">        this.maximumLeave = leaves.getMaximumLeave();</span>
+<span class="nc" id="L57">        this.allocationAllowedLeavePeriod = leaves.getAllocationAllowedLeavePeriod();</span>
+<span class="nc" id="L58">        this.allowLeaveApplicationAfterWorkingDays = leaves.getAllowLeaveApplicationAfterWorkingDays();</span>
+<span class="nc" id="L59">        this.maximumConsecutiveLeaveAllowed = leaves.getMaximumConsecutiveLeaveAllowed();</span>
+<span class="nc" id="L60">        this.maxIncashableLeave = leaves.getMaxIncashableLeave();</span>
+<span class="nc" id="L61">        this.nonIncashableLeave = leaves.getNonIncashableLeave();</span>
+<span class="nc" id="L62">        this.earningComponent = leaves.getEarningComponent();</span>
+<span class="nc" id="L63">        this.maxCarryForwardDays = leaves.getMaxCarryForwardDays();</span>
+<span class="nc" id="L64">        this.applicable = leaves.getApplicable();</span>
+<span class="nc" id="L65">        this.allowEncashment = leaves.getAllowEncashment();</span>
+<span class="nc" id="L66">        this.isEarnedleave = leaves.getIsEarnedleave();</span>
+<span class="nc" id="L67">        this.earnedLeaveFrequency = leaves.getEarnedLeaveFrequency();</span>
+<span class="nc" id="L68">        this.allocateOnDay = leaves.getAllocateOnDay();</span>
+<span class="nc" id="L69">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ApplyTimeSheetController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.timesheet</a> &gt; <span class="el_source">ApplyTimeSheetController.java</span></div><h1>ApplyTimeSheetController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.timesheet;
+
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.service.dto.project.ProjectListDTO;
+import com.atomicnorth.hrm.tenant.service.dto.project.TaskStoryDTO;
+import com.atomicnorth.hrm.tenant.service.dto.timeSheetDTO.TimesheetDTO;
+import com.atomicnorth.hrm.tenant.service.timesheet.ApplyTimeSheetService;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import javax.validation.Valid;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping(&quot;api/timesheet&quot;)
+<span class="nc" id="L30">public class ApplyTimeSheetController {</span>
+
+<span class="nc" id="L32">    private final Logger log = LoggerFactory.getLogger(ApplyTimeSheetController.class);</span>
+    @Autowired
+    private ApplyTimeSheetService applyTimeSheetService;
+
+    @GetMapping(&quot;/getLoggedInUserProjectList&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;ProjectListDTO&gt;&gt;&gt; getProjectList(@RequestParam(value = &quot;employeeId&quot;, required = false) Integer employeeId) {
+
+        try {
+<span class="nc" id="L40">            List&lt;ProjectListDTO&gt; projectData = applyTimeSheetService.fetchLoggedInUserProjectList(employeeId);</span>
+<span class="nc" id="L41">            ApiResponse&lt;List&lt;ProjectListDTO&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    projectData,
+                    true,
+                    &quot;ATMCMN_PROJECTS_FETCHED&quot;,
+                    &quot;Information&quot;
+            );
+<span class="nc" id="L47">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L48">        } catch (DataAccessException e) {</span>
+<span class="nc" id="L49">            log.error(&quot;Database error while fetching user project list&quot;, e);</span>
+<span class="nc" id="L50">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_DATABASE_ERROR&quot;, &quot;FAILURE&quot;, Collections.singletonList(&quot;Database error occurred&quot;)));</span>
+<span class="nc" id="L51">        } catch (Exception e) {</span>
+<span class="nc" id="L52">            log.error(&quot;Unexpected error while fetching user project list&quot;, e);</span>
+<span class="nc" id="L53">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_FETCH_ERROR&quot;, &quot;FAILURE&quot;, Collections.singletonList(&quot;An unexpected error occurred&quot;)));</span>
+        }
+    }
+
+    @GetMapping(&quot;/getTaskList&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;TaskStoryDTO&gt;&gt;&gt; getTaskList(
+            @RequestParam(value = &quot;projectRfNum&quot;, required = true) Integer projectRfNum) {
+<span class="nc bnc" id="L60" title="All 2 branches missed.">        if (projectRfNum == null) {</span>
+<span class="nc" id="L61">            return ResponseEntity.badRequest()</span>
+<span class="nc" id="L62">                    .body(new ApiResponse&lt;&gt;(null, false, &quot;INVALID_PROJECT_ID&quot;, &quot;FAILURE&quot;,</span>
+<span class="nc" id="L63">                            Collections.singletonList(&quot;Project ID must not be empty&quot;)));</span>
+        }
+        try {
+<span class="nc" id="L66">            List&lt;TaskStoryDTO&gt; taskList = applyTimeSheetService.getTaskListByProjectRfNum(projectRfNum);</span>
+<span class="nc" id="L67">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(taskList, true, &quot;TASKS_FETCHED&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L68">        } catch (Exception e) {</span>
+<span class="nc" id="L69">            log.error(&quot;Error occurred while fetching task list for projectId: {}&quot;, projectRfNum, e);</span>
+<span class="nc" id="L70">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L71">                    .body(new ApiResponse&lt;&gt;(null, false, &quot;FETCH_ERROR&quot;, &quot;FAILURE&quot;,</span>
+<span class="nc" id="L72">                            Collections.singletonList(&quot;An unexpected error occurred while fetching task list&quot;)));</span>
+        }
+    }
+
+    @GetMapping(&quot;/fetchCurrentWeekData&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; fetchCurrentWeekData(@RequestParam(value = &quot;firstDate&quot;) String firstDate, @RequestParam(value = &quot;secondDate&quot;) String secondDate, @RequestParam(value = &quot;thirdDate&quot;) String thirdDate, @RequestParam(value = &quot;fourthDate&quot;) String fourthDate, @RequestParam(value = &quot;fifthDate&quot;) String fifthDate, @RequestParam(value = &quot;sixthDate&quot;) String sixthDate, @RequestParam(value = &quot;lastDate&quot;) String lastDate, @RequestParam(value = &quot;timesheetUsername&quot;, required = false) String timesheetUsername) {
+
+<span class="nc bnc" id="L79" title="All 4 branches missed.">        if (StringUtils.isBlank(firstDate) || StringUtils.isBlank(lastDate)) {</span>
+<span class="nc" id="L80">            return ResponseEntity.badRequest().body(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_INVALID_DATE&quot;, &quot;FAILURE&quot;, Collections.singletonList(&quot;First and Last date must not be empty&quot;)));</span>
+        }
+        try {
+<span class="nc bnc" id="L83" title="All 2 branches missed.">            if (StringUtils.isBlank(timesheetUsername)) {</span>
+<span class="nc" id="L84">                timesheetUsername = SessionHolder.getUserLoginDetail().getUsername().toString();</span>
+            }
+<span class="nc" id="L86">            Map&lt;String, Object&gt; timesheetData = applyTimeSheetService.fetchUserTimeSheetData(firstDate, secondDate, thirdDate, fourthDate, fifthDate, sixthDate, lastDate, timesheetUsername);</span>
+<span class="nc" id="L87">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(timesheetData, true, &quot;ATMCMN_TIMESHEET_FETCHED&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L88">        } catch (Exception e) {</span>
+<span class="nc" id="L89">            log.error(&quot;Error occurred while fetching weekly timesheet data for user: {}&quot;, timesheetUsername, e);</span>
+<span class="nc" id="L90">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_FETCH_ERROR&quot;, &quot;FAILURE&quot;, Collections.singletonList(&quot;An unexpected error occurred while fetching timesheet data&quot;)));</span>
+        }
+    }
+
+    @PostMapping(&quot;/timesheetAction&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;TimesheetDTO&gt;&gt;&gt; timeSheetActions(@Valid @RequestBody List&lt;TimesheetDTO&gt; timesheetDtos) {
+        try {
+<span class="nc" id="L97">            List&lt;TimesheetDTO&gt; timesheetDTOS = applyTimeSheetService.applyTimesheet(timesheetDtos);</span>
+
+<span class="nc" id="L99">            ApiResponse&lt;List&lt;TimesheetDTO&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    timesheetDTOS,
+                    true,
+                    &quot;TIMESHEET-SUBMIT-SUCCESS&quot;,
+                    &quot;Information&quot;
+            );
+<span class="nc" id="L105">            return ResponseEntity.status(HttpStatus.CREATED).body(response);</span>
+<span class="nc" id="L106">        } catch (Exception ex) {</span>
+<span class="nc" id="L107">            ApiResponse&lt;List&lt;TimesheetDTO&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;TIMESHEET-SUBMIT-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L112">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L114">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

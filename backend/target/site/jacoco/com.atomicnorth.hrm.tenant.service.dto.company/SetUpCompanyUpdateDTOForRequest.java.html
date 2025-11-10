@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SetUpCompanyUpdateDTOForRequest.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.dto.company</a> &gt; <span class="el_source">SetUpCompanyUpdateDTOForRequest.java</span></div><h1>SetUpCompanyUpdateDTOForRequest.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.dto.company;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.validation.constraints.Size;
+import java.util.Date;
+
+<span class="nc bnc" id="L11" title="All 198 branches missed.">@Data</span>
+<span class="nc" id="L12">@NoArgsConstructor</span>
+<span class="nc" id="L13">@AllArgsConstructor</span>
+<span class="nc" id="L14">@Builder</span>
+public class SetUpCompanyUpdateDTOForRequest {
+
+    @Size(max = 255, message = &quot;Company name must be less than 255 characters&quot;)
+<span class="nc" id="L18">    private String companyName;</span>
+
+    @Size(max = 50, message = &quot;Company abbreviation must be less than 50 characters&quot;)
+<span class="nc" id="L21">    private String companyAbbreviation;</span>
+
+<span class="nc" id="L23">    private Integer defaultCurrency;</span>
+
+<span class="nc" id="L25">    private Integer country;</span>
+
+<span class="nc" id="L27">    private Integer defaultLetterHead;</span>
+<span class="nc" id="L28">    private Integer taxId;</span>
+<span class="nc" id="L29">    private Boolean isGroup;</span>
+
+    @Size(max = 255, message = &quot;Domain must be less than 255 characters&quot;)
+<span class="nc" id="L32">    private String domain;</span>
+
+<span class="nc" id="L34">    private Date dateOfEstablishment;</span>
+<span class="nc" id="L35">    private Integer parentCompany;</span>
+<span class="nc" id="L36">    private Integer defaultHolidayList;</span>
+
+    @Size(max = 255, message = &quot;Registration details must be less than 255 characters&quot;)
+<span class="nc" id="L39">    private String registrationDetails;</span>
+
+    @Size(max = 50, message = &quot;GST number must be less than 50 characters&quot;)
+<span class="nc" id="L42">    private String gstNo;</span>
+
+<span class="nc" id="L44">    private Integer chartOfAccount;</span>
+<span class="nc" id="L45">    private Integer chartOfAccountTemplate;</span>
+<span class="nc" id="L46">    private Integer writeOffAccount;</span>
+<span class="nc" id="L47">    private Integer lostAccount;</span>
+<span class="nc" id="L48">    private Integer defaultPaymentDiscountAccount;</span>
+<span class="nc" id="L49">    private Integer paymentTermTemplate;</span>
+<span class="nc" id="L50">    private Integer exchangeGainLoss;</span>
+<span class="nc" id="L51">    private Integer unreleasedGainLoss;</span>
+<span class="nc" id="L52">    private Integer roundOffAccount;</span>
+<span class="nc" id="L53">    private Integer roundOffOpening;</span>
+<span class="nc" id="L54">    private Integer roundOffCostCenter;</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

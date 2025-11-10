@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JsonConverter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.util</a> &gt; <span class="el_source">JsonConverter.java</span></div><h1>JsonConverter.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.util;
+
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import javax.persistence.AttributeConverter;
+import javax.persistence.Converter;
+import java.io.IOException;
+import java.util.Map;
+
+@Converter(autoApply = true)
+<span class="nc" id="L13">public class JsonConverter implements AttributeConverter&lt;Map&lt;String, Integer&gt;, String&gt; {</span>
+<span class="nc" id="L14">    private static final ObjectMapper objectMapper = new ObjectMapper();</span>
+
+    @Override
+    public String convertToDatabaseColumn(Map&lt;String, Integer&gt; skillFeedback) {
+<span class="nc bnc" id="L18" title="All 2 branches missed.">        if (skillFeedback == null) {</span>
+<span class="nc" id="L19">            return null;</span>
+        }
+        try {
+<span class="nc" id="L22">            return objectMapper.writeValueAsString(skillFeedback);</span>
+<span class="nc" id="L23">        } catch (JsonProcessingException e) {</span>
+<span class="nc" id="L24">            throw new RuntimeException(&quot;Error converting Map to JSON&quot;, e);</span>
+        }
+    }
+
+    @Override
+    public Map&lt;String, Integer&gt; convertToEntityAttribute(String skillFeedbackJson) {
+<span class="nc bnc" id="L30" title="All 4 branches missed.">        if (skillFeedbackJson == null || skillFeedbackJson.isEmpty()) {</span>
+<span class="nc" id="L31">            return null;</span>
+        }
+        try {
+<span class="nc" id="L34">            return objectMapper.readValue(skillFeedbackJson, Map.class);</span>
+<span class="nc" id="L35">        } catch (IOException e) {</span>
+<span class="nc" id="L36">            throw new RuntimeException(&quot;Error converting JSON to Map&quot;, e);</span>
+        }
+    }
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

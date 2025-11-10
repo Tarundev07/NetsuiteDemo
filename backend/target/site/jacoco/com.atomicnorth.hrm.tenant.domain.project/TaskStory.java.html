@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TaskStory.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.domain.project</a> &gt; <span class="el_source">TaskStory.java</span></div><h1>TaskStory.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.domain.project;
+
+import com.atomicnorth.hrm.tenant.domain.AbstractAuditingEntity;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import lombok.Data;
+
+import javax.persistence.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+<span class="nc bnc" id="L12" title="All 214 branches missed.">@Data</span>
+@Entity
+@Table(name = &quot;ses_m02_task_story&quot;)
+public class TaskStory extends AbstractAuditingEntity&lt;Long&gt; {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = &quot;TASK_RF_NUM&quot;)
+<span class="nc" id="L19">    private Integer taskRfNum;</span>
+
+    @Column(name = &quot;PROJECT_RF_NUM&quot;)
+<span class="nc" id="L22">    private Integer projectRfNum;</span>
+
+    @Column(name = &quot;TASK_ID&quot;)
+<span class="nc" id="L25">    private String taskid;</span>
+
+    @Column(name = &quot;TASK_NAME&quot;)
+<span class="nc" id="L28">    private String taskname;</span>
+
+    @Column(name = &quot;TASK_TYPE&quot;)
+<span class="nc" id="L31">    private String tasktype;</span>
+
+    @Column(name = &quot;TASK_DESC&quot;)
+<span class="nc" id="L34">    private String taskdesc;</span>
+
+    @Column(name = &quot;PROJECT_ID&quot;)
+<span class="nc" id="L37">    private String projectid;</span>
+
+    @Column(name = &quot;PROJECT_MILESTONE_ID&quot;)
+<span class="nc" id="L40">    private Integer projectMilestoneId;</span>
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = &quot;PROJECT_MILESTONE_ID&quot;, referencedColumnName = &quot;PROJECT_MILESTONE_ID&quot;, insertable = false, updatable = false)
+<span class="nc" id="L44">    private ProjectMilestone projectMilestone;</span>
+
+    @Column(name = &quot;EFFORT_ESTIMATION&quot;)
+<span class="nc" id="L47">    private String effortestimation;</span>
+
+    @Column(name = &quot;EFFORT_WEEK_COUNT&quot;)
+<span class="nc" id="L50">    private String effortWeekCount;</span>
+
+    @Column(name = &quot;EFFORT_DAY_COUNT&quot;)
+<span class="nc" id="L53">    private String effortDayCount;</span>
+
+    @Column(name = &quot;EFFORT_HOUR_COUNT&quot;)
+<span class="nc" id="L56">    private String effortHourCount;</span>
+
+    @Column(name = &quot;PLANNED_START_DATE&quot;)
+    @Temporal(TemporalType.DATE)
+<span class="nc" id="L60">    private Date plannedstartdate;</span>
+
+    @Column(name = &quot;ACTUAL_START_DATE&quot;)
+    @Temporal(TemporalType.DATE)
+<span class="nc" id="L64">    private Date actualstartdate;</span>
+
+    @Column(name = &quot;PLANNED_END_DATE&quot;)
+    @Temporal(TemporalType.DATE)
+<span class="nc" id="L68">    private Date plannedenddate;</span>
+
+    @Column(name = &quot;ACTUAL_END_DATE&quot;)
+    @Temporal(TemporalType.DATE)
+<span class="nc" id="L72">    private Date actualenddate;</span>
+
+    @Column(name = &quot;TASK_STATUS&quot;)
+<span class="nc" id="L75">    private String taskstatus;</span>
+
+    @Column(name = &quot;CRITICALITY&quot;)
+<span class="nc" id="L78">    private String criticality;</span>
+
+    @Column(name = &quot;DELETE_FLAG&quot;)
+<span class="nc" id="L81">    private String deleteflag;</span>
+
+    @Column(name = &quot;BILLABLE_FLAG&quot;)
+<span class="nc" id="L84">    private String billableflag;</span>
+
+    @Column(name = &quot;WORK_PROGRESS&quot;)
+<span class="nc" id="L87">    private String workprogress;</span>
+
+    @Column(name = &quot;PRICE_ELEMENT_ID&quot;)
+<span class="nc" id="L90">    private Integer priceElementId;</span>
+
+    @Column(name = &quot;TASK_NATURE_CODE&quot;)
+<span class="nc" id="L93">    private String taskNatureCode;</span>
+
+    @Column(name = &quot;RECORD_INFO&quot;, columnDefinition = &quot;TEXT&quot;)
+<span class="nc" id="L96">    private String recordInfo;</span>
+<span class="nc" id="L97">    @JsonManagedReference</span>
+    @OneToMany(mappedBy = &quot;taskStory&quot;, cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+<span class="nc" id="L99">    private List&lt;SubTaskStory&gt; subTaskStories = new ArrayList&lt;&gt;();</span>
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

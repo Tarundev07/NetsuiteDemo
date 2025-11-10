@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmployeeFamilyController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.employement</a> &gt; <span class="el_source">EmployeeFamilyController.java</span></div><h1>EmployeeFamilyController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.employement;
+
+import com.atomicnorth.hrm.tenant.service.dto.employement.EmployeeFamilyDTO;
+import com.atomicnorth.hrm.tenant.service.employement.EmployeeFamilyService;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequestMapping(&quot;/api/employeeFamily&quot;)
+<span class="nc" id="L20">public class EmployeeFamilyController {</span>
+<span class="nc" id="L21">    private final Logger log = LoggerFactory.getLogger(EmployeeFamilyController.class);</span>
+
+    @Autowired
+    private EmployeeFamilyService employeeFamilyService;
+
+    @PostMapping(&quot;/saveAndUpdateFamily&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;EmployeeFamilyDTO&gt;&gt;&gt; saveOrUpdateEmployeeFamily(@Valid @RequestBody List&lt;EmployeeFamilyDTO&gt; employeeFamilyDTOs) {
+
+        try {
+<span class="nc" id="L30">            List&lt;EmployeeFamilyDTO&gt; updatedList = employeeFamilyService.saveOrUpdate(employeeFamilyDTOs);</span>
+<span class="nc" id="L31">            ApiResponse&lt;List&lt;EmployeeFamilyDTO&gt;&gt; response = new ApiResponse&lt;&gt;(updatedList, true, &quot;EMPLOYEE-FAMILY-SAVE-SUCCESS&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L32">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L33">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L34">            ApiResponse&lt;List&lt;EmployeeFamilyDTO&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;EMPLOYEE-FAMILY-SAVE-FAILURE&quot;, &quot;Warning&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L35">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+<span class="nc" id="L36">        } catch (Exception ex) {</span>
+<span class="nc" id="L37">            ApiResponse&lt;List&lt;EmployeeFamilyDTO&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;EMPLOYEE-FAMILY-SAVE-FAILURE&quot;, &quot;Error&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L38">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;employeeFamily/{userId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;EmployeeFamilyDTO&gt;&gt;&gt; getFamilyByUsername(@PathVariable Integer userId) {
+        try {
+<span class="nc" id="L45">            List&lt;EmployeeFamilyDTO&gt; familyMembers = employeeFamilyService.getFamilyByUsername(userId);</span>
+<span class="nc" id="L46">            ApiResponse&lt;List&lt;EmployeeFamilyDTO&gt;&gt; response = new ApiResponse&lt;&gt;(familyMembers, true, &quot;EMPLOYEE-FAMILY-RETRIEVE-SUCCESS&quot;, &quot;Success&quot;);</span>
+<span class="nc" id="L47">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L48">        } catch (Exception ex) {</span>
+<span class="nc" id="L49">            ApiResponse&lt;List&lt;EmployeeFamilyDTO&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;EMPLOYEE-FAMILY-RETRIEVE-FAILURE&quot;, &quot;Error&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L50">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/get/{memberId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;EmployeeFamilyDTO&gt;&gt; getFamilyById(@PathVariable(&quot;memberId&quot;) Integer memberId) {
+        try {
+<span class="nc" id="L57">            return Optional.ofNullable(employeeFamilyService.getFamilyById(memberId)).map(employeeFamilyDTO -&gt; ResponseEntity.ok(new ApiResponse&lt;&gt;(employeeFamilyDTO, true, &quot;ATMCMN_EMPLOYEE_FAMILY_FETCHED&quot;, &quot;SUCCESS&quot;))).orElse(new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_EMPLOYEE_FAMILY_NOT_FOUND&quot;, &quot;FAILURE&quot;, Collections.singletonList(&quot;Employee Family member not found with ID: &quot; + memberId)), HttpStatus.OK));</span>
+<span class="nc" id="L58">        } catch (Exception e) {</span>
+<span class="nc" id="L59">            log.error(&quot;Error occurred while fetching Employee Family member by ID&quot;, e);</span>
+<span class="nc" id="L60">            return new ResponseEntity&lt;&gt;(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_EMPLOYEE_FAMILY_FETCH_ERROR&quot;, &quot;FAILURE&quot;, Collections.singletonList(e.getMessage())), HttpStatus.OK);</span>
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

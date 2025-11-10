@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LeaveAllocation.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.domain</a> &gt; <span class="el_source">LeaveAllocation.java</span></div><h1>LeaveAllocation.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.domain;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+
+import javax.persistence.*;
+import java.io.Serializable;
+import java.util.Date;
+import java.util.List;
+
+@Entity
+<span class="nc" id="L16">@AllArgsConstructor</span>
+<span class="nc" id="L17">@NoArgsConstructor</span>
+<span class="nc bnc" id="L18" title="All 46 branches missed.">@Data</span>
+<span class="nc" id="L19">@ToString(exclude = &quot;leaveAllocationDetails&quot;)</span>
+@Table(name = &quot;emp_leave_allocation&quot;)
+@Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
+public class LeaveAllocation extends AbstractAuditingEntity&lt;Long&gt; {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = &quot;ID&quot;)
+<span class="nc" id="L27">    private Long id;</span>
+
+    @Column(name = &quot;EMP_ID&quot;)
+<span class="nc" id="L30">    private Integer empId;</span>
+
+    @Column(name = &quot;TOTAL_LEAVE&quot;)
+<span class="nc" id="L33">    private Double totalLeave;</span>
+
+<span class="nc" id="L35">    @Column(name = &quot;IS_ACTIVE&quot;, length = 10, nullable = false)</span>
+<span class="nc" id="L36">    private String isActive = &quot;A&quot;;</span>
+    @OneToMany(mappedBy = &quot;leaveAllocation&quot;, cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+<span class="nc" id="L38">    private List&lt;LeaveAllocationDetails&gt; leaveAllocationDetails;</span>
+}
+
+
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

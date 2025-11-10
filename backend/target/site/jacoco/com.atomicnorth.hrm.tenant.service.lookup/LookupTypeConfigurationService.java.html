@@ -1,0 +1,404 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LookupTypeConfigurationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.lookup</a> &gt; <span class="el_source">LookupTypeConfigurationService.java</span></div><h1>LookupTypeConfigurationService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.lookup;
+
+import com.atomicnorth.hrm.exception.BadApiRequestException;
+import com.atomicnorth.hrm.tenant.domain.lookup.LookupCode;
+import com.atomicnorth.hrm.tenant.domain.lookup.LookupType;
+import com.atomicnorth.hrm.tenant.domain.roles.ApplicationModule;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.LookupCodeRepository;
+import com.atomicnorth.hrm.tenant.repository.SesM06ConfigurationRepository;
+import com.atomicnorth.hrm.tenant.repository.roles.ApplicationModuleRepository;
+import com.atomicnorth.hrm.tenant.repository.translation.LookupTypeProjection;
+import com.atomicnorth.hrm.tenant.service.dto.lookup.LookupCodeTranslationDTO;
+import com.atomicnorth.hrm.tenant.service.dto.lookup.LookupTypeTranslationDTO;
+import com.atomicnorth.hrm.tenant.service.translation.SupraTranslationCommonServices;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityNotFoundException;
+import javax.persistence.PersistenceContext;
+import javax.persistence.TypedQuery;
+import java.sql.*;
+import java.util.Date;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L34">public class LookupTypeConfigurationService {</span>
+
+    @Autowired
+    private SesM06ConfigurationRepository sesM06ConfigurationRepository;
+
+    @Autowired
+    private LookupCodeRepository lookupCodeRepository;
+
+    @Autowired
+    private SupraTranslationCommonServices supraTranslationCommonServices;
+
+    @Autowired
+    private ApplicationModuleRepository applicationModuleRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    public LookupType updateLookupType(String id, LookupTypeTranslationDTO lookupTypeTranslationDTO) {
+<span class="nc" id="L55">        LookupType lookupType = sesM06ConfigurationRepository.findById(Integer.valueOf(id))</span>
+<span class="nc" id="L56">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Lookup Type &quot; + id + &quot; not found&quot;));</span>
+
+<span class="nc bnc" id="L58" title="All 2 branches missed.">        if (lookupType.getLookupId() &gt; 0) {</span>
+<span class="nc" id="L59">            lookupType.setMeaning(lookupTypeTranslationDTO.getMeaning());</span>
+<span class="nc" id="L60">            lookupType.setDescription(lookupTypeTranslationDTO.getDescription());</span>
+<span class="nc" id="L61">            lookupType.setActiveStartDate(lookupTypeTranslationDTO.getActiveStartDate());</span>
+<span class="nc" id="L62">            lookupType.setActiveEndDate(lookupTypeTranslationDTO.getActiveEndDate());</span>
+<span class="nc" id="L63">            lookupType.setActiveFlag(lookupTypeTranslationDTO.getActiveFlag());</span>
+<span class="nc" id="L64">            lookupType.setAppModule(Long.valueOf(lookupTypeTranslationDTO.getAppModule()));</span>
+<span class="nc" id="L65">            lookupType.setModuleFunction(Long.valueOf(lookupTypeTranslationDTO.getModuleFunction()));</span>
+<span class="nc" id="L66">            return sesM06ConfigurationRepository.save(lookupType);</span>
+        } else {
+<span class="nc" id="L68">            throw new EntityNotFoundException(&quot;Lookup Type &quot; + id + &quot; not found&quot;);</span>
+        }
+    }
+
+    public LookupType getById(Integer id) {
+<span class="nc" id="L73">        Optional&lt;LookupType&gt; lookupTypeOptional = sesM06ConfigurationRepository.findById(id);</span>
+<span class="nc" id="L74">        return lookupTypeOptional.orElse(null);</span>
+    }
+
+    public LookupType deleteLookupById(Integer id, String flag) {
+<span class="nc" id="L78">        Optional&lt;LookupType&gt; optionalLookupType = sesM06ConfigurationRepository.findById(id);</span>
+
+<span class="nc bnc" id="L80" title="All 2 branches missed.">        if (optionalLookupType.isPresent()) {</span>
+<span class="nc" id="L81">            LookupType lookupType = optionalLookupType.get();</span>
+
+<span class="nc" id="L83">            lookupType.setActiveFlag(flag);</span>
+<span class="nc" id="L84">            return sesM06ConfigurationRepository.save(lookupType);</span>
+        } else {
+            // Handle the case where the lookup with the provided ID does not exist
+<span class="nc" id="L87">            throw new RuntimeException(&quot;Lookup with ID &quot; + id + &quot; not found&quot;);</span>
+        }
+    }
+
+    public LookupCode updateLookupCode(Integer id, LookupCodeTranslationDTO lookupCodeTranslationDTO) {
+<span class="nc" id="L92">        LookupCode code = lookupCodeRepository.findById(id)</span>
+<span class="nc" id="L93">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Lookup Code &quot; + id + &quot; not found&quot;));</span>
+
+<span class="nc bnc" id="L95" title="All 2 branches missed.">        if (code.getLookupCodeId() &gt; 0) {</span>
+<span class="nc" id="L96">            code.setMeaning(lookupCodeTranslationDTO.getMeaning());</span>
+<span class="nc" id="L97">            code.setDescription(lookupCodeTranslationDTO.getDescription());</span>
+<span class="nc" id="L98">            code.setActiveStartDate(lookupCodeTranslationDTO.getActiveStartDate());</span>
+<span class="nc" id="L99">            code.setDisplayOrder(lookupCodeTranslationDTO.getDisplayOrder());</span>
+<span class="nc" id="L100">            code.setActiveEndDate(lookupCodeTranslationDTO.getActiveEndDate());</span>
+<span class="nc" id="L101">            code.setActiveFlag(lookupCodeTranslationDTO.getActiveFlag());</span>
+<span class="nc" id="L102">            return lookupCodeRepository.save(code);</span>
+        } else {
+<span class="nc" id="L104">            throw new EntityNotFoundException(&quot;Lookup Code &quot; + id + &quot; not found&quot;);</span>
+        }
+    }
+
+    public LookupCode deleteLookupCodeById(Integer id, String flag) {
+<span class="nc" id="L109">        Optional&lt;LookupCode&gt; optionalLookupCode = lookupCodeRepository.findById(id);</span>
+
+<span class="nc bnc" id="L111" title="All 2 branches missed.">        if (optionalLookupCode.isPresent()) {</span>
+<span class="nc" id="L112">            LookupCode lookupCode = optionalLookupCode.get();</span>
+
+<span class="nc" id="L114">            lookupCode.setActiveFlag(flag);</span>
+<span class="nc" id="L115">            return lookupCodeRepository.save(lookupCode);</span>
+        } else {
+<span class="nc" id="L117">            throw new RuntimeException(&quot;LookupCode with ID &quot; + id + &quot; not found&quot;);</span>
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public LookupTypeTranslationDTO addLookTypeTranslation(LookupTypeTranslationDTO lookupTypeTranslationDTO) {
+        try {
+<span class="nc" id="L124">            String lookupUnique = &quot;LT-&quot;;</span>
+<span class="nc" id="L125">            String meaningCode = &quot;-M&quot;;</span>
+<span class="nc" id="L126">            String descriptionCode = &quot;-D&quot;;</span>
+
+<span class="nc" id="L128">            ApplicationModule schemaName = applicationModuleRepository.findFirstByModuleId(Integer.valueOf(lookupTypeTranslationDTO.getAppModule()));</span>
+<span class="nc" id="L129">            String content = lookupTypeTranslationDTO.getLookupType();</span>
+<span class="nc" id="L130">            String generatedCode = lookupUnique + content + meaningCode;</span>
+<span class="nc" id="L131">            String generatedCodeDescription = lookupUnique + schemaName.getSchemaName() + &quot;-&quot; + content + descriptionCode;</span>
+
+            // Set values in DTO
+<span class="nc" id="L134">            lookupTypeTranslationDTO.setShortCode(generatedCode);</span>
+<span class="nc" id="L135">            lookupTypeTranslationDTO.setMeaningCode(generatedCodeDescription);</span>
+<span class="nc" id="L136">            lookupTypeTranslationDTO.setEntityId(1);</span>
+<span class="nc" id="L137">            lookupTypeTranslationDTO.setClientId(1);</span>
+
+<span class="nc" id="L139">            LookupType lookupType = mapToEntity(lookupTypeTranslationDTO);</span>
+<span class="nc" id="L140">            LookupType saveLookuptype = sesM06ConfigurationRepository.save(lookupType);</span>
+
+            // Create a map to store values
+<span class="nc" id="L143">            Map&lt;String, String&gt; translationDataMap = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L144">            translationDataMap.put(generatedCode, lookupTypeTranslationDTO.getMeaning());</span>
+<span class="nc" id="L145">            translationDataMap.put(generatedCodeDescription, lookupTypeTranslationDTO.getDescription());</span>
+
+            // Call the common translation service to save translation data
+<span class="nc" id="L148">            boolean translationSuccess = supraTranslationCommonServices.saveTranslationData(translationDataMap);</span>
+
+<span class="nc bnc" id="L150" title="All 2 branches missed.">            if (!translationSuccess) {</span>
+                // Handle translation failure, you can throw an exception or log the error
+<span class="nc" id="L152">                throw new BadApiRequestException(&quot;Translation failed&quot;);</span>
+            }
+
+<span class="nc" id="L155">            return mapToDTO(saveLookuptype);</span>
+
+<span class="nc" id="L157">        } catch (Exception e) {</span>
+            // Log the error and throw it to the controller to handle
+<span class="nc" id="L159">            System.err.println(&quot;Error occurred while creating Lookup Type Translation: &quot; + e.getMessage());</span>
+<span class="nc" id="L160">            throw new RuntimeException(&quot;Error occurred while creating Lookup Type Translation: &quot; + e.getMessage(), e);</span>
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public LookupCodeTranslationDTO addLookCodeTranslation(LookupCodeTranslationDTO lookupCodeTranslationDTO) {
+
+        try {
+<span class="nc" id="L168">            String lookupUnique = &quot;LC-&quot;;</span>
+<span class="nc" id="L169">            String meaningCode = &quot;-M&quot;;</span>
+<span class="nc" id="L170">            String descriptionCode = &quot;-D&quot;;</span>
+
+<span class="nc" id="L172">            String lookupType = lookupCodeTranslationDTO.getLookupType();</span>
+<span class="nc" id="L173">            String lookupCodeName = lookupCodeTranslationDTO.getLookupCode();</span>
+<span class="nc" id="L174">            String generatedCode = lookupUnique + lookupType + &quot;-&quot; + lookupCodeName + meaningCode;</span>
+<span class="nc" id="L175">            String generatedCodeDescription = lookupUnique + lookupType + &quot;-&quot; + lookupCodeName + descriptionCode;</span>
+
+            // Set values in DTO
+<span class="nc" id="L178">            lookupCodeTranslationDTO.setMeaningShortCode(generatedCode);</span>
+<span class="nc" id="L179">            lookupCodeTranslationDTO.setDescriptionShortCode(generatedCodeDescription);</span>
+<span class="nc" id="L180">            lookupCodeTranslationDTO.setEntityId(1);</span>
+<span class="nc" id="L181">            lookupCodeTranslationDTO.setClientId(1);</span>
+
+<span class="nc" id="L183">            LookupCode lookupCode = mapToEntity(lookupCodeTranslationDTO);</span>
+<span class="nc" id="L184">            LookupCode saveLookupCode = lookupCodeRepository.save(lookupCode);</span>
+
+            // Create a map to store translation data
+<span class="nc" id="L187">            Map&lt;String, String&gt; translationDataMap = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L188">            translationDataMap.put(generatedCode, lookupCodeTranslationDTO.getMeaning());</span>
+<span class="nc" id="L189">            translationDataMap.put(generatedCodeDescription, lookupCodeTranslationDTO.getDescription());</span>
+
+<span class="nc" id="L191">            boolean translationSuccess = supraTranslationCommonServices.saveTranslationData(translationDataMap);</span>
+
+<span class="nc bnc" id="L193" title="All 2 branches missed.">            if (!translationSuccess) {</span>
+<span class="nc" id="L194">                throw new RuntimeException(&quot;Translation failed&quot;);</span>
+            }
+
+<span class="nc" id="L197">            return mapToDTOCode(saveLookupCode);</span>
+<span class="nc" id="L198">        } catch (Exception e) {</span>
+<span class="nc" id="L199">            System.err.println(&quot;Error occurred while creating Lookup Code Translation: &quot; + e.getMessage());</span>
+<span class="nc" id="L200">            throw new RuntimeException(&quot;Error occurred while creating Lookup Code Translation: &quot; + e.getMessage(), e);</span>
+        }
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; callGetLookUpTypeCodes(String p_lookup_type) {
+<span class="nc" id="L205">        return lookupCodeRepository.findByLookupType(p_lookup_type).stream()</span>
+<span class="nc" id="L206">                .filter(code -&gt; &quot;Y&quot;.equalsIgnoreCase(code.getActiveFlag()))</span>
+<span class="nc" id="L207">                .map(code -&gt; {</span>
+<span class="nc" id="L208">                    Map&lt;String, Object&gt; data = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L209">                    data.put(&quot;CREATED_BY&quot;, code.getCreatedBy());</span>
+<span class="nc" id="L210">                    data.put(&quot;LAST_UPDATED_BY&quot;, code.getLastUpdatedBy());</span>
+<span class="nc" id="L211">                    data.put(&quot;DISPLAY_ORDER&quot;, code.getDisplayOrder());</span>
+<span class="nc" id="L212">                    data.put(&quot;LOOKUP_TYPE&quot;, code.getLookupType());</span>
+<span class="nc" id="L213">                    data.put(&quot;ACTIVE_FLAG&quot;, code.getActiveFlag());</span>
+<span class="nc" id="L214">                    data.put(&quot;ACTIVE_END_DATE&quot;, code.getActiveEndDate());</span>
+<span class="nc" id="L215">                    data.put(&quot;DESCRIPTION_SHORTCODE&quot;, code.getDescrtiptionShortCode());</span>
+<span class="nc" id="L216">                    data.put(&quot;LOOKUP_CODE&quot;, code.getLookupCode());</span>
+<span class="nc" id="L217">                    data.put(&quot;LOOKUP_ID&quot;, code.getLookupId());</span>
+<span class="nc" id="L218">                    data.put(&quot;MEANING&quot;, code.getMeaning());</span>
+<span class="nc" id="L219">                    data.put(&quot;MODULE_FUNCTION&quot;, code.getModuleFunction());</span>
+<span class="nc" id="L220">                    data.put(&quot;LOOKUP_CODE_ID&quot;, code.getLookupCodeId());</span>
+<span class="nc" id="L221">                    data.put(&quot;DESCRIPTION&quot;, code.getDescription());</span>
+<span class="nc" id="L222">                    data.put(&quot;ACTIVE_START_DATE&quot;, code.getActiveStartDate());</span>
+<span class="nc" id="L223">                    data.put(&quot;MEANING_SHORTCODE&quot;, code.getMeaningShortCode());</span>
+<span class="nc" id="L224">                    data.put(&quot;APP_MODULE&quot;, code.getAppModule());</span>
+<span class="nc" id="L225">                    return data;</span>
+<span class="nc" id="L226">                }).collect(Collectors.toList());</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Map&lt;String, Object&gt; getLookupData(Integer id, Long module, Long function, String searchColumn, String searchValue, Pageable pageable) {
+        Page&lt;LookupType&gt; lookupType;
+
+        // Search criteria handling
+<span class="nc bnc" id="L234" title="All 4 branches missed.">        if (searchColumn != null &amp;&amp; searchValue != null) {</span>
+<span class="nc" id="L235">            lookupType = searchByColumn(searchColumn, searchValue, pageable);</span>
+<span class="nc bnc" id="L236" title="All 6 branches missed.">        } else if (id == null &amp;&amp; module == null &amp;&amp; function == null) {</span>
+<span class="nc" id="L237">            lookupType = sesM06ConfigurationRepository.findAll(pageable);</span>
+        } else {
+<span class="nc" id="L239">            lookupType = sesM06ConfigurationRepository.findByLookupIdOrAppModuleOrModuleFunction(id, module, function, pageable);</span>
+        }
+
+<span class="nc" id="L242">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L243">        response.put(&quot;result&quot;, lookupType.getContent());</span>
+<span class="nc" id="L244">        response.put(&quot;currentPage&quot;, pageable.getPageNumber() + 1);</span>
+<span class="nc" id="L245">        response.put(&quot;pageSize&quot;, pageable.getPageSize());</span>
+<span class="nc" id="L246">        response.put(&quot;totalItems&quot;, lookupType.getTotalElements());</span>
+<span class="nc" id="L247">        response.put(&quot;totalPages&quot;, lookupType.getTotalPages());</span>
+
+<span class="nc" id="L249">        return response;</span>
+    }
+
+    public Page&lt;LookupType&gt; searchByColumn(String column, String value, Pageable pageable) {
+<span class="nc" id="L253">        String baseQuery = &quot;FROM LookupType l WHERE LOWER(l.&quot; + column + &quot;) LIKE LOWER(:value)&quot;;</span>
+<span class="nc" id="L254">        String orderByClause = &quot;&quot;;</span>
+<span class="nc bnc" id="L255" title="All 2 branches missed.">        if (pageable.getSort().isSorted()) {</span>
+<span class="nc" id="L256">            orderByClause = &quot; ORDER BY &quot; + pageable.getSort().stream()</span>
+<span class="nc" id="L257">                    .map(order -&gt; &quot;l.&quot; + order.getProperty() + &quot; &quot; + order.getDirection().name())</span>
+<span class="nc" id="L258">                    .collect(Collectors.joining(&quot;, &quot;));</span>
+        }
+
+<span class="nc" id="L261">        String queryString = &quot;SELECT l &quot; + baseQuery + orderByClause;</span>
+<span class="nc" id="L262">        String countQueryString = &quot;SELECT COUNT(l) &quot; + baseQuery;</span>
+<span class="nc" id="L263">        TypedQuery&lt;LookupType&gt; query = entityManager.createQuery(queryString, LookupType.class);</span>
+<span class="nc" id="L264">        TypedQuery&lt;Long&gt; countQuery = entityManager.createQuery(countQueryString, Long.class);</span>
+<span class="nc" id="L265">        query.setParameter(&quot;value&quot;, &quot;%&quot; + value + &quot;%&quot;);</span>
+<span class="nc" id="L266">        countQuery.setParameter(&quot;value&quot;, &quot;%&quot; + value + &quot;%&quot;);</span>
+<span class="nc" id="L267">        query.setFirstResult((int) pageable.getOffset());</span>
+<span class="nc" id="L268">        query.setMaxResults(pageable.getPageSize());</span>
+<span class="nc" id="L269">        List&lt;LookupType&gt; resultList = query.getResultList();</span>
+<span class="nc" id="L270">        Long totalCount = countQuery.getSingleResult();</span>
+
+<span class="nc" id="L272">        return new PageImpl&lt;&gt;(resultList, pageable, totalCount);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;LookupTypeProjection&gt; getAllLookupType() {
+<span class="nc" id="L277">        return sesM06ConfigurationRepository.findAllBy();</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;LookupCode&gt; getAllLookupCodesById(Integer lookupTypeId) {
+<span class="nc" id="L282">        return lookupCodeRepository.findByLookupId(lookupTypeId);</span>
+    }
+
+    private LookupType mapToEntity(LookupTypeTranslationDTO dto) {
+<span class="nc" id="L286">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+
+<span class="nc" id="L288">        LookupType lookupType = new LookupType();</span>
+
+<span class="nc bnc" id="L290" title="All 2 branches missed.">        lookupType.setLookupType(dto.getLookupType() != null ? dto.getLookupType() : lookupType.getLookupType());</span>
+<span class="nc bnc" id="L291" title="All 2 branches missed.">        lookupType.setMeaning(dto.getMeaning() != null ? dto.getMeaning() : lookupType.getMeaning());</span>
+<span class="nc bnc" id="L292" title="All 2 branches missed.">        lookupType.setAppModule(dto.getAppModule() != null ? Long.valueOf(dto.getAppModule()) : lookupType.getAppModule());</span>
+<span class="nc bnc" id="L293" title="All 2 branches missed.">        lookupType.setModuleFunction(dto.getModuleFunction() != null ? Long.valueOf(dto.getModuleFunction()) : lookupType.getModuleFunction());</span>
+<span class="nc bnc" id="L294" title="All 2 branches missed.">        lookupType.setDescription(dto.getDescription() != null ? dto.getDescription() : lookupType.getDescription());</span>
+<span class="nc bnc" id="L295" title="All 2 branches missed.">        lookupType.setMeaningShortCode(dto.getShortCode() != null ? dto.getShortCode() : lookupType.getMeaningShortCode());</span>
+<span class="nc bnc" id="L296" title="All 2 branches missed.">        lookupType.setDescriptionShortCode(dto.getMeaningCode() != null ? dto.getMeaningCode() : lookupType.getDescriptionShortCode());</span>
+<span class="nc bnc" id="L297" title="All 2 branches missed.">        lookupType.setActiveFlag(dto.getActiveFlag() != null ? dto.getActiveFlag() : lookupType.getActiveFlag());</span>
+<span class="nc bnc" id="L298" title="All 2 branches missed.">        lookupType.setActiveStartDate(dto.getActiveStartDate() != null ? dto.getActiveStartDate() : lookupType.getActiveStartDate());</span>
+<span class="nc bnc" id="L299" title="All 2 branches missed.">        lookupType.setActiveEndDate(dto.getActiveEndDate() != null ? dto.getActiveEndDate() : lookupType.getActiveEndDate());</span>
+<span class="nc bnc" id="L300" title="All 2 branches missed.">        lookupType.setEntityId(dto.getEntityId() != null ? dto.getEntityId() : lookupType.getEntityId());</span>
+<span class="nc bnc" id="L301" title="All 2 branches missed.">        lookupType.setClientId(dto.getClientId() != null ? dto.getClientId() : lookupType.getClientId());</span>
+<span class="nc bnc" id="L302" title="All 2 branches missed.">        lookupType.setLastUpdateSessionId(dto.getLastUpdateSessionId() != null ? dto.getLastUpdateSessionId() : lookupType.getLastUpdateSessionId());</span>
+<span class="nc bnc" id="L303" title="All 2 branches missed.">        lookupType.setCreatedBy(dto.getCreatedBy() != null ? dto.getCreatedBy() : String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc bnc" id="L304" title="All 2 branches missed.">        lookupType.setCreationDate(dto.getCreationDate() != null ? dto.getCreationDate() : Date.from(new Date().toInstant()));</span>
+<span class="nc" id="L305">        lookupType.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L306">        lookupType.setLastUpdateDate(Date.from(new Date().toInstant()));</span>
+
+<span class="nc" id="L308">        return lookupType;</span>
+    }
+
+    private LookupTypeTranslationDTO mapToDTO(LookupType lookupType) {
+<span class="nc" id="L312">        LookupTypeTranslationDTO dto = new LookupTypeTranslationDTO();</span>
+
+<span class="nc" id="L314">        dto.setLookupId(lookupType.getLookupId());</span>
+<span class="nc" id="L315">        dto.setLookupType(lookupType.getLookupType());</span>
+<span class="nc" id="L316">        dto.setMeaning(lookupType.getMeaning());</span>
+<span class="nc bnc" id="L317" title="All 2 branches missed.">        dto.setAppModule(lookupType.getAppModule() != null ? String.valueOf(lookupType.getAppModule()) : null);</span>
+<span class="nc bnc" id="L318" title="All 2 branches missed.">        dto.setModuleFunction(lookupType.getModuleFunction() != null ? String.valueOf(lookupType.getModuleFunction()) : null);</span>
+<span class="nc" id="L319">        dto.setDescription(lookupType.getDescription());</span>
+<span class="nc" id="L320">        dto.setShortCode(lookupType.getMeaningShortCode());</span>
+<span class="nc" id="L321">        dto.setMeaningCode(lookupType.getDescriptionShortCode());</span>
+<span class="nc" id="L322">        dto.setActiveFlag(lookupType.getActiveFlag());</span>
+<span class="nc" id="L323">        dto.setActiveStartDate(lookupType.getActiveStartDate());</span>
+<span class="nc" id="L324">        dto.setActiveEndDate(lookupType.getActiveEndDate());</span>
+<span class="nc" id="L325">        dto.setEntityId(lookupType.getEntityId());</span>
+<span class="nc" id="L326">        dto.setClientId(lookupType.getClientId());</span>
+<span class="nc" id="L327">        dto.setLastUpdateSessionId(lookupType.getLastUpdateSessionId());</span>
+<span class="nc" id="L328">        dto.setCreatedBy(lookupType.getCreatedBy());</span>
+<span class="nc" id="L329">        dto.setCreationDate(lookupType.getCreationDate());</span>
+<span class="nc" id="L330">        dto.setLastUpdateSessionId(lookupType.getLastUpdateSessionId());</span>
+
+<span class="nc" id="L332">        return dto;</span>
+    }
+
+    private LookupCode mapToEntity(LookupCodeTranslationDTO dto) {
+<span class="nc" id="L336">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+
+<span class="nc" id="L338">        LookupCode lookupCode = new LookupCode();</span>
+
+<span class="nc bnc" id="L340" title="All 2 branches missed.">        lookupCode.setLookupType(dto.getLookupType() != null ? dto.getLookupType() : lookupCode.getLookupType());</span>
+<span class="nc bnc" id="L341" title="All 2 branches missed.">        lookupCode.setLookupCode(dto.getLookupCode() != null ? dto.getLookupCode() : lookupCode.getLookupCode());</span>
+<span class="nc bnc" id="L342" title="All 2 branches missed.">        lookupCode.setMeaning(dto.getMeaning() != null ? dto.getMeaning() : lookupCode.getMeaning());</span>
+<span class="nc bnc" id="L343" title="All 2 branches missed.">        lookupCode.setDescription(dto.getDescription() != null ? dto.getDescription() : lookupCode.getDescription());</span>
+<span class="nc bnc" id="L344" title="All 2 branches missed.">        lookupCode.setMeaningShortCode(dto.getMeaningShortCode() != null ? dto.getMeaningShortCode() : lookupCode.getMeaningShortCode());</span>
+<span class="nc bnc" id="L345" title="All 2 branches missed.">        lookupCode.setDescrtiptionShortCode(dto.getDescriptionShortCode() != null ? dto.getDescriptionShortCode() : lookupCode.getDescrtiptionShortCode());</span>
+<span class="nc bnc" id="L346" title="All 2 branches missed.">        lookupCode.setLookupId(dto.getLookupId() != null ? Integer.valueOf(dto.getLookupId()) : lookupCode.getLookupId());</span>
+<span class="nc bnc" id="L347" title="All 2 branches missed.">        lookupCode.setAppModule(dto.getAppModuleId() != null ? Long.valueOf(dto.getAppModuleId()) : lookupCode.getAppModule());</span>
+<span class="nc bnc" id="L348" title="All 2 branches missed.">        lookupCode.setModuleFunction(dto.getModuleFunction() != null ? Long.valueOf(dto.getModuleFunction()) : lookupCode.getModuleFunction());</span>
+<span class="nc bnc" id="L349" title="All 2 branches missed.">        lookupCode.setActiveFlag(dto.getActiveFlag() != null ? dto.getActiveFlag() : lookupCode.getActiveFlag());</span>
+<span class="nc bnc" id="L350" title="All 2 branches missed.">        lookupCode.setActiveStartDate(dto.getActiveStartDate() != null ? dto.getActiveStartDate() : lookupCode.getActiveStartDate());</span>
+<span class="nc bnc" id="L351" title="All 2 branches missed.">        lookupCode.setActiveEndDate(dto.getActiveEndDate() != null ? dto.getActiveEndDate() : lookupCode.getActiveEndDate());</span>
+<span class="nc bnc" id="L352" title="All 2 branches missed.">        lookupCode.setDisplayOrder(dto.getDisplayOrder() != null ? dto.getDisplayOrder() : lookupCode.getDisplayOrder());</span>
+<span class="nc" id="L353">        lookupCode.setEntityId(dto.getEntityId());</span>
+<span class="nc" id="L354">        lookupCode.setClientId(dto.getClientId());</span>
+<span class="nc" id="L355">        lookupCode.setLastUpdateSessionId(dto.getLastUpdateSessionId());</span>
+<span class="nc bnc" id="L356" title="All 2 branches missed.">        lookupCode.setCreatedBy(dto.getCreatedBy() != null ? dto.getCreatedBy() : String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc bnc" id="L357" title="All 2 branches missed.">        lookupCode.setCreationDate(dto.getCreationDate() != null ? dto.getCreationDate() : Date.from(new Date().toInstant()));</span>
+<span class="nc" id="L358">        lookupCode.setLastUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L359">        lookupCode.setLastUpdateDate(Date.from(new Date().toInstant()));</span>
+
+<span class="nc" id="L361">        return lookupCode;</span>
+    }
+
+    private LookupCodeTranslationDTO mapToDTOCode(LookupCode lookupCode) {
+<span class="nc" id="L365">        LookupCodeTranslationDTO dto = new LookupCodeTranslationDTO();</span>
+
+<span class="nc" id="L367">        dto.setLookupType(lookupCode.getLookupType());</span>
+<span class="nc" id="L368">        dto.setLookupCode(lookupCode.getLookupCode());</span>
+<span class="nc" id="L369">        dto.setMeaning(lookupCode.getMeaning());</span>
+<span class="nc" id="L370">        dto.setDescription(lookupCode.getDescription());</span>
+<span class="nc" id="L371">        dto.setMeaningShortCode(lookupCode.getMeaningShortCode());</span>
+<span class="nc" id="L372">        dto.setDescriptionShortCode(lookupCode.getDescrtiptionShortCode());</span>
+<span class="nc" id="L373">        dto.setLookupId(String.valueOf(lookupCode.getLookupId()));</span>
+<span class="nc" id="L374">        dto.setAppModuleId(String.valueOf(lookupCode.getAppModule()));</span>
+<span class="nc" id="L375">        dto.setModuleFunction(String.valueOf(lookupCode.getModuleFunction()));</span>
+<span class="nc" id="L376">        dto.setActiveFlag(lookupCode.getActiveFlag());</span>
+<span class="nc" id="L377">        dto.setActiveStartDate(lookupCode.getActiveStartDate());</span>
+<span class="nc" id="L378">        dto.setActiveEndDate(lookupCode.getActiveEndDate());</span>
+<span class="nc" id="L379">        dto.setDisplayOrder(lookupCode.getDisplayOrder());</span>
+<span class="nc" id="L380">        dto.setEntityId(lookupCode.getEntityId());</span>
+<span class="nc" id="L381">        dto.setClientId(lookupCode.getClientId());</span>
+<span class="nc" id="L382">        dto.setLastUpdateSessionId(lookupCode.getLastUpdateSessionId());</span>
+<span class="nc" id="L383">        dto.setCreatedBy(lookupCode.getCreatedBy());</span>
+<span class="nc" id="L384">        dto.setCreationDate(lookupCode.getCreationDate());</span>
+<span class="nc" id="L385">        dto.setLastUpdatedBy(lookupCode.getLastUpdatedBy());</span>
+<span class="nc" id="L386">        dto.setLastUpdateDate(lookupCode.getLastUpdateDate());</span>
+<span class="nc" id="L387">        return dto;</span>
+    }
+
+    public List&lt;Integer&gt; getIdByMeaningAndType(String meaning, String type) {
+<span class="nc" id="L391">        return lookupCodeRepository.findByMeaningContainingIgnoreCaseAndLookupType(meaning, type)</span>
+<span class="nc" id="L392">                .stream()</span>
+<span class="nc" id="L393">                .map(LookupCode::getLookupCodeId)</span>
+<span class="nc" id="L394">                .collect(Collectors.toList());</span>
+    }
+
+    public List&lt;String&gt; getCodesByMeaningAndType(String meaning, String type) {
+<span class="nc" id="L398">        return lookupCodeRepository.findByMeaningContainingAndLookupType(meaning, type)</span>
+<span class="nc" id="L399">                .stream()</span>
+<span class="nc" id="L400">                .map(LookupCode::getLookupCode)</span>
+<span class="nc" id="L401">                .collect(Collectors.toList());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

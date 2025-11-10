@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SkillListDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.dto.employement.skillSetDropdown</a> &gt; <span class="el_source">SkillListDTO.java</span></div><h1>SkillListDTO.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.dto.employement.skillSetDropdown;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+<span class="nc bnc" id="L9" title="All 118 branches missed.">@Data</span>
+public class SkillListDTO {
+
+    @JsonProperty(&quot;SKILL_ID&quot;)
+<span class="nc" id="L13">    private Integer SKILL_ID;</span>
+
+    @JsonProperty(&quot;NAME&quot;)
+<span class="nc" id="L16">    private String NAME;</span>
+
+    @JsonProperty(&quot;DESCRIPTION&quot;)
+<span class="nc" id="L19">    private String DESCRIPTION;</span>
+
+    @JsonProperty(&quot;CATEGORY_CODE&quot;)
+<span class="nc" id="L22">    private String CATEGORY_CODE;</span>
+
+    @JsonProperty(&quot;IS_DELETED&quot;)
+<span class="nc" id="L25">    private String IS_DELETED;</span>
+
+    @JsonProperty(&quot;IS_ACTIVE&quot;)
+<span class="nc" id="L28">    private String IS_ACTIVE;</span>
+
+    @JsonProperty(&quot;ENTITY_ID&quot;)
+<span class="nc" id="L31">    private Integer ENTITY_ID;</span>
+
+    @JsonProperty(&quot;CLIENT_ID&quot;)
+<span class="nc" id="L34">    private Integer CLIENT_ID;</span>
+
+    @JsonProperty(&quot;LAST_UPDATE_SESSION_ID&quot;)
+<span class="nc" id="L37">    private String LAST_UPDATE_SESSION_ID;</span>
+
+    // Audit fields
+    @JsonProperty(&quot;CREATION_DATE&quot;)
+<span class="nc" id="L41">    private LocalDateTime CREATION_DATE;</span>
+
+    @JsonProperty(&quot;CREATED_BY&quot;)
+<span class="nc" id="L44">    private String CREATED_BY;</span>
+
+    @JsonProperty(&quot;LAST_UPDATED_BY&quot;)
+<span class="nc" id="L47">    private String LAST_UPDATED_BY;</span>
+
+    @JsonProperty(&quot;LAST_UPDATED_DATE&quot;)
+<span class="nc" id="L50">    private LocalDate LAST_UPDATED_DATE;</span>
+
+    @JsonProperty(&quot;RECORD_INFO&quot;)
+<span class="nc" id="L53">    private String RECORD_INFO;</span>
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

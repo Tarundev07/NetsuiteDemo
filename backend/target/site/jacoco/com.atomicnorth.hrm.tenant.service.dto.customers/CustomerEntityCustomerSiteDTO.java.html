@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CustomerEntityCustomerSiteDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.dto.customers</a> &gt; <span class="el_source">CustomerEntityCustomerSiteDTO.java</span></div><h1>CustomerEntityCustomerSiteDTO.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.dto.customers;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
+import java.io.Serializable;
+import java.util.Date;
+
+@Getter
+<span class="nc" id="L15">@Setter</span>
+<span class="nc" id="L16">@NoArgsConstructor</span>
+<span class="nc" id="L17">@AllArgsConstructor</span>
+public class CustomerEntityCustomerSiteDTO implements Serializable {
+
+    @NotNull(message = &quot;Account ID is required&quot;)
+<span class="nc" id="L21">    private Integer accountId;</span>
+<span class="nc" id="L22">    private Integer siteId;</span>
+
+    @Size(max = 100, message = &quot;Site code should be at most 100 characters&quot;)
+<span class="nc" id="L25">    private String siteCode;</span>
+
+    @NotNull(message = &quot;Country ID is required&quot;)
+<span class="nc" id="L28">    private Integer countryId;</span>
+<span class="nc" id="L29">    private String countryName;</span>
+<span class="nc" id="L30">    private Integer currencyId;</span>
+
+    @NotNull(message = &quot;Name is required&quot;)
+    @Size(max = 100, message = &quot;Name should be at most 100 characters&quot;)
+<span class="nc" id="L34">    private String name;</span>
+
+    @Size(max = 100, message = &quot;Description should be at most 100 characters&quot;)
+<span class="nc" id="L37">    private String description;</span>
+
+    @Size(max = 100, message = &quot;GSTN should be at most 100 characters&quot;)
+    @Pattern(regexp = &quot;\\d{15}&quot;, message = &quot;GSTN should be 15 digits&quot;)
+<span class="nc" id="L41">    private String gstn;</span>
+
+    @NotNull(message = &quot;Primary flag is required&quot;)
+    @Pattern(regexp = &quot;[YN]&quot;, message = &quot;Primary flag should be 'Y' or 'N'&quot;)
+<span class="nc" id="L45">    private String isPrimary;</span>
+
+    @NotNull(message = &quot;Deleted flag is required&quot;)
+    @Pattern(regexp = &quot;[YN]&quot;, message = &quot;Deleted flag should be 'Y' or 'N'&quot;)
+<span class="nc" id="L49">    private String isDeleted;</span>
+
+    @NotNull(message = &quot;Active flag is required&quot;)
+    @Pattern(regexp = &quot;[YN]&quot;, message = &quot;Active flag should be 'Y' or 'N'&quot;)
+<span class="nc" id="L53">    private String isActive;</span>
+
+    @Size(max = 200, message = &quot;Attribute2 should be at most 200 characters&quot;)
+<span class="nc" id="L56">    private String attribute2;</span>
+
+    @Size(max = 200, message = &quot;Attribute3 should be at most 200 characters&quot;)
+<span class="nc" id="L59">    private String attribute3;</span>
+
+    @Size(max = 50, message = &quot;Created by should be at most 50 characters&quot;)
+<span class="nc" id="L62">    private String createdBy;</span>
+
+    @NotNull(message = &quot;Creation date is required&quot;)
+<span class="nc" id="L65">    private Date creationDate;</span>
+
+    @Size(max = 50, message = &quot;Last updated by should be at most 50 characters&quot;)
+<span class="nc" id="L68">    private String lastUpdatedBy;</span>
+
+    @NotNull(message = &quot;Last update date is required&quot;)
+<span class="nc" id="L71">    private Date lastUpdateDate;</span>
+
+    // Add getters and setters for all fields
+
+    // Add constructors as needed
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

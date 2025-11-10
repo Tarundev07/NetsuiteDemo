@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ShiftRosterController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.attendance</a> &gt; <span class="el_source">ShiftRosterController.java</span></div><h1>ShiftRosterController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.attendance;
+
+import com.atomicnorth.hrm.tenant.service.attendance.ShiftRosterService;
+import com.atomicnorth.hrm.tenant.service.dto.attendance.RosterRemarkDTO;
+import com.atomicnorth.hrm.tenant.service.dto.attendance.ShiftRosterRequestDTO;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.fileupload.disk.DiskFileItemFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping(&quot;/api/roster&quot;)
+<span class="nc" id="L42">public class ShiftRosterController {</span>
+<span class="nc" id="L43">    private final Logger log = LoggerFactory.getLogger(ShiftRosterController.class);</span>
+    @Autowired
+    private ShiftRosterService shiftRosterService;
+
+    @PostMapping(&quot;/updateEmployeeShiftRoster&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; updateEmployeeShiftRoster(@RequestBody ShiftRosterRequestDTO request) {
+        try {
+<span class="nc" id="L50">            Object responseObject = shiftRosterService.updateShiftRosterOfEmp(request.getUsername(), request.getFirstDay(), request.getLastDay(), request.getShiftCodeArray(), request.getShiftPLArray(), request.getShiftRemarkArray());</span>
+<span class="nc" id="L51">            ApiResponse&lt;Object&gt; apiResponse = new ApiResponse&lt;&gt;(responseObject, true, &quot;SHIFT-ROSTER-UPDATED&quot;, &quot;SUCCESS&quot;);</span>
+<span class="nc" id="L52">            return ResponseEntity.ok(apiResponse);</span>
+<span class="nc" id="L53">        } catch (Exception e) {</span>
+            //e.printStackTrace();
+<span class="nc" id="L55">            ApiResponse&lt;Object&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;ERROR-UPDATING-SHIFT-ROSTER&quot;, &quot;FAILURE&quot;);</span>
+<span class="nc" id="L56">            errorResponse.setErrors(Collections.singletonList(&quot;SQL Integrity Constraint Violated While Inactivating The Shift: &quot; + e.getCause().getCause().getMessage()));</span>
+<span class="nc" id="L57">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/generateBulkUploadShiftSheet&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;String&gt;&gt; generateBulkUploadShiftSheet(@RequestParam(required = true) String firstDay, @RequestParam(required = true) String lastDay, @RequestParam(required = false) List&lt;String&gt; userDivisionGroup, @RequestParam(required = false) List&lt;String&gt; userDivisionProject) {
+
+        try {
+<span class="nc bnc" id="L65" title="All 2 branches missed.">            String result = shiftRosterService.generateBulkAssignShift(firstDay, lastDay, userDivisionGroup, userDivisionProject != null ? userDivisionProject : List.of());</span>
+<span class="nc" id="L66">            ApiResponse&lt;String&gt; response = new ApiResponse&lt;&gt;(result, true, &quot;SHIFT-SHEET-GENERATED-SUCCESSFULLY&quot;, &quot;SUCCESS&quot;);</span>
+<span class="nc" id="L67">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L68">        } catch (Exception e) {</span>
+<span class="nc" id="L69">            e.printStackTrace();</span>
+<span class="nc" id="L70">            ApiResponse&lt;String&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;SHIFT-SHEET-GENERATION-FAILED&quot;, &quot;ERROR&quot;, List.of(e.getMessage()));</span>
+<span class="nc" id="L71">            return ResponseEntity.badRequest().body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/generateBulkUploadShiftSheetNoShiftCode&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;String&gt;&gt; generateBulkUploadShiftSheetWithoutDetails(@RequestParam(required = true) String firstDay, @RequestParam(required = true) String lastDay, @RequestParam(required = false) List&lt;String&gt; userDivisionGroup, @RequestParam(required = false) List&lt;String&gt; userDivisionProject) {
+        try {
+<span class="nc bnc" id="L78" title="All 2 branches missed.">            String result = shiftRosterService.generateBulkAssignShiftWithoutDetails(firstDay, lastDay, userDivisionGroup, userDivisionProject != null ? userDivisionProject : List.of());</span>
+<span class="nc" id="L79">            ApiResponse&lt;String&gt; response = new ApiResponse&lt;&gt;(result, true, &quot;SHIFT-SHEET-GENERATED-SUCCESSFULLY&quot;, &quot;SUCCESS&quot;);</span>
+<span class="nc" id="L80">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L81">        } catch (Exception e) {</span>
+<span class="nc" id="L82">            e.printStackTrace();</span>
+<span class="nc" id="L83">            ApiResponse&lt;String&gt; errorResponse = new ApiResponse&lt;&gt;(null, false, &quot;SHIFT-SHEET-GENERATION-FAILED&quot;, &quot;ERROR&quot;, List.of(e.getMessage()));</span>
+<span class="nc" id="L84">            return ResponseEntity.badRequest().body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/downloadEmpReportFile/{fileName}&quot;)
+    public ResponseEntity&lt;byte[]&gt; downloadEmpReport(@PathVariable(&quot;fileName&quot;) String fileName) throws IOException {
+
+<span class="nc" id="L91">        String downloadFolderPath = System.getProperty(&quot;user.home&quot;) + File.separator + &quot;Downloads&quot;;</span>
+<span class="nc" id="L92">        String filePath = downloadFolderPath + File.separator + fileName;</span>
+<span class="nc" id="L93">        Path path = Paths.get(filePath);</span>
+<span class="nc" id="L94">        byte[] fileContent = Files.readAllBytes(path);</span>
+<span class="nc" id="L95">        HttpHeaders headers = new HttpHeaders();</span>
+<span class="nc" id="L96">        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);</span>
+<span class="nc" id="L97">        headers.setContentDispositionFormData(&quot;attachment&quot;, fileName);</span>
+<span class="nc" id="L98">        headers.setContentLength(fileContent.length);</span>
+<span class="nc" id="L99">        return ResponseEntity.ok().headers(headers).body(fileContent);</span>
+    }
+
+    @PostMapping(&quot;/uploadBulkShiftSheet&quot;)
+    public @ResponseBody String uploadBulkShiftSheet(@RequestParam(&quot;file&quot;) MultipartFile file, @RequestParam(value = &quot;firstDay&quot;, required = true) String firstDay, @RequestParam(value = &quot;lastDay&quot;, required = true) String lastDay) throws Exception {
+<span class="nc" id="L104">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+        try {
+<span class="nc" id="L106">            DiskFileItemFactory factory = new DiskFileItemFactory();</span>
+<span class="nc" id="L107">            factory.setRepository(new File(System.getProperty(&quot;user.dir&quot;)));</span>
+<span class="nc" id="L108">            String uploadPath = System.getProperty(&quot;user.dir&quot;);</span>
+<span class="nc" id="L109">            byte[] bytes = file.getBytes();</span>
+<span class="nc" id="L110">            BufferedOutputStream stream = new BufferedOutputStream(new FileOutputStream(new File(uploadPath + File.separator + file.getOriginalFilename())));</span>
+<span class="nc" id="L111">            stream.write(bytes);</span>
+<span class="nc" id="L112">            stream.flush();</span>
+<span class="nc" id="L113">            stream.close();</span>
+<span class="nc" id="L114">            String submitStatus = shiftRosterService.extractShiftDataAndUpload(firstDay, lastDay, file, false);</span>
+<span class="nc bnc" id="L115" title="All 2 branches missed.">            if (submitStatus.contains(&quot;SUCCESS&quot;)) {</span>
+<span class="nc" id="L116">                String finalSubmitStatus = shiftRosterService.extractShiftDataAndUpload(firstDay, lastDay, file, true);</span>
+<span class="nc" id="L117">                response.put(&quot;status&quot;, &quot;success.&quot;);</span>
+<span class="nc" id="L118">                response.put(&quot;message&quot;, finalSubmitStatus);</span>
+<span class="nc" id="L119">            } else {</span>
+<span class="nc" id="L120">                response.put(&quot;status&quot;, &quot;error&quot;);</span>
+<span class="nc" id="L121">                response.put(&quot;message&quot;, submitStatus);</span>
+            }
+<span class="nc" id="L123">        } catch (Exception e) {</span>
+<span class="nc" id="L124">            response.put(&quot;status&quot;, &quot;error&quot;);</span>
+<span class="nc" id="L125">            response.put(&quot;message&quot;, e.getMessage());</span>
+<span class="nc" id="L126">        }</span>
+<span class="nc" id="L127">        return new ObjectMapper().writeValueAsString(response);</span>
+    }
+
+    @PostMapping(&quot;/uploadBulkShiftSheetFinal&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;String&gt;&gt; uploadBulkShiftSheetFinal(@RequestParam(value = &quot;firstDay&quot;, required = true) String firstDay, @RequestParam(value = &quot;lastDay&quot;, required = true) String lastDay, @RequestPart(value = &quot;File&quot;, required = true) MultipartFile file) {
+        ApiResponse&lt;String&gt; response;
+        try {
+<span class="nc" id="L134">            String result = shiftRosterService.extractShiftDataAndUpload(firstDay, lastDay, file, true);</span>
+<span class="nc" id="L135">            response = new ApiResponse&lt;&gt;(result, true, &quot;SHIFT-ASSIGNED-SUCCESSFULLY&quot;, &quot;SUCCESS&quot;);</span>
+<span class="nc" id="L136">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L137">        } catch (Exception e) {</span>
+<span class="nc" id="L138">            response = new ApiResponse&lt;&gt;(null, false, &quot;SHIFT-ASSIGNED-ERROR&quot;, &quot;ERROR&quot;, List.of(e.getMessage()));</span>
+<span class="nc" id="L139">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+        }
+    }
+
+    @PostMapping(&quot;/create&quot;)
+    public ResponseEntity&lt;String&gt; createRoster(@RequestBody RosterRemarkDTO rosterRemarkDTO) {
+        try {
+<span class="nc" id="L146">            shiftRosterService.createRoster(rosterRemarkDTO);</span>
+<span class="nc" id="L147">            return ResponseEntity.ok(&quot;Roster created successfully.&quot;);</span>
+<span class="nc" id="L148">        } catch (Exception e) {</span>
+<span class="nc" id="L149">            return ResponseEntity.status(HttpStatus.OK).body(&quot;Error creating roster: &quot; + e.getMessage());</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

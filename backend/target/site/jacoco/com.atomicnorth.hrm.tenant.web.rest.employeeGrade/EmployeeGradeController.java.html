@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmployeeGradeController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.employeeGrade</a> &gt; <span class="el_source">EmployeeGradeController.java</span></div><h1>EmployeeGradeController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.employeeGrade;
+
+import com.atomicnorth.hrm.tenant.service.dto.employeeGrade.EmployeeGradeDTO;
+import com.atomicnorth.hrm.tenant.service.employeeGrade.EmployeeGradeService;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping(&quot;api/employee-grade&quot;)
+<span class="nc" id="L21">public class EmployeeGradeController {</span>
+
+    @Autowired
+    EmployeeGradeService gradeService;
+
+    @PostMapping
+    public ResponseEntity&lt;ApiResponse&lt;EmployeeGradeDTO&gt;&gt; saveEmployeeGrade(@Valid @RequestBody EmployeeGradeDTO gradeDTO) {
+<span class="nc" id="L28">        EmployeeGradeDTO save = gradeService.saveUpdate(gradeDTO);</span>
+        try {
+<span class="nc" id="L30">            ApiResponse&lt;EmployeeGradeDTO&gt; response = new ApiResponse&lt;&gt;(</span>
+                    save,
+                    true,
+                    &quot;EMPLOYEE-GRADE-CREATE-SUCCESS&quot;,
+                    &quot;Success&quot;
+            );
+<span class="nc" id="L36">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L37">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L38">            ApiResponse&lt;EmployeeGradeDTO&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;EMPLOYEE-GRADE-CREATE-FAILURE&quot;,
+                    &quot;Warning&quot;,
+<span class="nc" id="L43">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L45">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+<span class="nc" id="L46">        } catch (Exception ex) {</span>
+<span class="nc" id="L47">            ApiResponse&lt;EmployeeGradeDTO&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;EMPLOYEE-GRADE-CREATE-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L52">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L54">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+
+    /*Niraj Code*/
+
+    @GetMapping
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getEmployeeGradeList(
+            @RequestParam(defaultValue = &quot;0&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;createdDate&quot;, required = false) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;, required = false) String sortDir,
+            @RequestParam(required = false) String searchColumn,  // Added search column
+            @RequestParam(required = false) String searchValue    // Added search value
+    ) {
+        try {
+<span class="nc" id="L71">            Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.fromString(sortDir), sortBy);</span>
+<span class="nc" id="L72">            Map&lt;String, Object&gt; gradeDTOList = gradeService.getPaginatedEmployeeGrades(pageable, searchColumn, searchValue);</span>
+
+<span class="nc" id="L74">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = new ApiResponse&lt;&gt;(</span>
+                    gradeDTOList,
+                    true,
+                    &quot;EMPLOYEE-GRADE-LIST-SUCCESS&quot;,
+                    &quot;Success&quot;
+            );
+<span class="nc" id="L80">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+
+<span class="nc" id="L82">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L83">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;EMPLOYEE-GRADE-LIST-FAILURE&quot;,
+                    &quot;Warning&quot;,
+<span class="nc" id="L88">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L90">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+<span class="nc" id="L91">        } catch (Exception ex) {</span>
+<span class="nc" id="L92">            ApiResponse&lt;Map&lt;String, Object&gt;&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;EMPLOYEE-GRADE-LIST-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L97">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L99">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    /*-----------------end---------------*/
+    @PatchMapping(&quot;{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;EmployeeGradeDTO&gt;&gt; updateEmployeeGrade(
+            @Valid
+            @PathVariable Integer id,
+            @RequestBody EmployeeGradeDTO dto
+    ) {
+<span class="nc" id="L110">        EmployeeGradeDTO employeeGradeDTO = gradeService.updateEmployeeGrade(id, dto);</span>
+        try {
+<span class="nc" id="L112">            ApiResponse&lt;EmployeeGradeDTO&gt; response = new ApiResponse&lt;&gt;(</span>
+                    employeeGradeDTO,
+                    true,
+                    &quot;EMPLOYEE-GRADE-UPDATE-SUCCESS&quot;,
+                    &quot;Success&quot;
+            );
+<span class="nc" id="L118">            return ResponseEntity.status(HttpStatus.OK).body(response);</span>
+<span class="nc" id="L119">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L120">            ApiResponse&lt;EmployeeGradeDTO&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;EMPLOYEE-GRADE-UPDATE-FAILURE&quot;,
+                    &quot;Warning&quot;,
+<span class="nc" id="L125">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L127">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+<span class="nc" id="L128">        } catch (Exception ex) {</span>
+<span class="nc" id="L129">            ApiResponse&lt;EmployeeGradeDTO&gt; errorResponse = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;EMPLOYEE-GRADE-UPDATE-FAILURE&quot;,
+                    &quot;Error&quot;,
+<span class="nc" id="L134">                    Collections.singletonList(ex.getMessage())</span>
+            );
+<span class="nc" id="L136">            return ResponseEntity.status(HttpStatus.OK).body(errorResponse);</span>
+        }
+    }
+
+    @GetMapping(&quot;/findEmpGradeIdAndName&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; getEmpGradeNameAndId() {
+        try {
+<span class="nc" id="L143">            List&lt;Map&lt;String, Object&gt;&gt; employees = this.gradeService.findEmpGradeNameAndId();</span>
+<span class="nc bnc" id="L144" title="All 2 branches missed.">            if (employees.isEmpty()) {</span>
+<span class="nc" id="L145">                return new ResponseEntity&lt;&gt;(</span>
+                        new ApiResponse&lt;&gt;(null, false, &quot;EMP_GRADE_DETAILS_NOT_FOUND&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L147">                                Collections.singletonList(&quot;No Employee Grade details found.&quot;)),</span>
+                        HttpStatus.OK);
+            }
+<span class="nc" id="L150">            return ResponseEntity.ok(</span>
+                    new ApiResponse&lt;&gt;(employees, true, &quot;EMP_GRADE_DETAILS_FETCHED&quot;, &quot;SUCCESS&quot;));
+<span class="nc" id="L152">        } catch (Exception e) {</span>
+<span class="nc" id="L153">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;EMP_GRADE_DETAILS_FETCH_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L155">                            Collections.singletonList(e.getMessage())),</span>
+                    HttpStatus.OK);
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

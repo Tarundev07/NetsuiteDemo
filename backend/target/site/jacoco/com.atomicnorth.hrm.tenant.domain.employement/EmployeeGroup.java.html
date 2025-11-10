@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmployeeGroup.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.domain.employement</a> &gt; <span class="el_source">EmployeeGroup.java</span></div><h1>EmployeeGroup.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.domain.employement;
+
+import com.atomicnorth.hrm.tenant.domain.AbstractAuditingEntity;
+import com.atomicnorth.hrm.util.Enum.Active;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+import java.io.Serializable;
+
+<span class="nc bnc" id="L19" title="All 38 branches missed.">@Data</span>
+<span class="nc" id="L20">@AllArgsConstructor</span>
+<span class="nc" id="L21">@NoArgsConstructor</span>
+@Entity
+@Table(name = &quot;ses_m25_employee_group&quot;)
+public class EmployeeGroup extends AbstractAuditingEntity&lt;Long&gt; implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = &quot;Id&quot;, nullable = false)
+<span class="nc" id="L31">    private Long id;</span>
+
+    @Column(name = &quot;GROUP_ID&quot;)
+<span class="nc" id="L34">    private Long groupId;</span>
+
+    @Column(name = &quot;EMP_ID&quot;)
+<span class="nc" id="L37">    private String empId;</span>
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = &quot;ISACTIVE&quot;, length = 1)
+<span class="nc" id="L41">    private Active isActive;</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FileStorageService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.util</a> &gt; <span class="el_source">FileStorageService.java</span></div><h1>FileStorageService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.util;
+
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+
+
+@Service
+public class FileStorageService {
+
+    private final Path rootLocation;
+
+<span class="nc" id="L24">    public FileStorageService(@Value(&quot;${file.upload-dir}&quot;) String uploadDir) throws IOException {</span>
+<span class="nc" id="L25">        this.rootLocation = Paths.get(uploadDir).toAbsolutePath().normalize();</span>
+<span class="nc" id="L26">        Files.createDirectories(rootLocation); // Ensure directory exists</span>
+<span class="nc" id="L27">    }</span>
+
+    public String storeFile(MultipartFile file, String subFolder) throws IOException {
+<span class="nc bnc" id="L30" title="All 2 branches missed.">        if (file.isEmpty()) {</span>
+<span class="nc" id="L31">            throw new IOException(&quot;Cannot store empty file.&quot;);</span>
+        }
+
+<span class="nc" id="L34">        Path folderPath = rootLocation.resolve(subFolder).normalize();</span>
+<span class="nc" id="L35">        Files.createDirectories(folderPath);</span>
+
+<span class="nc" id="L37">        String originalFilename = StringUtils.cleanPath(file.getOriginalFilename());</span>
+<span class="nc" id="L38">        String timestampedName = System.currentTimeMillis() + &quot;_&quot; + originalFilename;</span>
+<span class="nc" id="L39">        Path destinationFile = folderPath.resolve(timestampedName).normalize();</span>
+
+<span class="nc" id="L41">        Files.copy(file.getInputStream(), destinationFile, StandardCopyOption.REPLACE_EXISTING);</span>
+
+<span class="nc" id="L43">        return destinationFile.toString(); // Return absolute path</span>
+    }
+
+    public Resource loadFile(String filePath) throws MalformedURLException {
+<span class="nc" id="L47">        Path file = Paths.get(filePath).normalize();</span>
+<span class="nc" id="L48">        return new UrlResource(file.toUri());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

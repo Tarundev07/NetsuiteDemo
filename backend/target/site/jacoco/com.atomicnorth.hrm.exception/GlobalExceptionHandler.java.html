@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GlobalExceptionHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.exception</a> &gt; <span class="el_source">GlobalExceptionHandler.java</span></div><h1>GlobalExceptionHandler.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.exception;
+
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.TransactionSystemException;
+import org.springframework.validation.FieldError;
+import org.springframework.validation.ObjectError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+@RestControllerAdvice
+<span class="nc" id="L22">public class GlobalExceptionHandler {</span>
+<span class="nc" id="L23">    private final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);</span>
+
+    // Handle ResourceNotFoundException
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; handleResourceNotFoundException(ResourceNotFoundException ex) {
+<span class="nc" id="L28">        logger.error(&quot;Resource not found: {}&quot;, ex.getMessage());</span>
+<span class="nc" id="L29">        ApiResponse&lt;Object&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;NOT_FOUND&quot;, &quot;Error&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L30">        return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+    }
+
+    // Handle MethodArgumentNotValidException (Validation errors)
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, String&gt;&gt;&gt; handleValidationException(MethodArgumentNotValidException ex) {
+<span class="nc" id="L36">        Map&lt;String, String&gt; errors = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L37" title="All 2 branches missed.">        for (ObjectError error : ex.getBindingResult().getAllErrors()) {</span>
+<span class="nc" id="L38">            String fieldName = ((FieldError) error).getField();</span>
+<span class="nc" id="L39">            String message = error.getDefaultMessage();</span>
+<span class="nc" id="L40">            errors.put(fieldName, message);</span>
+<span class="nc" id="L41">        }</span>
+        //ApiResponse&lt;Map&lt;String, String&gt;&gt; response = new ApiResponse&lt;&gt;(errors, false, &quot;VALIDATION_ERROR&quot;, &quot;Warning&quot;);
+<span class="nc" id="L43">        List&lt;String&gt; errorMessages = new ArrayList&lt;&gt;(errors.values());</span>
+<span class="nc" id="L44">        ApiResponse&lt;Map&lt;String, String&gt;&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;VALIDATION_ERROR&quot;, &quot;Warning&quot;, errorMessages);</span>
+<span class="nc" id="L45">        return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+    }
+
+    // Handle BadApiRequestException
+    @ExceptionHandler(BadApiRequestException.class)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; handleBadApiRequestException(BadApiRequestException ex) {
+<span class="nc" id="L51">        logger.error(&quot;Bad API request: {}&quot;, ex.getMessage());</span>
+<span class="nc" id="L52">        ApiResponse&lt;Object&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;BAD_REQUEST&quot;, &quot;Error&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L53">        return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+    }
+
+    // Handle InvalidApiRequestException
+    @ExceptionHandler(InvalidApiRequestException.class)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; handleInvalidApiRequestException(InvalidApiRequestException ex) {
+<span class="nc" id="L59">        logger.error(&quot;Invalid API request: {}&quot;, ex.getMessage());</span>
+<span class="nc" id="L60">        ApiResponse&lt;Object&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;INVALID_REQUEST&quot;, &quot;Error&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L61">        return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+    }
+
+    // Handle HttpMessageNotReadableException
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
+<span class="nc" id="L67">        ApiResponse&lt;Object&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;INVALID_JSON&quot;, &quot;Error&quot;, Collections.singletonList(&quot;Invalid JSON format in the request body.&quot;));</span>
+<span class="nc" id="L68">        return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+    }
+
+    // Handle IllegalArgumentException
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; handleIllegalArgumentException(IllegalArgumentException ex) {
+<span class="nc" id="L74">        logger.error(&quot;Illegal argument: {}&quot;, ex.getMessage());</span>
+<span class="nc" id="L75">        ApiResponse&lt;Object&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;INVALID_ARGUMENT&quot;, &quot;Error&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L76">        return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+    }
+
+    // Handle DataNotFoundException
+    @ExceptionHandler(DataNotFoundException.class)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; handleDataNotFoundException(DataNotFoundException ex) {
+<span class="nc" id="L82">        logger.error(&quot;Data not found: {}&quot;, ex.getMessage());</span>
+<span class="nc" id="L83">        ApiResponse&lt;Object&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;DATA_NOT_FOUND&quot;, &quot;Error&quot;, Collections.singletonList(ex.getMessage()));</span>
+<span class="nc" id="L84">        return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);</span>
+    }
+
+    // Handle DataIntegrityViolationException (Database constraint violations)
+  /*  @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
+        logger.error(&quot;Database constraint violation: {}&quot;, ex.getMessage());
+        ApiResponse&lt;Object&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;DATA_INTEGRITY_VIOLATION&quot;, &quot;Error&quot;, Collections.singletonList(&quot;Database constraint violation: &quot; + ex.getMostSpecificCause().getMessage()));
+        return new ResponseEntity&lt;&gt;(response, HttpStatus.OK);
+    }*/
+
+    // Handle Generic Exceptions
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; handleGenericException(Exception ex) {
+<span class="nc" id="L98">        logger.error(&quot;An unexpected error occurred: {}&quot;, ex.getMessage());</span>
+<span class="nc bnc" id="L99" title="All 2 branches missed.">        if (ex.getMessage().contains(&quot;authentication is required&quot;)) {</span>
+<span class="nc" id="L100">            ApiResponse&lt;Object&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;TOKEN_EXPIRED&quot;, &quot;Error&quot;, Collections.singletonList(&quot;Token expired. Please login to continue.&quot;));</span>
+<span class="nc" id="L101">            return new ResponseEntity&lt;&gt;(response, HttpStatus.UNAUTHORIZED);</span>
+        } else {
+<span class="nc" id="L103">            ApiResponse&lt;Object&gt; response = new ApiResponse&lt;&gt;(null, false, &quot;INTERNAL_SERVER_ERROR&quot;, &quot;Error&quot;, Collections.singletonList(&quot;Error occurred while processing the request.&quot;));</span>
+<span class="nc" id="L104">            return new ResponseEntity&lt;&gt;(response, HttpStatus.INTERNAL_SERVER_ERROR);</span>
+        }
+    }
+
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity&lt;ApiResponse&lt;String&gt;&gt; handleMaxSizeException(MaxUploadSizeExceededException ex) {
+<span class="nc" id="L111">        return ResponseEntity.ok(</span>
+                new ApiResponse&lt;&gt;(null, false, &quot;FILE-SIZE-EXCEEDED&quot;, &quot;Error&quot;,
+<span class="nc" id="L113">                        List.of(&quot;File size exceeds the maximum allowed limit of 2MB. Please upload a smaller file.&quot;)));</span>
+    }
+    @ExceptionHandler({
+            DataIntegrityViolationException.class,
+            org.hibernate.exception.DataException.class,
+            TransactionSystemException.class
+    })
+    public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; manageDatabaseExceptions(Exception ex) {
+<span class="nc" id="L121">        Throwable rootCause = getRootCause(ex);</span>
+<span class="nc bnc" id="L122" title="All 2 branches missed.">        String msg = rootCause != null ? rootCause.getMessage() : ex.getMessage();</span>
+
+        ApiResponse&lt;Void&gt; response;
+<span class="nc bnc" id="L125" title="All 6 branches missed.">        if (msg != null &amp;&amp; (msg.contains(&quot;Data too long&quot;) || msg.contains(&quot;Data truncation&quot;))) {</span>
+<span class="nc" id="L126">            String column = extractColumnName(msg);</span>
+<span class="nc" id="L127">            response = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;DB-DATA-LENGTH-ERROR&quot;,
+                    &quot;Error&quot;,
+<span class="nc bnc" id="L132" title="All 2 branches missed.">                    List.of(column != null</span>
+<span class="nc" id="L133">                            ? &quot;The value for '&quot; + column + &quot;' exceeds the allowed length.&quot;</span>
+<span class="nc" id="L134">                            : &quot;One of the fields exceeds the allowed length.&quot;)</span>
+            );
+<span class="nc" id="L136">            return ResponseEntity.badRequest().body(response);</span>
+        }
+<span class="nc bnc" id="L138" title="All 4 branches missed.">        if (msg != null &amp;&amp; msg.toLowerCase().contains(&quot;duplicate entry&quot;)) {</span>
+<span class="nc" id="L139">            String column = extractDuplicateColumn(msg);</span>
+<span class="nc" id="L140">            response = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;DB-DUPLICATE-ERROR&quot;,
+                    &quot;Error&quot;,
+<span class="nc bnc" id="L145" title="All 2 branches missed.">                    List.of(column != null</span>
+<span class="nc" id="L146">                            ? &quot;Duplicate value not allowed for column '&quot; + column + &quot;'.&quot;</span>
+<span class="nc" id="L147">                            : &quot;Duplicate value detected in database.&quot;)</span>
+            );
+<span class="nc" id="L149">            return ResponseEntity.badRequest().body(response);</span>
+        }
+<span class="nc bnc" id="L151" title="All 4 branches missed.">        if (msg != null &amp;&amp; msg.toLowerCase().contains(&quot;cannot be null&quot;)) {</span>
+<span class="nc" id="L152">            String column = extractColumnName(msg);</span>
+<span class="nc" id="L153">            response = new ApiResponse&lt;&gt;(</span>
+                    null,
+                    false,
+                    &quot;DB-NOTNULL-ERROR&quot;,
+                    &quot;Error&quot;,
+<span class="nc bnc" id="L158" title="All 2 branches missed.">                    List.of(column != null</span>
+<span class="nc" id="L159">                            ? &quot;Column '&quot; + column + &quot;' cannot be null.&quot;</span>
+<span class="nc" id="L160">                            : &quot;A required field is missing.&quot;)</span>
+            );
+<span class="nc" id="L162">            return ResponseEntity.badRequest().body(response);</span>
+        }
+<span class="nc" id="L164">        response = new ApiResponse&lt;&gt;(</span>
+                null,
+                false,
+                &quot;DB-ERROR&quot;,
+                &quot;Error&quot;,
+<span class="nc" id="L169">                List.of(&quot;A database error occurred: &quot; + msg)</span>
+        );
+<span class="nc" id="L171">        return ResponseEntity.internalServerError().body(response);</span>
+    }
+    private Throwable getRootCause(Throwable throwable) {
+<span class="nc" id="L174">        Throwable cause = throwable;</span>
+<span class="nc bnc" id="L175" title="All 4 branches missed.">        while (cause.getCause() != null &amp;&amp; cause.getCause() != cause) {</span>
+<span class="nc" id="L176">            cause = cause.getCause();</span>
+        }
+<span class="nc" id="L178">        return cause;</span>
+    }
+
+    private String extractColumnName(String msg) {
+<span class="nc" id="L182">        Matcher matcher = Pattern.compile(&quot;for column '(.*?)'&quot;).matcher(msg);</span>
+<span class="nc bnc" id="L183" title="All 2 branches missed.">        return matcher.find() ? matcher.group(1) : null;</span>
+    }
+
+    private String extractDuplicateColumn(String msg) {
+<span class="nc" id="L187">        Matcher matcher = Pattern.compile(&quot;for key '(.*?)'&quot;).matcher(msg);</span>
+<span class="nc bnc" id="L188" title="All 2 branches missed.">        return matcher.find() ? matcher.group(1) : null;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

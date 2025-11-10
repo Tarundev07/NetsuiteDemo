@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>InterviewService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service</a> &gt; <span class="el_source">InterviewService.java</span></div><h1>InterviewService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service;
+
+import com.atomicnorth.hrm.tenant.domain.Interview;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.repository.InterviewRepository;
+import com.atomicnorth.hrm.tenant.repository.InterviewRoundRepository;
+import com.atomicnorth.hrm.tenant.repository.employement.employee_job_applicant.JobApplicantRepository;
+import com.atomicnorth.hrm.tenant.service.dto.InterviewDTO;
+import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.persistence.EntityNotFoundException;
+import java.io.IOException;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+<span class="fc" id="L26">public class InterviewService {</span>
+
+<span class="fc" id="L28">    private final Logger log = LoggerFactory.getLogger(InterviewService.class);</span>
+    @Autowired
+    private InterviewRepository interviewRepository;
+    @Autowired
+    private ModelMapper modelMapper;
+    @Autowired
+    private InterviewRoundRepository interviewRoundRepository;
+    @Autowired
+    private EmployeeRepository employeeRepository;
+    @Autowired
+    private JobApplicantRepository employeeJobApplicantRepository;
+
+    @Transactional
+    public InterviewDTO saveInterview(InterviewDTO interviewDTO, MultipartFile resumeFile) throws IOException {
+<span class="fc" id="L42">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="fc" id="L43">        Interview interview = new Interview();</span>
+<span class="fc" id="L44">        interview.setInterviewRoundId(interviewDTO.getInterviewRoundId());</span>
+<span class="fc" id="L45">        interview.setInterviewerId(interviewDTO.getInterviewerId());</span>
+<span class="fc" id="L46">        interview.setStatus(interviewDTO.getStatus());</span>
+<span class="fc" id="L47">        interview.setJobApplicantId(interviewDTO.getJobApplicantId());</span>
+<span class="fc" id="L48">        interview.setInterviewScheduledDate(interviewDTO.getInterviewScheduledDate());</span>
+<span class="fc" id="L49">        interview.setFromTime(interviewDTO.getFromTime());</span>
+<span class="fc" id="L50">        interview.setToTime(interviewDTO.getToTime());</span>
+<span class="fc" id="L51">        interview.setRating(interviewDTO.getRating());</span>
+<span class="fc" id="L52">        interview.setSummary(interviewDTO.getSummary());</span>
+<span class="fc" id="L53">        interview.setCreatedDate(LocalDate.now());</span>
+<span class="fc" id="L54">        interview.setCreatedBy(tokenHolder.getUsername().toString());</span>
+<span class="fc" id="L55">        interview = interviewRepository.save(interview);</span>
+<span class="pc bpc" id="L56" title="1 of 4 branches missed.">        if (resumeFile != null &amp;&amp; !resumeFile.isEmpty()) {</span>
+<span class="fc" id="L57">            interview.setResumeLink(&quot;/api/interview/&quot; + interview.getInterviewId() + &quot;/downloadResume&quot;);</span>
+<span class="fc" id="L58">            interviewRepository.saveResume(interview.getInterviewId(), interviewDTO.getJobApplicantId(), resumeFile.getBytes());</span>
+        } else {
+<span class="fc" id="L60">            interview.setResumeLink(null);</span>
+        }
+<span class="fc" id="L62">        interview = interviewRepository.save(interview);</span>
+<span class="fc" id="L63">        return mapToDTO(interview);</span>
+    }
+
+    @Transactional
+    public InterviewDTO updateInterview(Long interviewId, InterviewDTO dto, MultipartFile resumeFile) throws IOException {
+<span class="fc" id="L68">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="fc" id="L69">        Optional&lt;Interview&gt; existingInterviewOpt = interviewRepository.findById(interviewId);</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">        if (existingInterviewOpt.isEmpty()) {</span>
+<span class="fc" id="L71">            log.error(&quot;Interview with ID {} not found for update&quot;, interviewId);</span>
+<span class="fc" id="L72">            throw new EntityNotFoundException(&quot;Interview not found for ID: &quot; + interviewId);</span>
+        }
+<span class="fc" id="L74">        Interview existingInterview = existingInterviewOpt.get();</span>
+<span class="fc" id="L75">        dto.setCreatedDate(existingInterview.getCreatedDate());</span>
+<span class="fc" id="L76">        dto.setCreatedBy(existingInterview.getCreatedBy());</span>
+<span class="pc bpc" id="L77" title="1 of 2 branches missed.">        List&lt;Long&gt; newInterviewerIds = dto.getInterviewerId() != null ? new ArrayList&lt;&gt;(dto.getInterviewerId()) : new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L78">        modelMapper.map(dto, existingInterview);</span>
+<span class="fc" id="L79">        existingInterview.setInterviewerId(newInterviewerIds);</span>
+<span class="fc" id="L80">        existingInterview.setUpdatedDate(LocalDate.now());</span>
+<span class="fc" id="L81">        existingInterview.setUpdatedBy(tokenHolder.getUsername().toString());</span>
+        // Handle resume file update
+<span class="pc bpc" id="L83" title="2 of 4 branches missed.">        if (resumeFile != null &amp;&amp; !resumeFile.isEmpty()) {</span>
+<span class="fc" id="L84">            existingInterview.setResumeLink(&quot;/api/interview/&quot; + existingInterview.getInterviewId() + &quot;/downloadResume&quot;);</span>
+<span class="fc" id="L85">            interviewRepository.saveResume(existingInterview.getInterviewId(), existingInterview.getJobApplicantId(), resumeFile.getBytes());</span>
+        } else {
+<span class="nc" id="L87">            existingInterview.setResumeLink(null);</span>
+        }
+<span class="fc" id="L89">        existingInterview = interviewRepository.save(existingInterview);</span>
+<span class="fc" id="L90">        log.info(&quot;Interview with ID {} updated successfully&quot;, existingInterview.getInterviewId());</span>
+<span class="fc" id="L91">        return mapToDTO(existingInterview);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;InterviewDTO&gt; getAllInterviews() {
+<span class="fc" id="L96">        return interviewRepository.findAll().stream()</span>
+<span class="fc" id="L97">                .map(this::mapToDTO)</span>
+<span class="fc" id="L98">                .collect(Collectors.toList());</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Optional&lt;InterviewDTO&gt; getInterviewById(Long id) {
+<span class="fc" id="L103">        return interviewRepository.findById(id)</span>
+<span class="fc" id="L104">                .map(this::mapToDTO);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;InterviewDTO&gt; getInterviewByApplicantId(Integer id) {
+<span class="nc" id="L109">        return interviewRepository.findByJobApplicantId(id)</span>
+<span class="nc" id="L110">                .stream()</span>
+<span class="nc" id="L111">                .map(this::mapToDTO)</span>
+<span class="nc" id="L112">                .collect(Collectors.toList());</span>
+    }
+
+    public byte[] downloadResume(Long interviewId) {
+<span class="fc" id="L116">        return interviewRepository.findResumeByInterviewId(interviewId);</span>
+    }
+
+    private InterviewDTO mapToDTO(Interview interview) {
+<span class="fc" id="L120">        InterviewDTO dto = new InterviewDTO();</span>
+<span class="fc" id="L121">        dto.setInterviewId(interview.getInterviewId());</span>
+<span class="fc" id="L122">        dto.setInterviewRoundId(interview.getInterviewRoundId());</span>
+<span class="fc" id="L123">        dto.setInterviewerId(interview.getInterviewerId());</span>
+<span class="fc" id="L124">        dto.setStatus(interview.getStatus());</span>
+<span class="fc" id="L125">        dto.setJobApplicantId(interview.getJobApplicantId());</span>
+<span class="fc" id="L126">        dto.setInterviewScheduledDate(interview.getInterviewScheduledDate());</span>
+<span class="fc" id="L127">        dto.setFromTime(interview.getFromTime());</span>
+<span class="fc" id="L128">        dto.setToTime(interview.getToTime());</span>
+<span class="fc" id="L129">        dto.setRating(interview.getRating());</span>
+<span class="fc" id="L130">        dto.setSummary(interview.getSummary());</span>
+<span class="fc" id="L131">        dto.setResumeLink(interview.getResumeLink());</span>
+<span class="fc" id="L132">        dto.setCreatedDate(interview.getCreatedDate());</span>
+<span class="fc" id="L133">        dto.setCreatedBy(interview.getCreatedBy());</span>
+<span class="fc" id="L134">        dto.setUpdatedDate(interview.getUpdatedDate());</span>
+<span class="fc" id="L135">        dto.setUpdatedBy(interview.getUpdatedBy());</span>
+<span class="pc bpc" id="L136" title="1 of 2 branches missed.">        if (interview.getJobApplicantId() != null) {</span>
+<span class="fc" id="L137">            dto.setJobApplicantName(</span>
+<span class="fc" id="L138">                    employeeJobApplicantRepository.findJobApplicantNameById(interview.getJobApplicantId())</span>
+<span class="fc" id="L139">                            .orElseGet(() -&gt; {</span>
+<span class="fc" id="L140">                                log.warn(&quot;Job Applicant name not found for ID: {}&quot;, interview.getJobApplicantId());</span>
+<span class="fc" id="L141">                                return &quot;Unknown Applicant&quot;;</span>
+                            }));
+        }
+<span class="pc bpc" id="L144" title="1 of 2 branches missed.">        if (interview.getInterviewRoundId() != null) {</span>
+<span class="fc" id="L145">            interviewRoundRepository.findById(interview.getInterviewRoundId()).ifPresent(interviewRound -&gt; {</span>
+<span class="nc" id="L146">                dto.setInterviewRoundName(</span>
+<span class="nc" id="L147">                        Optional.ofNullable(interviewRound.getInterviewRoundName())</span>
+<span class="nc" id="L148">                                .orElseGet(() -&gt; {</span>
+<span class="nc" id="L149">                                    log.warn(&quot;Interview Round name not found for ID: {}&quot;, interview.getInterviewRoundId());</span>
+<span class="nc" id="L150">                                    return &quot;Unknown Interview Round&quot;;</span>
+                                }));
+<span class="nc" id="L152">                List&lt;Long&gt; interviewerId = new ArrayList&lt;&gt;(interviewRound.getInterviewersId());</span>
+<span class="nc" id="L153">                List&lt;Long&gt; ids = interview.getInterviewerId();</span>
+<span class="nc bnc" id="L154" title="All 4 branches missed.">                if (ids != null &amp;&amp; !ids.isEmpty()) {</span>
+<span class="nc bnc" id="L155" title="All 2 branches missed.">                    for (Long id : ids) {</span>
+<span class="nc bnc" id="L156" title="All 2 branches missed.">                        if (!interviewerId.contains(id)) {</span>
+<span class="nc" id="L157">                            interviewerId.add(id);</span>
+                        }
+<span class="nc" id="L159">                    }</span>
+                }
+
+<span class="nc bnc" id="L162" title="All 4 branches missed.">                if (interviewerId != null &amp;&amp; !interviewerId.isEmpty()) {</span>
+<span class="nc" id="L163">                    dto.setInterviewersName(</span>
+<span class="nc" id="L164">                            interviewerId.stream()</span>
+<span class="nc" id="L165">                                    .map(id -&gt; employeeRepository.findEmployeeFullNameById(id).orElse(&quot;Unknown Employee&quot;))</span>
+<span class="nc" id="L166">                                    .collect(Collectors.toList()));</span>
+                }
+<span class="nc" id="L168">            });</span>
+        }
+<span class="fc" id="L170">        return dto;</span>
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; interviewDropdownList() {
+<span class="nc" id="L174">        return interviewRepository.findAll().stream()</span>
+<span class="nc" id="L175">                .filter(interview -&gt; &quot;OPEN&quot;.equals(interview.getStatus()))</span>
+<span class="nc" id="L176">                .map(interview -&gt; {</span>
+<span class="nc" id="L177">                    Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L178">                    result.put(&quot;interviewId&quot;, interview.getInterviewId());</span>
+<span class="nc" id="L179">                    result.put(&quot;interviewRoundId&quot;, interview.getInterviewRoundId());</span>
+<span class="nc" id="L180">                    return result;</span>
+<span class="nc" id="L181">                }).collect(Collectors.toList());</span>
+    }
+
+    @Transactional
+    public void updateInterviewStatus(Integer jobApplicantId) {
+<span class="nc" id="L186">        List&lt;Interview&gt; interviews = interviewRepository.findByJobApplicantId(jobApplicantId);</span>
+<span class="nc" id="L187">        log.info(&quot;Job ApplicsntId {} :&quot;, jobApplicantId);</span>
+<span class="nc bnc" id="L188" title="All 2 branches missed.">        if (!interviews.isEmpty()) {</span>
+<span class="nc bnc" id="L189" title="All 2 branches missed.">            for (Interview a : interviews) {</span>
+<span class="nc" id="L190">                a.setStatus(&quot;CLOSED&quot;);</span>
+<span class="nc" id="L191">                log.info(&quot;Job Interview {} :&quot;, a);</span>
+<span class="nc" id="L192">            }</span>
+<span class="nc" id="L193">            interviewRepository.saveAll(interviews);</span>
+        }
+<span class="nc" id="L195">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

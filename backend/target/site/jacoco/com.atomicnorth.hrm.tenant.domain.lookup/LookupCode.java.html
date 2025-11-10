@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LookupCode.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.domain.lookup</a> &gt; <span class="el_source">LookupCode.java</span></div><h1>LookupCode.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.domain.lookup;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
+
+import javax.persistence.*;
+import java.util.Date;
+
+@Entity
+<span class="nc bnc" id="L10" title="All 310 branches missed.">@Data</span>
+@Table(name = &quot;ses_m00_lookup_codes&quot;)
+public class LookupCode {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = &quot;LOOKUP_CODE_ID&quot;)
+<span class="nc" id="L17">    private Integer lookupCodeId;</span>
+
+    @Column(name = &quot;LOOKUP_TYPE&quot;)
+<span class="nc" id="L20">    private String lookupType;</span>
+
+    @Column(name = &quot;LOOKUP_CODE&quot;)
+<span class="nc" id="L23">    private String lookupCode;</span>
+    @Column(name = &quot;MEANING&quot;)
+<span class="nc" id="L25">    private String meaning;</span>
+    @Column(name = &quot;DESCRIPTION&quot;)
+<span class="nc" id="L27">    private String description;</span>
+
+    @Column(name = &quot;MEANING_SHORTCODE&quot;)
+<span class="nc" id="L30">    private String meaningShortCode;</span>
+
+    @Column(name = &quot;DESCRIPTION_SHORTCODE&quot;)
+<span class="nc" id="L33">    private String descrtiptionShortCode;</span>
+
+    @Column(name = &quot;LOOKUP_ID&quot;)
+<span class="nc" id="L36">    private Integer lookupId;</span>
+
+    @Column(name = &quot;APP_MODULE&quot;)
+<span class="nc" id="L39">    private Long appModule;</span>
+
+    @Column(name = &quot;MODULE_FUNCTION&quot;)
+<span class="nc" id="L42">    private Long moduleFunction;</span>
+    @Column(name = &quot;ACTIVE_FLAG&quot;)
+<span class="nc" id="L44">    private String activeFlag;</span>
+    @Column(name = &quot;ACTIVE_START_DATE&quot;)
+<span class="nc" id="L46">    private Date activeStartDate;</span>
+    @Column(name = &quot;ACTIVE_END_DATE&quot;)
+<span class="nc" id="L48">    private Date activeEndDate;</span>
+    @Column(name = &quot;DISPLAY_ORDER&quot;)
+<span class="nc" id="L50">    private Integer displayOrder;</span>
+
+    @Column(name = &quot;ATTRIBUTE1&quot;)
+<span class="nc" id="L53">    private String attribute1;</span>
+    @Column(name = &quot;ATTRIBUTE2&quot;)
+<span class="nc" id="L55">    private String attribute2;</span>
+    @Column(name = &quot;ATTRIBUTE3&quot;)
+<span class="nc" id="L57">    private String attribute3;</span>
+    @Column(name = &quot;ATTRIBUTE4&quot;)
+<span class="nc" id="L59">    private String attribute4;</span>
+    @Column(name = &quot;ATTRIBUTE5&quot;)
+<span class="nc" id="L61">    private String attribute5;</span>
+
+    @Column(name = &quot;ATTRIBUTE6&quot;)
+<span class="nc" id="L64">    private String attribute6;</span>
+
+    @Column(name = &quot;ATTRIBUTE7&quot;)
+<span class="nc" id="L67">    private String attribute7;</span>
+
+    @Column(name = &quot;ATTRIBUTE8&quot;)
+<span class="nc" id="L70">    private String attribute8;</span>
+
+    @Column(name = &quot;ATTRIBUTE9&quot;)
+<span class="nc" id="L73">    private String attribute9;</span>
+    @Column(name = &quot;ATTRIBUTE10&quot;)
+<span class="nc" id="L75">    private String attribute10;</span>
+    @Column(name = &quot;ATTRIBUTE11&quot;)
+<span class="nc" id="L77">    private String attribute11;</span>
+    @Column(name = &quot;ATTRIBUTE12&quot;)
+<span class="nc" id="L79">    private String attribute12;</span>
+    @Column(name = &quot;ATTRIBUTE13&quot;)
+<span class="nc" id="L81">    private String attribute13;</span>
+    @Column(name = &quot;ATTRIBUTE14&quot;)
+<span class="nc" id="L83">    private String attribute14;</span>
+    @Column(name = &quot;ATTRIBUTE15&quot;)
+<span class="nc" id="L85">    private String attribute15;</span>
+    @Column(name = &quot;ENTITY_ID&quot;)
+<span class="nc" id="L87">    private Integer entityId;</span>
+    @Column(name = &quot;CLIENT_ID&quot;)
+<span class="nc" id="L89">    private Integer clientId;</span>
+    @Column(name = &quot;LAST_UPDATED_BY&quot;)
+<span class="nc" id="L91">    private String LastUpdatedBy;</span>
+    @Column(name = &quot;LAST_UPDATED_DATE&quot;)
+<span class="nc" id="L93">    private Date lastUpdateDate;</span>
+    @Column(name = &quot;CREATED_BY&quot;)
+<span class="nc" id="L95">    private String createdBy;</span>
+    @Column(name = &quot;CREATION_DATE&quot;)
+<span class="nc" id="L97">    private Date creationDate;</span>
+    @Column(name = &quot;LAST_UPDATE_SESSION_ID&quot;)
+<span class="nc" id="L99">    private Integer lastUpdateSessionId;</span>
+
+    @Transient
+    @JsonProperty
+<span class="nc" id="L103">    private String functionName;</span>
+
+    @Transient
+    @JsonProperty
+<span class="nc" id="L107">    private String moduleName;</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

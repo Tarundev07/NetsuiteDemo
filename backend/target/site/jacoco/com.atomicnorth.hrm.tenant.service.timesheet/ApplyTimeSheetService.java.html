@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ApplyTimeSheetService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.timesheet</a> &gt; <span class="el_source">ApplyTimeSheetService.java</span></div><h1>ApplyTimeSheetService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.timesheet;
+
+import com.atomicnorth.hrm.tenant.domain.project.Project;
+import com.atomicnorth.hrm.tenant.domain.project.ProjectAllocation;
+import com.atomicnorth.hrm.tenant.domain.project.ProjectTaskAllocation;
+import com.atomicnorth.hrm.tenant.domain.project.ProjectTemplateTask;
+import com.atomicnorth.hrm.tenant.domain.project.TaskStory;
+import com.atomicnorth.hrm.tenant.domain.timeSheet.UserTaskMapping;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.project.ProjectAllocationRepository;
+import com.atomicnorth.hrm.tenant.repository.project.ProjectRepository;
+import com.atomicnorth.hrm.tenant.repository.project.ProjectTaskAllocationRepository;
+import com.atomicnorth.hrm.tenant.repository.project.ProjectTemplateRepository;
+import com.atomicnorth.hrm.tenant.repository.project.TaskStoryRepository;
+import com.atomicnorth.hrm.tenant.repository.timeSheet.UserTaskMappingRepository;
+import com.atomicnorth.hrm.tenant.service.dto.project.ProjectListDTO;
+import com.atomicnorth.hrm.tenant.service.dto.project.TaskStoryDTO;
+import com.atomicnorth.hrm.tenant.service.dto.timeSheetDTO.TimesheetDTO;
+import com.atomicnorth.hrm.tenant.service.leave.ApplyLeaveService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import javax.transaction.Transactional;
+import java.sql.SQLException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L36">public class ApplyTimeSheetService {</span>
+<span class="nc" id="L37">    private final Logger log = LoggerFactory.getLogger(ApplyTimeSheetService.class);</span>
+    @Autowired
+    private ProjectRepository projectRepository;
+    @Autowired
+    private UserTaskMappingRepository userTaskMappingRepository;
+    @Autowired
+    private ProjectAllocationRepository projectAllocationRepository;
+    @Autowired
+    private TaskStoryRepository taskStoryRepository;
+    @Autowired
+    private ProjectTemplateRepository projectTemplateRepository;
+    @Autowired
+    private ProjectTaskAllocationRepository projectTaskAllocationRepository;
+    @Autowired
+    private ApplyLeaveService applyLeaveService;
+
+    public List&lt;ProjectListDTO&gt; fetchLoggedInUserProjectList(Integer employeeId) {
+<span class="nc" id="L54">        UserLoginDetail user = SessionHolder.getUserLoginDetail();</span>
+<span class="nc bnc" id="L55" title="All 2 branches missed.">        if (employeeId == null) employeeId = user.getEmpId();</span>
+<span class="nc" id="L56">        List&lt;ProjectAllocation&gt; projectAllocation = projectAllocationRepository.findDistinctByEmployeeId(employeeId);</span>
+<span class="nc" id="L57">        List&lt;Integer&gt; projectRfNums = projectAllocation.stream().map(ProjectAllocation::getProjectRfNum).collect(Collectors.toList());</span>
+<span class="nc" id="L58">        List&lt;Project&gt; projects = projectRepository.findByProjectRfNumIn(projectRfNums);</span>
+<span class="nc" id="L59">        return projects.stream()</span>
+<span class="nc" id="L60">                .map(project -&gt; {</span>
+<span class="nc" id="L61">                    ProjectListDTO dto = new ProjectListDTO();</span>
+<span class="nc" id="L62">                    dto.setProjectName(project.getProjectName());</span>
+<span class="nc" id="L63">                    dto.setProjectId(project.getProjectId());</span>
+<span class="nc" id="L64">                    dto.setProjectRfNum(project.getProjectRfNum());</span>
+<span class="nc" id="L65">                    return dto;</span>
+                })
+<span class="nc" id="L67">                .collect(Collectors.toList());</span>
+    }
+
+    @Transactional
+    public List&lt;TaskStoryDTO&gt; getTaskListByProjectRfNum(Integer projectRfNum) throws SQLException {
+<span class="nc" id="L72">        List&lt;Integer&gt; taskIds = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L73">        Project project = projectRepository.findById(projectRfNum).orElse(null);</span>
+<span class="nc bnc" id="L74" title="All 2 branches missed.">        if (project != null) {</span>
+<span class="nc bnc" id="L75" title="All 2 branches missed.">            if (project.getProjectTemplateId() != null) {</span>
+<span class="nc" id="L76">                projectTemplateRepository.findById(project.getProjectTemplateId()).ifPresent(projectTemplate -&gt; taskIds.addAll(projectTemplate.getProjectTemplateTasks().stream().filter(x -&gt; &quot;Y&quot;.equals(x.getIsActive())).map(ProjectTemplateTask::getTaskId).collect(Collectors.toList())));</span>
+            }
+        }
+<span class="nc" id="L79">        List&lt;ProjectTaskAllocation&gt; allocations = projectTaskAllocationRepository.findByProjectRfNum(projectRfNum);</span>
+<span class="nc" id="L80">        taskIds.addAll(allocations.stream().map(ProjectTaskAllocation::getTaskRfNum).collect(Collectors.toList()));</span>
+
+<span class="nc" id="L82">        List&lt;TaskStory&gt; taskStories = taskStoryRepository.findByTaskRfNumIn(taskIds);</span>
+<span class="nc" id="L83">        return taskStories.stream().map(str -&gt; new TaskStoryDTO(str.getTaskRfNum(), str.getTaskid(), str.getTaskname(), str.getBillableflag())).collect(Collectors.toList());</span>
+    }
+
+    @Transactional
+    public Map&lt;String, Object&gt; fetchUserTimeSheetData(String firstDate, String secondDate, String thirdDate,
+                                                            String fourthDate, String fifthDate, String sixthDate,
+                                                            String lastDate, String timesheetUsername) {
+<span class="nc" id="L90">        Map&lt;String, Object&gt; finalResponse = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L91">        List&lt;Map&lt;String, Object&gt;&gt; timesheetDetails = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L92">        List&lt;Map&lt;String, Object&gt;&gt; leaveDetails = new ArrayList&lt;&gt;();</span>
+        try {
+<span class="nc" id="L94">            SimpleDateFormat formats = new SimpleDateFormat(&quot;yyyy-MM-dd&quot;);</span>
+<span class="nc" id="L95">            Date first = formats.parse(firstDate);</span>
+<span class="nc" id="L96">            Date last = formats.parse(lastDate);</span>
+<span class="nc" id="L97">            Integer employeeId = SessionHolder.getUserLoginDetail().getEmpId();</span>
+<span class="nc" id="L98">            List&lt;UserTaskMapping&gt; taskMappings  = userTaskMappingRepository.findDistinctTaskIdByUsernameAndTimesheetDateBetween(timesheetUsername, first, last);</span>
+<span class="nc" id="L99">            List&lt;String&gt; taskIdList = taskMappings.stream().map(UserTaskMapping::getTaskId).distinct().collect(Collectors.toList());</span>
+<span class="nc bnc" id="L100" title="All 2 branches missed.">            for (String taskId : taskIdList) {</span>
+<span class="nc" id="L101">                List&lt;UserTaskMapping&gt; dataList = userTaskMappingRepository.findByUsernameAndTaskIdAndTimesheetDateBetweenAndTimesheetStatusNotOrderByTimesheetDateAsc(timesheetUsername, taskId, first, last, &quot;deleted&quot;);</span>
+<span class="nc bnc" id="L102" title="All 2 branches missed.">                for (UserTaskMapping obj : dataList) {</span>
+<span class="nc" id="L103">                    Map&lt;String, Object&gt; record = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L104" title="All 2 branches missed.">                    String dateString = obj.getTimesheetDate() != null ? obj.getTimesheetDate().toString() : &quot;&quot;;</span>
+<span class="nc" id="L105">                    record.put(&quot;timesheetId&quot;, obj.getTimesheetId());</span>
+<span class="nc" id="L106">                    record.put(&quot;projectId&quot;, obj.getProjectId());</span>
+<span class="nc" id="L107">                    record.put(&quot;taskId&quot;, obj.getTaskId());</span>
+<span class="nc" id="L108">                    record.put(&quot;taskName&quot;, obj.getTask().getTaskname());</span>
+<span class="nc" id="L109">                    record.put(&quot;timesheetDate&quot;, dateString);</span>
+<span class="nc" id="L110">                    record.put(&quot;effortInHours&quot;, obj.getEffortInHours());</span>
+<span class="nc bnc" id="L111" title="All 4 branches missed.">                    record.put(&quot;submitStatus&quot;, obj.getSubmitStatus() != null &amp;&amp; obj.getSubmitStatus().equalsIgnoreCase(&quot;true&quot;));</span>
+<span class="nc" id="L112">                    record.put(&quot;remark&quot;, obj.getRemark());</span>
+<span class="nc" id="L113">                    record.put(&quot;approverRemark&quot;, obj.getApproverRemark());</span>
+<span class="nc" id="L114">                    record.put(&quot;timesheetStatus&quot;, obj.getTimesheetStatus());</span>
+<span class="nc" id="L115">                    record.put(&quot;projectName&quot;, obj.getProject().getProjectName());</span>
+
+<span class="nc" id="L117">                    String[] dateArray = {firstDate, secondDate, thirdDate, fourthDate, fifthDate, sixthDate, lastDate};</span>
+<span class="nc" id="L118">                    Map&lt;String, String&gt; dateMap = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L119" title="All 2 branches missed.">                    for (int i = 0; i &lt; dateArray.length; i++) {</span>
+<span class="nc" id="L120">                        dateMap.put(dateArray[i], String.valueOf(i + 1));</span>
+                    }
+
+<span class="nc bnc" id="L123" title="All 2 branches missed.">                    if (dateMap.containsKey(dateString)) {</span>
+<span class="nc" id="L124">                        String dayKey = &quot;day&quot; + dateMap.get(dateString);</span>
+<span class="nc" id="L125">                        record.put(dayKey, dateString);</span>
+<span class="nc" id="L126">                        record.put(&quot;effortInHours&quot; + dayKey, obj.getEffortInHours());</span>
+<span class="nc" id="L127">                        record.put(dayKey + &quot;Comment&quot;, obj.getRemark());</span>
+<span class="nc" id="L128">                        record.put(&quot;tmSheetStatus&quot; + dayKey, obj.getTimesheetStatus());</span>
+                    }
+<span class="nc" id="L130">                    timesheetDetails.add(record);</span>
+<span class="nc" id="L131">                }</span>
+<span class="nc" id="L132">            }</span>
+
+<span class="nc" id="L134">            List&lt;String&gt; allDates = Arrays.asList(firstDate, secondDate, thirdDate, fourthDate, fifthDate, sixthDate, lastDate);</span>
+<span class="nc bnc" id="L135" title="All 2 branches missed.">            for (String dateStr : allDates) {</span>
+<span class="nc" id="L136">                LocalDate currentDate = LocalDate.parse(dateStr);</span>
+
+<span class="nc" id="L138">                Map&lt;LocalDate, Map&lt;String, String&gt;&gt; leaveMap = applyLeaveService.leaveAppliedOnDate(employeeId, currentDate);</span>
+<span class="nc bnc" id="L139" title="All 2 branches missed.">                for (Map.Entry&lt;LocalDate, Map&lt;String, String&gt;&gt; entry : leaveMap.entrySet()) {</span>
+<span class="nc" id="L140">                    Map&lt;String, Object&gt; leaveRecord = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L141">                    leaveRecord.put(&quot;date&quot;, entry.getKey().toString());</span>
+<span class="nc" id="L142">                    leaveRecord.put(&quot;type&quot;, entry.getValue().get(&quot;type&quot;));</span>
+<span class="nc" id="L143">                    leaveRecord.put(&quot;status&quot;, entry.getValue().get(&quot;status&quot;));</span>
+<span class="nc" id="L144">                    leaveDetails.add(leaveRecord);</span>
+<span class="nc" id="L145">                }</span>
+<span class="nc" id="L146">            }</span>
+<span class="nc" id="L147">            finalResponse.put(&quot;timesheetDetails&quot;, timesheetDetails);</span>
+<span class="nc" id="L148">            finalResponse.put(&quot;leaveDetails&quot;, leaveDetails);</span>
+<span class="nc" id="L149">        } catch (Exception e) {</span>
+<span class="nc" id="L150">            log.error(&quot;Error fetching user timesheet data for user: {}&quot;, timesheetUsername, e);</span>
+<span class="nc" id="L151">        }</span>
+<span class="nc" id="L152">        return finalResponse;</span>
+    }
+
+    @Transactional
+    public List&lt;TimesheetDTO&gt; applyTimesheet(List&lt;TimesheetDTO&gt; timesheetDTOs) throws ParseException {
+<span class="nc" id="L157">        UserLoginDetail token = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L158">        SimpleDateFormat formats = new SimpleDateFormat(&quot;yyyy-MM-dd&quot;);</span>
+<span class="nc" id="L159">        List&lt;TimesheetDTO&gt; resultDTOs = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L161" title="All 2 branches missed.">        for (TimesheetDTO day : timesheetDTOs) {</span>
+<span class="nc" id="L162">            Date parsedDate = formats.parse(day.getTimesheetDate());</span>
+<span class="nc" id="L163">            java.sql.Date timesheetDate = new java.sql.Date(parsedDate.getTime());</span>
+<span class="nc" id="L164">            UserTaskMapping taskMap = userTaskMappingRepository.findByTimesheetId(day.getTimesheetId()).orElse(new UserTaskMapping());</span>
+
+<span class="nc" id="L166">            taskMap.setTimesheetId(day.getTimesheetId());</span>
+<span class="nc" id="L167">            taskMap.setTaskId(day.getTaskId());</span>
+<span class="nc" id="L168">            taskMap.setEmployeeId(day.getEmployeeId());</span>
+<span class="nc" id="L169">            taskMap.setUsername(day.getUserName());</span>
+<span class="nc" id="L170">            taskMap.setTimesheetDate(timesheetDate);</span>
+<span class="nc" id="L171">            taskMap.setEffortInHours(day.getEffortInHours());</span>
+<span class="nc" id="L172">            taskMap.setRemark(day.getRemark());</span>
+<span class="nc" id="L173">            taskMap.setTimesheetStatus(day.getTimesheetStatus());</span>
+<span class="nc" id="L174">            taskMap.setBillableFlag(day.getBillableFlag());</span>
+<span class="nc" id="L175">            taskMap.setProjectId(day.getProjectId());</span>
+<span class="nc" id="L176">            taskMap.setSubmitStatus(day.getSubmitStatus());</span>
+<span class="nc" id="L177">            taskMap.setLocked(true);</span>
+<span class="nc" id="L178">            taskMap.setCreatedBy(token.getUsername().toString());</span>
+<span class="nc" id="L179">            taskMap.setCreationDate(LocalDateTime.now());</span>
+<span class="nc" id="L180">            taskMap.setLastUpdatedBy(token.getUsername().toString());</span>
+<span class="nc" id="L181">            taskMap.setLastUpdateDate(LocalDateTime.now());</span>
+
+<span class="nc" id="L183">            UserTaskMapping savedTask = userTaskMappingRepository.save(taskMap);</span>
+<span class="nc" id="L184">            resultDTOs.add(new TimesheetDTO(savedTask));</span>
+<span class="nc" id="L185">        }</span>
+
+<span class="nc" id="L187">        return resultDTOs;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

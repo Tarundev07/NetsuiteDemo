@@ -1,0 +1,166 @@
+spring:
+  resources:
+    static-locations: file:D:/eManagerSaas-2024-02-01/emSAAS-New-16-02-2024/emSAAS/backend/EMSaaSLogo/images/
+  config:
+    activate:
+      on-profile: '!api-docs'
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+  mvc:
+    static-path-pattern: /static/**
+    resources:
+      static-locations: classpath:/META-INF/resources/, classpath:/resources/, classpath:/static/, classpath:/public/, file:/EMSaaSLogo/images/, file:/assets/json/EMSaaSTranslationData/json
+
+springdoc:
+  api-docs:
+    enabled: false
+
+
+
+
+---
+management:
+  endpoints:
+    web:
+      base-path: /management
+      exposure:
+        include:
+          [
+            'configprops',
+            'env',
+            'health',
+            'info',
+            'metrics',
+            'openapigroups',
+            'logfile',
+            'loggers',
+            'prometheus',
+            'threaddump',
+            'caches',
+          ]
+  endpoint:
+    health:
+      show-details: when_authorized
+      roles: 'ROLE_ADMIN'
+      probes:
+        enabled: true
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState,db
+    metrics:
+      enabled: true
+  info:
+    git:
+      mode: full
+    env:
+      enabled: true
+  health:
+    mail:
+      enabled: false # When using the MailService, configure an SMTP server and set this to true
+  metrics:
+    export:
+      # Prometheus is the default metrics backend
+      prometheus:
+        enabled: true
+        step: 60
+    enable:
+      http: true
+      jvm: true
+      logback: true
+      process: true
+      system: true
+    distribution:
+      percentiles-histogram:
+        all: true
+      percentiles:
+        all: 0, 0.5, 0.75, 0.95, 0.99, 1.0
+    tags:
+      application: ${spring.application.name}
+    web:
+      server:
+        request:
+          autotime:
+            enabled: true
+
+spring:
+  profiles:
+    active: dev
+      #   group:
+      #     dev:
+      #      - dev
+      #     - api-docs
+    # Uncomment to activate TLS for the dev profile
+    #- tls
+  resources:
+    static-locations[0]: classpath:/META-INF/resources/
+    static-locations[1]: classpath:/resources/
+    static-locations[2]: classpath:/static/
+    static-locations[3]: classpath:/public/
+    static-locations[4]: file:D:\eManagerSaas-2024-02-01\emSAAS-New-16-02-2024\emSAAS\backend\EMSaaSLogo\images
+    static-path-pattern: /static/**
+
+  jmx:
+    enabled: false
+  messages:
+    basename: i18n/messages
+  main:
+    allow-bean-definition-overriding: true
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+  task:
+    execution:
+      thread-name-prefix: hr-management-task-
+      pool:
+        core-size: 2
+        max-size: 50
+        queue-capacity: 10000
+    scheduling:
+      thread-name-prefix: hr-management-scheduling-
+      pool:
+        size: 2
+  thymeleaf:
+    mode: HTML
+  output:
+    ansi:
+      console-available: true
+
+server:
+  servlet:
+    session:
+      cookie:
+        http-only: true
+
+springdoc:
+  show-actuator: true
+
+# Properties to be exposed on the /info management endpoint
+info:
+  # Comma separated list of profiles that will trigger the ribbon to show
+  display-ribbon-on-profiles: 'dev'
+
+images:
+  upload-path: ../anplapps/hr-management/EMSaaSLogo/images
+
+translation:
+  upload-translation-path: "/opt/emanager-uat/tomcat9/emsaasuat/ROOT/assets/json/EMSaaSTranslationData/json"
+
+file:
+  upload-dir: uploads
+
+
+# Resource handler for serving static content (adjust the path accordingly)
+spring.resources.static-path-pattern: /images/**
+spring.resources.static-locations: file:D:/eManagerSaas-2024-02-01/emSAAS-New-16-02-2024/emSAAS/backend/EMSaaSLogo/images/
+
+
+# Document management settings
+document:
+  upload-path: D:/DocumentStorage/ # Define the base directory for document uploads
+  static-path-pattern: /docs/**
+  static-locations: file:D:/DocumentStorage/

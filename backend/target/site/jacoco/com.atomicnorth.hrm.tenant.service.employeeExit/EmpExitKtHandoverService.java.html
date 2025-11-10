@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmpExitKtHandoverService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.employeeExit</a> &gt; <span class="el_source">EmpExitKtHandoverService.java</span></div><h1>EmpExitKtHandoverService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.employeeExit;
+
+import com.atomicnorth.hrm.tenant.domain.Employee;
+import com.atomicnorth.hrm.tenant.domain.asset.EmpAssetAssignment;
+import com.atomicnorth.hrm.tenant.domain.designation.Designation;
+import com.atomicnorth.hrm.tenant.domain.employeeExit.EmpExitAdminClearance;
+import com.atomicnorth.hrm.tenant.domain.employeeExit.EmpExitKtHandover;
+import com.atomicnorth.hrm.tenant.domain.employeeExit.EmpExitKtHandoverDetail;
+import com.atomicnorth.hrm.tenant.domain.employeeExit.EmpExitRequest;
+import com.atomicnorth.hrm.tenant.domain.project.Project;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.repository.EmployeeExit.EmpExitKtHandoverDetailRepository;
+import com.atomicnorth.hrm.tenant.repository.EmployeeExit.EmpExitKtHandoverRepository;
+import com.atomicnorth.hrm.tenant.repository.EmployeeExit.EmpExitRequestRepository;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.repository.designation.DesignationRepository;
+import com.atomicnorth.hrm.tenant.repository.project.ProjectRepository;
+import com.atomicnorth.hrm.tenant.service.dto.employeeExit.AdminClearanceDto;
+import com.atomicnorth.hrm.tenant.service.dto.employeeExit.EmpExitKtHandoverDTO;
+import com.atomicnorth.hrm.tenant.service.dto.employeeExit.EmpExitKtHandoverDetailDTO;
+import com.atomicnorth.hrm.util.FileStorageService;
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.persistence.EntityNotFoundException;
+import javax.transaction.Transactional;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.*;
+
+@Service
+<span class="nc" id="L41">public class EmpExitKtHandoverService {</span>
+
+    @Autowired
+    private EmpExitKtHandoverRepository ktRepo;
+    @Autowired
+    private EmployeeRepository employeeRepository;
+
+    @Autowired
+    private EmpExitRequestRepository EmpExitRepository;
+    @Autowired
+    DesignationRepository descrepo;
+
+    @Autowired
+    private ProjectRepository projectRepository;
+
+    @Autowired
+    private EmpExitKtHandoverDetailRepository detailRepo;
+
+    @Autowired
+    private  FileStorageService fileStorageService;
+
+    @Autowired
+    private ModelMapper modelMapper;
+
+
+
+    @Transactional
+    public void createKtHandover(Integer exitRequestId) {
+<span class="nc" id="L69">        EmpExitKtHandover kt = new EmpExitKtHandover();</span>
+<span class="nc" id="L70">        kt.setExitRequestId(exitRequestId);</span>
+<span class="nc" id="L71">        kt.setHandoverStartDate(LocalDate.now());</span>
+<span class="nc" id="L72">        kt.setStatus(&quot;Pending&quot;);</span>
+
+<span class="nc" id="L74">        ktRepo.save(kt);</span>
+<span class="nc" id="L75">    }</span>
+
+    public boolean existsByExitRequestId(Integer exitRequestId) {
+<span class="nc" id="L78">        return ktRepo.existsByExitRequestId(exitRequestId);</span>
+    }
+
+    @Transactional
+
+    public EmpExitKtHandoverDTO getAllKtHandoverList(Integer exitRequestId) {
+
+<span class="nc" id="L85">        EmpExitRequest empExitRequest = EmpExitRepository.findById(exitRequestId)</span>
+<span class="nc" id="L86">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot; Exit Request ID Not Found.&quot;));</span>
+<span class="nc" id="L87">        Employee employee = employeeRepository.findByEmployeeId(empExitRequest.getEmployeeId())</span>
+<span class="nc" id="L88">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot; employee Not Found.&quot;));</span>
+<span class="nc" id="L89">        EmpExitKtHandover ktHandover = ktRepo.findByExitRequestId(exitRequestId)</span>
+<span class="nc" id="L90">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot; KT Handover Not Found.&quot;));</span>
+
+<span class="nc" id="L92">        EmpExitKtHandoverDTO dto = new EmpExitKtHandoverDTO();</span>
+<span class="nc" id="L93">        dto.setEmployeeName(employee.getFullName() + &quot; (&quot; + employee.getEmployeeNumber() + &quot;)&quot;);</span>
+<span class="nc" id="L94">        dto.setEmployeeId(employee.getEmployeeId());</span>
+<span class="nc" id="L95">        dto.setId(ktHandover.getId());</span>
+<span class="nc" id="L96">        dto.setExitRequestNumber(empExitRequest.getExitRequestNumber());</span>
+<span class="nc" id="L97">        dto.setLastWorkingDate(empExitRequest.getLastWorkingDate());</span>
+<span class="nc" id="L98">        dto.setStatus(ktHandover.getStatus());</span>
+<span class="nc" id="L99">        dto.setHandoverStartDate(ktHandover.getHandoverStartDate());</span>
+<span class="nc" id="L100">        dto.setHandoverEndDate(ktHandover.getHandoverEndDate());</span>
+<span class="nc bnc" id="L101" title="All 2 branches missed.">        dto.setDepartment(employee.getDepartment() != null ? employee.getDepartment().getDname() : null);</span>
+<span class="nc bnc" id="L102" title="All 2 branches missed.">        dto.setDesignation(employee.getDesignation() != null ? employee.getDesignation().getDesignationName() : null);</span>
+<span class="nc bnc" id="L103" title="All 2 branches missed.">        String reportingManager = employee.getReportingManager() != null</span>
+<span class="nc" id="L104">                ? employee.getReportingManager().getFirstName() + &quot; &quot; + employee.getReportingManager().getLastName()</span>
+<span class="nc" id="L105">                : &quot;Reporting Manager Not Found &quot;;</span>
+<span class="nc" id="L106">        dto.setReportingManager(reportingManager);</span>
+
+        // ---- Fetch detail/session ----
+<span class="nc" id="L109">  List&lt;EmpExitKtHandoverDetail&gt; details = detailRepo.findByKtHandoverIdAndIsDeleted(ktHandover.getId(), &quot;N&quot;);</span>
+
+<span class="nc" id="L111">        List&lt;EmpExitKtHandoverDetailDTO&gt; detailDTOs = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L112" title="All 4 branches missed.">        if (details != null &amp;&amp; !details.isEmpty()) {</span>
+<span class="nc bnc" id="L113" title="All 2 branches missed.">            for (EmpExitKtHandoverDetail d : details) {</span>
+<span class="nc" id="L114">                EmpExitKtHandoverDetailDTO det = new EmpExitKtHandoverDetailDTO();</span>
+<span class="nc" id="L115">                det.setId(d.getId());</span>
+<span class="nc" id="L116">                det.setKtHandoverId(d.getKtHandoverId());</span>
+<span class="nc" id="L117">                det.setProjectId(d.getProjectId());</span>
+<span class="nc" id="L118">                det.setKtToEmployeeId(d.getKtToEmployeeId());</span>
+<span class="nc" id="L119">                det.setKtDate(d.getKtDate());</span>
+<span class="nc" id="L120">                det.setKtMode(d.getKtMode());</span>
+<span class="nc" id="L121">                det.setKtDocumentPath(d.getKtDocumentPath());</span>
+<span class="nc" id="L122">                det.setStatus(d.getStatus());</span>
+<span class="nc" id="L123">                det.setRemarks(d.getRemarks());det.setIsDeleted(d.getIsDeleted()); // Make sure DTO carries isDeleted status</span>
+
+                // extra fields in DTO that are not in detail entity: set from parent objects
+<span class="nc" id="L126">                det.setHandoverEndDate(ktHandover.getHandoverEndDate());</span>
+<span class="nc bnc" id="L127" title="All 2 branches missed.">                det.setDepartment(employee.getDepartment() != null ? employee.getDepartment().getDname() : null);</span>
+<span class="nc" id="L128">                detailDTOs.add(det);</span>
+<span class="nc" id="L129">            }</span>
+        }
+<span class="nc" id="L131">        dto.setDetails(detailDTOs);</span>
+<span class="nc" id="L132">        return dto;</span>
+    }
+
+
+    @Transactional
+    public EmpExitKtHandoverDTO saveKtHandover(EmpExitKtHandoverDTO dto, Map&lt;String, MultipartFile&gt; fileMap, Integer exitRequestId) throws IOException {
+        EmpExitKtHandover handover;
+
+<span class="nc" id="L140">        Optional&lt;EmpExitKtHandover&gt; existingHandover = ktRepo.findByExitRequestId(exitRequestId);</span>
+<span class="nc bnc" id="L141" title="All 2 branches missed.">        if (existingHandover.isPresent()) {</span>
+<span class="nc" id="L142">            handover = existingHandover.get();</span>
+            // Update parent fields
+<span class="nc" id="L144">            handover.setHandoverStartDate(dto.getHandoverStartDate());</span>
+<span class="nc" id="L145">            handover.setHandoverEndDate(dto.getHandoverEndDate());</span>
+<span class="nc" id="L146">            handover.setStatus(dto.getStatus());</span>
+        } else {
+<span class="nc" id="L148">            handover = new EmpExitKtHandover();</span>
+<span class="nc" id="L149">            handover.setExitRequestId(exitRequestId);</span>
+<span class="nc" id="L150">            handover.setHandoverStartDate(dto.getHandoverStartDate());</span>
+<span class="nc" id="L151">            handover.setHandoverEndDate(dto.getHandoverEndDate());</span>
+<span class="nc" id="L152">            handover.setStatus(dto.getStatus());</span>
+        }
+
+<span class="nc" id="L155">        EmpExitKtHandover savedHandover = ktRepo.save(handover);</span>
+
+<span class="nc bnc" id="L157" title="All 2 branches missed.">        if (dto.getDetails() != null) {</span>
+<span class="nc" id="L158">            List&lt;EmpExitKtHandoverDetail&gt; detailEntities = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L160" title="All 2 branches missed.">            for (EmpExitKtHandoverDetailDTO d : dto.getDetails()) {</span>
+                EmpExitKtHandoverDetail detail;
+<span class="nc bnc" id="L162" title="All 2 branches missed.">                if (d.getId() != null) {</span>
+<span class="nc" id="L163">                    detail = detailRepo.findById(d.getId()).orElse(new EmpExitKtHandoverDetail());</span>
+                } else {
+<span class="nc" id="L165">                    detail = new EmpExitKtHandoverDetail();</span>
+                }
+
+<span class="nc" id="L168">                detail.setKtHandoverId(savedHandover.getId());</span>
+<span class="nc" id="L169">                detail.setProjectId(d.getProjectId());</span>
+<span class="nc" id="L170">                detail.setKtToEmployeeId(d.getKtToEmployeeId());</span>
+<span class="nc" id="L171">                detail.setKtDate(d.getKtDate());</span>
+<span class="nc" id="L172">                detail.setKtMode(d.getKtMode());</span>
+<span class="nc" id="L173">                detail.setStatus(d.getStatus());</span>
+<span class="nc" id="L174">                detail.setRemarks(d.getRemarks());</span>
+
+            // handle soft delete flag
+<span class="nc bnc" id="L177" title="All 4 branches missed.">            if (d.getIsDeleted() != null &amp;&amp; d.getIsDeleted().equalsIgnoreCase(&quot;Y&quot;)) {</span>
+<span class="nc" id="L178">                detail.setIsDeleted(&quot;Y&quot;);</span>
+            } else {
+<span class="nc" id="L180">                detail.setIsDeleted(&quot;N&quot;);</span>
+           }
+
+                // File upload
+<span class="nc bnc" id="L184" title="All 2 branches missed.">                if (fileMap != null) {</span>
+<span class="nc" id="L185">                    MultipartFile file = fileMap.get(&quot;files[&quot; + d.getId() + &quot;]&quot;);</span>
+<span class="nc bnc" id="L186" title="All 4 branches missed.">                    if (file != null &amp;&amp; !file.isEmpty()) {</span>
+<span class="nc" id="L187">                        String path = fileStorageService.storeFile(file, &quot;kt_documents&quot;);</span>
+<span class="nc" id="L188">                        detail.setKtDocumentPath(path);</span>
+                    }
+                }
+
+<span class="nc" id="L192">                detailEntities.add(detail);</span>
+<span class="nc" id="L193">            }</span>
+
+<span class="nc" id="L195">            detailRepo.saveAll(detailEntities);</span>
+        }
+
+<span class="nc" id="L198">        return modelMapper.map(savedHandover, EmpExitKtHandoverDTO.class);</span>
+    }
+
+
+    public Map&lt;String, Object&gt; downloadKtDocs(Integer id) throws IOException {
+<span class="nc" id="L203">        EmpExitKtHandoverDetail assignment = detailRepo.findById(id).orElseThrow(() -&gt; new EntityNotFoundException(&quot;No record found for the given input.&quot;));</span>
+<span class="nc" id="L204">        String filePath = assignment.getKtDocumentPath();</span>
+<span class="nc bnc" id="L205" title="All 4 branches missed.">        if (filePath == null || filePath.isBlank()) {</span>
+<span class="nc" id="L206">            throw new IllegalArgumentException(&quot;No clearance file found for Kt Handover id: &quot; + id);</span>
+        }
+<span class="nc" id="L208">        Resource resource = fileStorageService.loadFile(filePath);</span>
+<span class="nc bnc" id="L209" title="All 4 branches missed.">        if (!resource.exists() || !resource.isReadable()) {</span>
+<span class="nc" id="L210">            throw new IOException(&quot;File not found or not readable: &quot; + filePath);</span>
+        }
+<span class="nc" id="L212">        String contentType = Files.probeContentType(Paths.get(filePath));</span>
+<span class="nc bnc" id="L213" title="All 2 branches missed.">        if (contentType == null) {</span>
+<span class="nc" id="L214">            contentType = &quot;application/pdf&quot;;</span>
+        }
+<span class="nc" id="L216">        Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L217">        result.put(&quot;resource&quot;, resource);</span>
+<span class="nc" id="L218">        result.put(&quot;contentType&quot;, contentType);</span>
+<span class="nc" id="L219">        return result;</span>
+    }
+
+    @Transactional
+    public EmpExitRequest approveKt(Integer id) {
+<span class="nc" id="L224">        EmpExitRequest ktstatus = EmpExitRepository.findById(id).orElseThrow(() -&gt; new EntityNotFoundException(&quot;Request not found.&quot;));</span>
+<span class="nc" id="L225">        ktstatus.setKtHandoverStatus(&quot;Approved&quot;);</span>
+<span class="nc" id="L226">        ktstatus.setLastUpdatedBy(String.valueOf(SessionHolder.getUserLoginDetail().getUsername()));</span>
+<span class="nc" id="L227">        ktstatus.setLastUpdatedDate(Instant.now());</span>
+<span class="nc" id="L228">        return EmpExitRepository.save(ktstatus);</span>
+    }
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

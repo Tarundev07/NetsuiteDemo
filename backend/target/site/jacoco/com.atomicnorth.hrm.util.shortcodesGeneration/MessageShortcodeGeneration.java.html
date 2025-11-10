@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MessageShortcodeGeneration.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.util.shortcodesGeneration</a> &gt; <span class="el_source">MessageShortcodeGeneration.java</span></div><h1>MessageShortcodeGeneration.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.util.shortcodesGeneration;
+
+import com.atomicnorth.hrm.configuration.multitenant.TenantContextHolder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Component;
+
+import java.sql.CallableStatement;
+import java.sql.Connection;
+import java.sql.Types;
+
+@Component
+<span class="nc" id="L13">public class MessageShortcodeGeneration {</span>
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    public String callMessageGenerateCodeProcedure(String prefix, String messageCode, String type, int moduleId) {
+        try {
+<span class="nc" id="L20">            String schemaName = TenantContextHolder.getTenant();</span>
+            //String procedureName = schemaName + &quot;.GenerateMessageShortcode&quot;; // Replace with the actual procedure name
+<span class="nc" id="L22">            String procedureName = schemaName + &quot;.GenerateLookupTypeShortcode&quot;; // Replace with the actual procedure name</span>
+
+            // Get the database connection
+<span class="nc" id="L25">            Connection connection = jdbcTemplate.getDataSource().getConnection();</span>
+<span class="nc" id="L26">            CallableStatement callableStatement = connection.prepareCall(&quot;{CALL &quot; + procedureName + &quot;(?, ?, ?, ?, ?)}&quot;);</span>
+
+            // Set input parameters
+<span class="nc" id="L29">            callableStatement.setString(1, prefix);</span>
+<span class="nc" id="L30">            callableStatement.setString(2, messageCode);</span>
+<span class="nc" id="L31">            callableStatement.setString(3, type);</span>
+<span class="nc" id="L32">            callableStatement.setInt(4, moduleId);</span>
+
+            // Register output parameter
+<span class="nc" id="L35">            callableStatement.registerOutParameter(5, Types.VARCHAR);</span>
+
+            // Execute the stored procedure
+<span class="nc" id="L38">            callableStatement.execute();</span>
+
+            // Get the result from the output parameter
+<span class="nc" id="L41">            String generatedCode = callableStatement.getString(5);</span>
+
+            // Close resources
+<span class="nc" id="L44">            callableStatement.close();</span>
+<span class="nc" id="L45">            connection.close();</span>
+
+<span class="nc" id="L47">            return generatedCode;</span>
+<span class="nc" id="L48">        } catch (Exception e) {</span>
+            // Log the exception for debugging purposes
+<span class="nc" id="L50">            e.printStackTrace();</span>
+            // Return an error message or handle the exception according to your application's logic
+<span class="nc" id="L52">            return &quot;Error occurred while generating code: &quot; + e.getMessage();</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

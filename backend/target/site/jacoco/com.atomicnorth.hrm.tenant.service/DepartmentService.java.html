@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DepartmentService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service</a> &gt; <span class="el_source">DepartmentService.java</span></div><h1>DepartmentService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service;
+
+import com.atomicnorth.hrm.tenant.domain.Approver;
+import com.atomicnorth.hrm.tenant.domain.Department;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.DepartmentRepository;
+import com.atomicnorth.hrm.tenant.repository.EmployeeRepository;
+import com.atomicnorth.hrm.tenant.repository.LookupCodeRepository;
+import com.atomicnorth.hrm.tenant.repository.company.SetUpCompanyRepository;
+import com.atomicnorth.hrm.tenant.service.dto.ApproverDTO;
+import com.atomicnorth.hrm.tenant.service.dto.DepartmentDTO;
+import com.atomicnorth.hrm.tenant.service.dto.DepartmentIdNameDTO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import javax.persistence.EntityNotFoundException;
+import javax.transaction.Transactional;
+import java.text.ParseException;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+<span class="fc" id="L26">public class DepartmentService {</span>
+
+<span class="fc" id="L28">    private final Logger log = LoggerFactory.getLogger(DepartmentService.class);</span>
+    @Autowired
+    private DepartmentRepository departmentRepository;
+    @Autowired
+    private EmployeeRepository employeeRepository;
+    @Autowired
+    private SetUpCompanyRepository setUpCompanyRepository;
+    @Autowired
+    private LookupCodeRepository lookupCodeRepository;
+
+    @Transactional
+    public DepartmentDTO createDepartment(DepartmentDTO departmentDTO) throws ParseException {
+<span class="fc" id="L40">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="fc" id="L41">        Department department = mapToEntity(departmentDTO);</span>
+<span class="fc" id="L42">        department.setCreatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="fc" id="L43">        department.setCreatedDate(new Date());</span>
+<span class="fc" id="L44">        department.setIsActive(departmentDTO.getIsActive());</span>
+<span class="fc" id="L45">        Department savedDepartment = departmentRepository.save(department);</span>
+<span class="fc" id="L46">        return mapToDTO(savedDepartment);</span>
+    }
+
+    @Transactional
+    public DepartmentDTO updateDepartment(Long id, DepartmentDTO departmentDTO) {
+<span class="fc" id="L51">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="fc" id="L52">        Department existingDepartment = departmentRepository.findById(id)</span>
+<span class="fc" id="L53">                .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Department with ID &quot; + id + &quot; not found&quot;));</span>
+<span class="fc" id="L54">        existingDepartment.getApprovers().size(); // Load approvers to avoid lazy loading issues</span>
+<span class="fc" id="L55">        existingDepartment.setDname(departmentDTO.getDname());</span>
+<span class="fc" id="L56">        existingDepartment.setParentDepartment(departmentDTO.getParentDepartment());</span>
+<span class="fc" id="L57">        existingDepartment.setPayrollCostCenter(departmentDTO.getPayrollCostCenter());</span>
+<span class="fc" id="L58">        existingDepartment.setDescription(departmentDTO.getDescription());</span>
+<span class="fc" id="L59">        existingDepartment.setCompany(departmentDTO.getCompany());</span>
+<span class="pc bpc" id="L60" title="3 of 4 branches missed.">        existingDepartment.setGroup(departmentDTO.getIsGroup() != null &amp;&amp; departmentDTO.getIsGroup());</span>
+<span class="fc" id="L61">        existingDepartment.setLeaveBlock(departmentDTO.getLeaveBlock());</span>
+<span class="fc" id="L62">        existingDepartment.setUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="fc" id="L63">        existingDepartment.setUpdatedDate(new Date());</span>
+<span class="fc" id="L64">        existingDepartment.setIsActive(departmentDTO.getIsActive());</span>
+<span class="pc bpc" id="L65" title="2 of 4 branches missed.">        if (departmentDTO.getApprovers() != null &amp;&amp; !departmentDTO.getApprovers().isEmpty()) {</span>
+            // List of existing approvers
+<span class="fc" id="L67">            List&lt;Approver&gt; existingApprovers = existingDepartment.getApprovers();</span>
+            // Map existing approvers by employeeId and type for quick lookup
+<span class="fc" id="L69">            Set&lt;String&gt; existingKeys = existingApprovers.stream()</span>
+<span class="fc" id="L70">                    .map(approver -&gt; approver.getEmployeeId() + &quot;-&quot; + approver.getType())</span>
+<span class="fc" id="L71">                    .collect(Collectors.toSet());</span>
+            // Check for new approvers (id == null)
+<span class="fc bfc" id="L73" title="All 2 branches covered.">            for (ApproverDTO approverDTO : departmentDTO.getApprovers()) {</span>
+<span class="fc bfc" id="L74" title="All 2 branches covered.">                if (approverDTO.getId() == null) {</span>
+                    // Generate unique key for the new approver
+<span class="fc" id="L76">                    String newApproverKey = approverDTO.getEmployeeId() + &quot;-&quot; + approverDTO.getType();</span>
+                    // If key already exists in the existing approvers, throw an exception
+<span class="fc bfc" id="L78" title="All 2 branches covered.">                    if (existingKeys.contains(newApproverKey)) {</span>
+<span class="fc" id="L79">                        throw new IllegalArgumentException(&quot;Approver with Employee ID &quot; + approverDTO.getEmployeeId() +</span>
+<span class="fc" id="L80">                                &quot; and Type '&quot; + approverDTO.getType() + &quot;' already exists in the department.&quot;);</span>
+                    }
+                }
+<span class="fc" id="L83">            }</span>
+            // Update or add approvers
+<span class="fc" id="L85">            Map&lt;Long, Approver&gt; existingApproversMap = existingApprovers.stream()</span>
+<span class="fc" id="L86">                    .collect(Collectors.toMap(Approver::getId, approver -&gt; approver));</span>
+<span class="fc bfc" id="L87" title="All 2 branches covered.">            for (ApproverDTO approverDTO : departmentDTO.getApprovers()) {</span>
+<span class="pc bpc" id="L88" title="1 of 4 branches missed.">                if (approverDTO.getId() != null &amp;&amp; existingApproversMap.containsKey(approverDTO.getId())) {</span>
+                    // Update existing approver
+<span class="fc" id="L90">                    Approver existingApprover = existingApproversMap.get(approverDTO.getId());</span>
+<span class="fc" id="L91">                    existingApprover.setType(approverDTO.getType());</span>
+<span class="fc" id="L92">                    existingApprover.setEmployeeId(approverDTO.getEmployeeId());</span>
+<span class="pc bpc" id="L93" title="1 of 2 branches missed.">                    existingApprover.setIsActive(departmentDTO.getIsActive() ? approverDTO.getIsActive() : false);</span>
+<span class="fc" id="L94">                    existingApprover.setUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="fc" id="L95">                    existingApprover.setUpdatedDate(new Date());</span>
+<span class="pc bpc" id="L96" title="1 of 2 branches missed.">                } else if (approverDTO.getId() == null) {</span>
+                    // Add new approver
+<span class="fc" id="L98">                    Approver newApprover = mapApproverToEntity(approverDTO);</span>
+<span class="fc" id="L99">                    newApprover.setAddedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="fc" id="L100">                    newApprover.setAddedAt(new Date());</span>
+<span class="pc bpc" id="L101" title="2 of 4 branches missed.">                    newApprover.setIsActive(departmentDTO.getIsActive() &amp;&amp; (approverDTO.getIsActive()));</span>
+<span class="fc" id="L102">                    newApprover.setDepartment(existingDepartment);</span>
+<span class="fc" id="L103">                    existingApprovers.add(newApprover);</span>
+                }
+<span class="fc" id="L105">            }</span>
+        }
+<span class="fc" id="L107">        Department updatedDepartment = departmentRepository.save(existingDepartment);</span>
+<span class="fc" id="L108">        return mapToDTO(updatedDepartment);</span>
+    }
+
+    @Transactional
+    public List&lt;DepartmentDTO&gt; findAllDepartments() {
+<span class="fc" id="L113">        List&lt;Department&gt; departments = departmentRepository.findAll();</span>
+<span class="pc bpc" id="L114" title="1 of 2 branches missed.">        if (departments.isEmpty()) {</span>
+<span class="nc" id="L115">            log.info(&quot;No active departments found&quot;);</span>
+        } else {
+<span class="fc" id="L117">            log.info(&quot;Active departments retrieved: {}&quot;, departments.size());</span>
+        }
+<span class="fc" id="L119">        return departments.stream()</span>
+<span class="fc" id="L120">                .map(this::mapToDTO)</span>
+<span class="fc" id="L121">                .collect(Collectors.toList());</span>
+    }
+
+    @Transactional
+    public Optional&lt;DepartmentDTO&gt; getDepartmentById(Long id) {
+<span class="fc" id="L126">        return departmentRepository.findById(id)</span>
+<span class="fc" id="L127">                .map(this::mapToDTO);</span>
+    }
+
+    @Transactional
+    public void deleteDepartmentById(Long id) {
+<span class="fc" id="L132">        Department department = departmentRepository.findById(id)</span>
+<span class="pc" id="L133">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Department with ID &quot; + id + &quot; not found&quot;));</span>
+        // Soft delete department
+<span class="fc" id="L135">        department.setIsActive(false);</span>
+        // Soft delete associated approvers
+<span class="pc" id="L137">        department.getApprovers().forEach(approver -&gt; approver.setIsActive(false));</span>
+<span class="fc" id="L138">        departmentRepository.save(department);</span>
+<span class="fc" id="L139">    }</span>
+
+    private Department mapToEntity(DepartmentDTO dto) {
+<span class="fc" id="L142">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="fc" id="L143">        Department department = new Department();</span>
+<span class="fc" id="L144">        department.setDname(dto.getDname());</span>
+<span class="fc" id="L145">        department.setParentDepartment(dto.getParentDepartment());</span>
+<span class="fc" id="L146">        department.setPayrollCostCenter(dto.getPayrollCostCenter());</span>
+<span class="fc" id="L147">        department.setDescription(dto.getDescription());</span>
+<span class="fc" id="L148">        department.setCompany(dto.getCompany());</span>
+<span class="pc bpc" id="L149" title="3 of 4 branches missed.">        department.setGroup(dto.getIsGroup() != null &amp;&amp; dto.getIsGroup());</span>
+<span class="fc" id="L150">        department.setLeaveBlock(dto.getLeaveBlock());</span>
+<span class="fc" id="L151">        department.setCreatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="fc" id="L152">        department.setCreatedDate(new Date());</span>
+<span class="fc" id="L153">        department.setIsActive(dto.getIsActive());</span>
+<span class="pc bpc" id="L154" title="1 of 2 branches missed.">        if (dto.getApprovers() != null) {</span>
+<span class="nc" id="L155">            department.setApprovers(</span>
+<span class="nc" id="L156">                    dto.getApprovers().stream()</span>
+<span class="nc" id="L157">                            .map(this::mapApproverToEntity)</span>
+<span class="nc" id="L158">                            .peek(approver -&gt; approver.setDepartment(department))</span>
+<span class="nc" id="L159">                            .collect(Collectors.toList())</span>
+            );
+        }
+<span class="fc" id="L162">        return department;</span>
+    }
+
+    private DepartmentDTO mapToDTO(Department department) {
+<span class="fc" id="L166">        DepartmentDTO dto = new DepartmentDTO();</span>
+<span class="fc" id="L167">        dto.setId(department.getId());</span>
+<span class="fc" id="L168">        dto.setDname(department.getDname());</span>
+<span class="fc" id="L169">        dto.setParentDepartment(department.getParentDepartment());</span>
+<span class="fc" id="L170">        dto.setPayrollCostCenter(department.getPayrollCostCenter());</span>
+<span class="fc" id="L171">        dto.setDescription(department.getDescription());</span>
+<span class="fc" id="L172">        dto.setCompany(department.getCompany());</span>
+<span class="fc" id="L173">        dto.setIsGroup(department.isGroup());</span>
+<span class="fc" id="L174">        dto.setLeaveBlock(department.getLeaveBlock());</span>
+<span class="fc" id="L175">        dto.setCreatedDate(department.getCreatedDate());</span>
+<span class="fc" id="L176">        dto.setCreatedBy(department.getCreatedBy());</span>
+<span class="fc" id="L177">        dto.setUpdatedDate(department.getUpdatedDate());</span>
+<span class="fc" id="L178">        dto.setUpdatedBy(department.getUpdatedBy());</span>
+<span class="fc" id="L179">        dto.setIsActive(department.getIsActive());</span>
+<span class="fc bfc" id="L180" title="All 2 branches covered.">        if (department.getCompany() != null) {</span>
+<span class="fc" id="L181">            dto.setCompanyName(setUpCompanyRepository.findCompanyNameById(department.getCompany())</span>
+<span class="fc" id="L182">                    .orElse(&quot;Unknown Company&quot;));</span>
+        }
+<span class="fc bfc" id="L184" title="All 2 branches covered.">        if (department.getParentDepartment() != null) {</span>
+<span class="fc" id="L185">            dto.setParentDepartmentName(departmentRepository.findDepartmentNameById(department.getParentDepartment())</span>
+<span class="fc" id="L186">                    .orElse(&quot;Unknown Parent Department&quot;));</span>
+        }
+<span class="fc bfc" id="L188" title="All 2 branches covered.">        if (department.getPayrollCostCenter() != null) {</span>
+<span class="fc" id="L189">            dto.setPayrollCostCenterName(lookupCodeRepository</span>
+<span class="fc" id="L190">                    .findMeaningByLookupTypeAndLookupCode(&quot;PAYROLL_COST_CENTER&quot;, department.getPayrollCostCenter().toString())</span>
+<span class="fc" id="L191">                    .orElse(&quot;Unknown Payroll cost center&quot;));</span>
+        }
+<span class="fc bfc" id="L193" title="All 2 branches covered.">        if (department.getLeaveBlock() != null) {</span>
+<span class="fc" id="L194">            dto.setLeaveBlockName(lookupCodeRepository</span>
+<span class="fc" id="L195">                    .findMeaningByLookupTypeAndLookupCode(&quot;LEAVE_BLOCK_TYPE&quot;, department.getLeaveBlock().toString())</span>
+<span class="fc" id="L196">                    .orElse(&quot;Unknown Leave Block&quot;));</span>
+        }
+<span class="pc bpc" id="L198" title="1 of 2 branches missed.">        if (department.getApprovers() != null) {</span>
+<span class="fc" id="L199">            dto.setApprovers(</span>
+<span class="fc" id="L200">                    department.getApprovers().stream()</span>
+<span class="fc" id="L201">                            .map(this::mapApproverToDTO)</span>
+<span class="fc" id="L202">                            .collect(Collectors.toList())</span>
+            );
+        }
+<span class="fc" id="L205">        return dto;</span>
+    }
+
+    private Approver mapApproverToEntity(ApproverDTO dto) {
+<span class="fc" id="L209">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="fc" id="L210">        Approver approver = new Approver();</span>
+<span class="fc" id="L211">        approver.setType(dto.getType());</span>
+<span class="fc" id="L212">        approver.setEmployeeId(dto.getEmployeeId());</span>
+<span class="fc" id="L213">        approver.setAddedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="fc" id="L214">        approver.setAddedAt(new Date());</span>
+<span class="fc" id="L215">        approver.setIsActive(dto.getIsActive());</span>
+<span class="fc" id="L216">        return approver;</span>
+    }
+
+    private ApproverDTO mapApproverToDTO(Approver approver) {
+<span class="fc" id="L220">        ApproverDTO dto = new ApproverDTO();</span>
+<span class="fc" id="L221">        dto.setId(approver.getId());</span>
+<span class="fc" id="L222">        dto.setType(approver.getType());</span>
+<span class="fc" id="L223">        dto.setEmployeeId(approver.getEmployeeId());</span>
+<span class="fc" id="L224">        dto.setAddedBy(approver.getAddedBy());</span>
+<span class="fc" id="L225">        dto.setAddedAt(approver.getAddedAt());</span>
+<span class="fc" id="L226">        dto.setUpdatedBy(approver.getUpdatedBy());</span>
+<span class="fc" id="L227">        dto.setUpdatedDate(approver.getUpdatedDate());</span>
+<span class="fc" id="L228">        dto.setIsActive(approver.getIsActive());</span>
+<span class="pc bpc" id="L229" title="1 of 2 branches missed.">        if (approver.getEmployeeId() != null) {</span>
+<span class="fc" id="L230">            dto.setEmpName(employeeRepository.findEmployeeFullNameById(approver.getEmployeeId()).orElse(&quot;Unknown Employee&quot;));</span>
+        }
+<span class="fc" id="L232">        return dto;</span>
+    }
+
+    public List&lt;DepartmentIdNameDTO&gt; getAllDname() {
+<span class="nc" id="L236">        return departmentRepository.findAll().stream()</span>
+<span class="nc" id="L237">                .filter(x -&gt; Boolean.TRUE.equals(x.getIsActive()))</span>
+<span class="nc" id="L238">                .map(department -&gt; {</span>
+<span class="nc" id="L239">                    DepartmentIdNameDTO dto = new DepartmentIdNameDTO();</span>
+<span class="nc" id="L240">                    dto.setId(department.getId());</span>
+<span class="nc" id="L241">                    dto.setDname(department.getDname());</span>
+<span class="nc" id="L242">                    return dto;</span>
+<span class="nc" id="L243">                }).sorted(Comparator.comparing(DepartmentIdNameDTO::getDname, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))).collect(Collectors.toList());</span>
+    }
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

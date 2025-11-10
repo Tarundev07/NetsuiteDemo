@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OnboardingActivitesDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.dto.employement.employee_on_boarding</a> &gt; <span class="el_source">OnboardingActivitesDTO.java</span></div><h1>OnboardingActivitesDTO.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.dto.employement.employee_on_boarding;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
+
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+import java.util.Date;
+
+<span class="nc bnc" id="L12" title="All 358 branches missed.">@Data</span>
+public class OnboardingActivitesDTO {
+
+<span class="nc" id="L15">    private Integer activityId;</span>
+
+<span class="nc" id="L17">    private Integer onboardingId;</span>
+
+    @NotNull(message = &quot;Activity name is required&quot;)
+    @Size(max = 255, message = &quot;Activity name cannot exceed 255 characters&quot;)
+<span class="nc" id="L21">    private Integer activityCode;</span>
+
+<span class="nc" id="L23">    private String activityName;</span>
+
+    @NotNull(message = &quot;Department is required&quot;)
+<span class="nc" id="L26">    private Integer department;</span>
+
+<span class="nc" id="L28">    private String departmentName;</span>
+
+    @NotNull(message = &quot;Assigned user is required&quot;)
+<span class="nc" id="L31">    private Integer assignedUser;</span>
+
+<span class="nc" id="L33">    private String assignedUserName;</span>
+
+    @NotNull(message = &quot;Begins on date is required&quot;)
+<span class="nc" id="L36">    private Date beginsOn;</span>
+
+    @NotNull(message = &quot;Duration in days is required&quot;)
+    @Min(value = 1, message = &quot;Duration must be at least 1 day&quot;)
+<span class="nc" id="L40">    private Integer durationDays;</span>
+
+    @NotNull(message = &quot;Status is required&quot;)
+<span class="nc" id="L43">    private String status;</span>
+
+    @NotBlank(message = &quot;Operation source is required&quot;)
+    @Size(max = 10, message = &quot;Operation source cannot exceed 10 characters&quot;)
+<span class="nc" id="L47">    private String operationSource;</span>
+
+
+    @JsonProperty(&quot;cAttribute1&quot;)
+<span class="nc" id="L51">    private String cAttribute1;</span>
+
+    @JsonProperty(&quot;cAttribute2&quot;)
+<span class="nc" id="L54">    private String cAttribute2;</span>
+
+    @JsonProperty(&quot;cAttribute3&quot;)
+<span class="nc" id="L57">    private String cAttribute3;</span>
+
+    @JsonProperty(&quot;cAttribute4&quot;)
+<span class="nc" id="L60">    private String cAttribute4;</span>
+
+    @JsonProperty(&quot;cAttribute5&quot;)
+<span class="nc" id="L63">    private String cAttribute5;</span>
+
+    @JsonProperty(&quot;cAttribute6&quot;)
+<span class="nc" id="L66">    private String cAttribute6;</span>
+
+    @JsonProperty(&quot;cAttribute7&quot;)
+<span class="nc" id="L69">    private String cAttribute7;</span>
+
+    @JsonProperty(&quot;cAttribute8&quot;)
+<span class="nc" id="L72">    private String cAttribute8;</span>
+
+    @JsonProperty(&quot;cAttribute9&quot;)
+<span class="nc" id="L75">    private String cAttribute9;</span>
+
+    @JsonProperty(&quot;cAttribute10&quot;)
+<span class="nc" id="L78">    private String cAttribute10;</span>
+
+    @JsonProperty(&quot;cAttribute11&quot;)
+<span class="nc" id="L81">    private String cAttribute11;</span>
+
+    @JsonProperty(&quot;cAttribute12&quot;)
+<span class="nc" id="L84">    private String cAttribute12;</span>
+
+    @JsonProperty(&quot;cAttribute13&quot;)
+<span class="nc" id="L87">    private String cAttribute13;</span>
+
+    @JsonProperty(&quot;cAttribute14&quot;)
+<span class="nc" id="L90">    private String cAttribute14;</span>
+
+    @JsonProperty(&quot;cAttribute15&quot;)
+<span class="nc" id="L93">    private String cAttribute15;</span>
+
+    @JsonProperty(&quot;nAttribute16&quot;)
+<span class="nc" id="L96">    private Integer nAttribute16;</span>
+
+    @JsonProperty(&quot;nAttribute17&quot;)
+<span class="nc" id="L99">    private Integer nAttribute17;</span>
+
+    @JsonProperty(&quot;nAttribute18&quot;)
+<span class="nc" id="L102">    private Integer nAttribute18;</span>
+
+    @JsonProperty(&quot;nAttribute19&quot;)
+<span class="nc" id="L105">    private Integer nAttribute19;</span>
+
+    @JsonProperty(&quot;nAttribute20&quot;)
+<span class="nc" id="L108">    private Integer nAttribute20;</span>
+
+    @JsonProperty(&quot;nAttribute21&quot;)
+<span class="nc" id="L111">    private Integer nAttribute21;</span>
+
+    @JsonProperty(&quot;nAttribute22&quot;)
+<span class="nc" id="L114">    private Integer nAttribute22;</span>
+
+    @JsonProperty(&quot;nAttribute23&quot;)
+<span class="nc" id="L117">    private Integer nAttribute23;</span>
+
+    @JsonProperty(&quot;nAttribute24&quot;)
+<span class="nc" id="L120">    private Integer nAttribute24;</span>
+
+    @JsonProperty(&quot;nAttribute25&quot;)
+<span class="nc" id="L123">    private Integer nAttribute25;</span>
+
+    @JsonProperty(&quot;dAttribute26&quot;)
+<span class="nc" id="L126">    private Date dAttribute26;</span>
+
+    @JsonProperty(&quot;dAttribute27&quot;)
+<span class="nc" id="L129">    private Date dAttribute27;</span>
+
+    @JsonProperty(&quot;dAttribute28&quot;)
+<span class="nc" id="L132">    private Date dAttribute28;</span>
+
+    @JsonProperty(&quot;dAttribute29&quot;)
+<span class="nc" id="L135">    private Date dAttribute29;</span>
+
+    @JsonProperty(&quot;dAttribute30&quot;)
+<span class="nc" id="L138">    private Date dAttribute30;</span>
+
+    @JsonProperty(&quot;jAttribute31&quot;)
+<span class="nc" id="L141">    private String jAttribute31;</span>
+
+    @JsonProperty(&quot;jAttribute32&quot;)
+<span class="nc" id="L144">    private String jAttribute32;</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

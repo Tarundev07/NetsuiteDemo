@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserTableEntityDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.dto.accessgroup</a> &gt; <span class="el_source">UserTableEntityDTO.java</span></div><h1>UserTableEntityDTO.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.dto.accessgroup;
+
+import com.atomicnorth.hrm.tenant.service.dto.project.ProjectDTO;
+import com.atomicnorth.hrm.tenant.service.dto.project.TaskStoryDTO;
+import lombok.Data;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+<span class="nc bnc" id="L11" title="All 230 branches missed.">@Data</span>
+public class UserTableEntityDTO {
+
+<span class="nc" id="L14">    private Integer username; // Id or Primary Key</span>
+<span class="nc" id="L15">    private String usercode;</span>
+<span class="nc" id="L16">    private String firstName;</span>
+<span class="nc" id="L17">    private String lastName;</span>
+<span class="nc" id="L18">    private String role;</span>
+<span class="nc" id="L19">    private String primaryemail;</span>
+<span class="nc" id="L20">    private String remark;</span>
+<span class="nc" id="L21">    private String usergroup;</span>
+<span class="nc" id="L22">    private String userstatus;</span>
+<span class="nc" id="L23">    private Date dob;</span>
+<span class="nc" id="L24">    private Date creationdate;</span>
+<span class="nc" id="L25">    private String reportingmanager;</span>
+<span class="nc" id="L26">    private Integer hrManager;</span>
+<span class="nc" id="L27">    private String hrFullName;</span>
+<span class="nc" id="L28">    private Date joiningdate;</span>
+<span class="nc" id="L29">    private Date lastworkingdate;</span>
+<span class="nc" id="L30">    private String baselocation;</span>
+<span class="nc" id="L31">    private String designation;</span>
+<span class="nc" id="L32">    private String accountunit;</span>
+<span class="nc" id="L33">    private String department;</span>
+<span class="nc" id="L34">    private String policygroup;</span>
+<span class="nc" id="L35">    private String division;</span>
+<span class="nc" id="L36">    private Integer divisionId;</span>
+<span class="nc" id="L37">    private Date marriagedate;</span>
+<span class="nc" id="L38">    private String lastupdatedby;</span>
+<span class="nc" id="L39">    private Date lastmodifieddate;</span>
+
+<span class="nc" id="L41">    private List&lt;TaskStoryDTO&gt; taskMappingList = new ArrayList&lt;TaskStoryDTO&gt;();</span>
+<span class="nc" id="L42">    private List&lt;ProjectDTO&gt; projectList = new ArrayList&lt;&gt;();</span>
+
+
+<span class="nc" id="L45">    public UserTableEntityDTO() {</span>
+
+<span class="nc" id="L47">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

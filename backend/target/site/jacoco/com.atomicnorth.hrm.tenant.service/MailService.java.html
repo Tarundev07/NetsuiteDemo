@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MailService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service</a> &gt; <span class="el_source">MailService.java</span></div><h1>MailService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service;
+
+import com.atomicnorth.hrm.configuration.ApplicationProperties;
+import com.atomicnorth.hrm.configuration.multitenant.TenantContextHolder;
+import com.atomicnorth.hrm.tenant.domain.User;
+import com.atomicnorth.hrm.tenant.domain.notificationTemplates.NotificationTemplates;
+import com.atomicnorth.hrm.tenant.repository.UserRepository;
+import com.atomicnorth.hrm.tenant.repository.notificationTemplates.NotificationTemplatesRepository;
+import com.atomicnorth.hrm.tenant.service.dto.timeSheetDTO.CreateTimeSheetDTO;
+import com.atomicnorth.hrm.tenant.service.mail.EmailService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.MessageSource;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+import org.thymeleaf.context.Context;
+import org.thymeleaf.spring5.SpringTemplateEngine;
+
+import javax.servlet.http.HttpServletRequest;
+import java.time.Instant;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.UUID;
+
+@Service
+public class MailService {
+
+    private static final String USER = &quot;user&quot;;
+    private static final String BASE_URL = &quot;baseUrl&quot;;
+<span class="nc" id="L31">    private final Logger log = LoggerFactory.getLogger(MailService.class);</span>
+    private final ApplicationProperties applicationProperties;
+
+    private final JavaMailSender javaMailSender;
+
+    private final MessageSource messageSource;
+
+    private final SpringTemplateEngine templateEngine;
+    private final NotificationTemplatesRepository notificationTemplatesRepository;
+
+    private final UserRepository userRepository;
+
+    private final EmailService emailService;
+
+    public MailService(
+            ApplicationProperties applicationProperties,
+            JavaMailSender javaMailSender,
+            MessageSource messageSource,
+            SpringTemplateEngine templateEngine,
+<span class="nc" id="L50">            NotificationTemplatesRepository notificationTemplatesRepository, UserRepository userRepository, EmailService emailService) {</span>
+<span class="nc" id="L51">        this.applicationProperties = applicationProperties;</span>
+<span class="nc" id="L52">        this.javaMailSender = javaMailSender;</span>
+<span class="nc" id="L53">        this.messageSource = messageSource;</span>
+<span class="nc" id="L54">        this.templateEngine = templateEngine;</span>
+<span class="nc" id="L55">        this.notificationTemplatesRepository = notificationTemplatesRepository;</span>
+<span class="nc" id="L56">        this.userRepository = userRepository;</span>
+<span class="nc" id="L57">        this.emailService = emailService;</span>
+<span class="nc" id="L58">    }</span>
+
+    @Async
+    public void sendEmailFromTemplate(User user, String templateName, String titleKey) {
+<span class="nc bnc" id="L62" title="All 2 branches missed.">        if (user.getEmail() == null) {</span>
+<span class="nc" id="L63">            log.debug(&quot;Email doesn't exist for user '{}'&quot;, user.getEmail());</span>
+<span class="nc" id="L64">            return;</span>
+        }
+<span class="nc" id="L66">        Locale locale = Locale.forLanguageTag(&quot;&quot;);</span>
+<span class="nc" id="L67">        Context context = new Context(locale);</span>
+<span class="nc" id="L68">        context.setVariable(USER, user);</span>
+<span class="nc" id="L69">        context.setVariable(BASE_URL, applicationProperties.getMail().getBaseUrl());</span>
+<span class="nc" id="L70">        emailService.sendMail(user.getEmail(), titleKey, templateName);</span>
+
+<span class="nc" id="L72">    }</span>
+
+    @Async
+    public void sendPasswordResetMail(User user, String baseUrl) {
+<span class="nc" id="L76">        log.debug(&quot;Sending password reset email to '{}'&quot;, user.getEmail());</span>
+<span class="nc" id="L77">        Optional&lt;NotificationTemplates&gt; templates = notificationTemplatesRepository.findByNotificationTypeAndCommunicationTypeAndTemplateType(</span>
+                &quot;User&quot;, &quot;EMAIL&quot;, &quot;FORGOT_PASSWORD&quot;);
+<span class="nc bnc" id="L79" title="All 2 branches missed.">        if (templates.isEmpty()) {</span>
+<span class="nc" id="L80">            log.error(&quot;No email template found for FORGOT_PASSWORD&quot;);</span>
+<span class="nc" id="L81">            throw new IllegalArgumentException(&quot;Email template not found for FORGOT_PASSWORD&quot;);</span>
+        }
+<span class="nc" id="L83">        NotificationTemplates notificationTemplates = templates.get();</span>
+<span class="nc" id="L84">        String personalizedEmailBody = notificationTemplates.getBody()</span>
+<span class="nc" id="L85">                .replace(&quot;[%DisplayName%]&quot;, user.getDisplayName())</span>
+<span class="nc" id="L86">                .replace(&quot;[%URL%]&quot;, generateResetUrl(user,baseUrl));</span>
+<span class="nc" id="L87">        sendEmailFromTemplate(user, personalizedEmailBody, notificationTemplates.getTemplateName());</span>
+<span class="nc" id="L88">    }</span>
+
+    public String generateResetUrl(User user,String baseUrl) {
+<span class="nc" id="L91">        String resetToken = UUID.randomUUID().toString();</span>
+<span class="nc" id="L92">        user.setResetKey(resetToken);</span>
+<span class="nc" id="L93">        user.setResetDate(Instant.now());</span>
+<span class="nc" id="L94">        userRepository.save(user);</span>
+<span class="nc" id="L95">        return baseUrl + &quot;/login/setNewPasswordLogin?token=&quot; + resetToken + &quot;&amp;clientId=&quot; + TenantContextHolder.getTenant();</span>
+    }
+
+    public void sendTimesheetSubmitMail(CreateTimeSheetDTO loginBean) {
+<span class="nc" id="L99">        Optional&lt;User&gt; userDetails = userRepository.findById(Long.valueOf(loginBean.getUsername()));</span>
+<span class="nc" id="L100">        User user = userDetails.get();</span>
+<span class="nc" id="L101">        Optional&lt;NotificationTemplates&gt; templates = notificationTemplatesRepository.findByNotificationTypeAndCommunicationTypeAndTemplateType(</span>
+                &quot;Timesheet&quot;, &quot;EMAIL&quot;, &quot;TIMESHEET_SUBMITTED&quot;);
+<span class="nc bnc" id="L103" title="All 2 branches missed.">        if (templates.isEmpty()) {</span>
+<span class="nc" id="L104">            log.error(&quot;No email template found for TIMESHEET_SUBMITTED&quot;);</span>
+<span class="nc" id="L105">            throw new IllegalArgumentException(&quot;Email template not found for TIMESHEET_SUBMITTED&quot;);</span>
+        }
+<span class="nc" id="L107">        NotificationTemplates notificationTemplates = templates.get();</span>
+<span class="nc" id="L108">        String personalizedEmailBody = notificationTemplates.getBody()</span>
+<span class="nc" id="L109">                .replace(&quot;[%DisplayName%]&quot;, user.getDisplayName());</span>
+<span class="nc" id="L110">        sendEmailFromTemplate(user, personalizedEmailBody, notificationTemplates.getTemplateName());</span>
+
+<span class="nc" id="L112">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

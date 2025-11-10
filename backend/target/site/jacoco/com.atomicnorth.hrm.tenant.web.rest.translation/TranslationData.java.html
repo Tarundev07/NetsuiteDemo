@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TranslationData.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest.translation</a> &gt; <span class="el_source">TranslationData.java</span></div><h1>TranslationData.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest.translation;
+
+import com.atomicnorth.hrm.exception.BadApiRequestException;
+import com.atomicnorth.hrm.tenant.service.dto.translation.TranslationDTO;
+import com.atomicnorth.hrm.tenant.service.translation.SupraTranslationCommonServices;
+import com.atomicnorth.hrm.util.OldApiResponseMessage;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping(&quot;/api/translation&quot;)
+<span class="nc" id="L31">public class TranslationData {</span>
+
+    @Value(&quot;${translation.upload-translation-path}&quot;)
+    private String uploadTranslationPath;
+
+    @Autowired
+    private SupraTranslationCommonServices supraTranslationCommonServices;
+
+    @GetMapping(&quot;/getAllTranslatedData&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;TranslationDTO&gt;&gt;&gt; getAllCustomerData() {
+        try {
+<span class="nc" id="L42">            List&lt;TranslationDTO&gt; translatedData = supraTranslationCommonServices.getAllTranslatedData();</span>
+<span class="nc" id="L43">            return ResponseEntity.ok(</span>
+                    new ApiResponse&lt;&gt;(translatedData, true, &quot;TRANSLATIONS_FETCHED&quot;, &quot;SUCCESS&quot;)
+            );
+<span class="nc" id="L46">        } catch (Exception e) {</span>
+<span class="nc" id="L47">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;SERVER_ERROR&quot;, &quot;ERROR&quot;,
+<span class="nc" id="L49">                            Collections.singletonList(&quot;Unexpected error occurred while fetching translations.&quot;)</span>
+                    )
+            );
+        }
+    }
+
+    @PatchMapping(&quot;/update&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;TranslationDTO&gt;&gt;&gt; updateTranslations(@RequestBody List&lt;TranslationDTO&gt; translationDTOs) {
+        try {
+<span class="nc" id="L58">            List&lt;TranslationDTO&gt; updatedList = supraTranslationCommonServices.updateTranslations(translationDTOs);</span>
+
+<span class="nc" id="L60">            boolean allSucceeded = updatedList.size() == translationDTOs.stream()</span>
+<span class="nc bnc" id="L61" title="All 2 branches missed.">                    .filter(dto -&gt; dto.getShortCode() != null &amp;&amp;</span>
+<span class="nc bnc" id="L62" title="All 2 branches missed.">                            dto.getLanguageId() != null &amp;&amp;</span>
+<span class="nc bnc" id="L63" title="All 2 branches missed.">                            dto.getDescription() != null)</span>
+<span class="nc bnc" id="L64" title="All 2 branches missed.">                    .count();</span>
+
+<span class="nc" id="L66">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(</span>
+                    updatedList,
+                    allSucceeded,
+<span class="nc bnc" id="L69" title="All 2 branches missed.">                    allSucceeded ? &quot;TRANSLATION-UPDATE-SUCCESS&quot; : &quot;TRANSLATION-PARTIAL-SUCCESS&quot;,</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">                    allSucceeded ? &quot;All translations updated successfully.&quot; : &quot;Some translations failed to update.&quot;</span>
+            ));
+
+<span class="nc" id="L73">        } catch (BadApiRequestException ex) {</span>
+<span class="nc" id="L74">            return ResponseEntity.badRequest().body(new ApiResponse&lt;&gt;(</span>
+<span class="nc" id="L75">                    null, false, &quot;TRANSLATION-UPDATE-FAILURE&quot;, &quot;Invalid request&quot;, List.of(ex.getMessage())</span>
+            ));
+<span class="nc" id="L77">        } catch (Exception ex) {</span>
+<span class="nc" id="L78">            return ResponseEntity.internalServerError().body(new ApiResponse&lt;&gt;(</span>
+                    null, false, &quot;TRANSLATION-UPDATE-FAILURE&quot;, &quot;Internal server error&quot;,
+<span class="nc" id="L80">                    List.of(&quot;An error occurred while updating translations.&quot;)</span>
+            ));
+        }
+    }
+
+    @GetMapping(&quot;/getShortCodeData&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;TranslationDTO&gt;&gt;&gt; getTranslations(@RequestParam List&lt;String&gt; shortCodes) {
+        try {
+<span class="nc" id="L88">            List&lt;TranslationDTO&gt; translationDTOs = supraTranslationCommonServices.getTranslationsByShortCodes(shortCodes);</span>
+
+<span class="nc" id="L90">            return ResponseEntity.ok(</span>
+                    new ApiResponse&lt;&gt;(translationDTOs, true, &quot;TRANSLATIONS_FETCHED&quot;, &quot;SUCCESS&quot;)
+            );
+
+<span class="nc" id="L94">        } catch (BadApiRequestException ex) {</span>
+<span class="nc" id="L95">            return ResponseEntity.badRequest().body(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;TRANSLATION_NOT_FOUND&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L97">                            Collections.singletonList(&quot;Translation fetch failed: &quot; + ex.getMessage())</span>
+                    )
+            );
+
+<span class="nc" id="L101">        } catch (Exception ex) {</span>
+<span class="nc" id="L102">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;SERVER_ERROR&quot;, &quot;ERROR&quot;,
+<span class="nc" id="L104">                            Collections.singletonList(&quot;Unexpected error occurred while fetching translations.&quot;)</span>
+                    )
+            );
+        }
+    }
+
+    @GetMapping(&quot;/getTranslationsDataByShortcodeAndLangId&quot;)
+    public ResponseEntity&lt;?&gt; getTranslationsByShortCodesAndLanguageId(
+            @RequestParam List&lt;String&gt; shortCodes,
+            @RequestParam Integer languageId) {
+
+        try {
+<span class="nc" id="L116">            List&lt;TranslationDTO&gt; translationDTOs = supraTranslationCommonServices.getTranslationsByShortCodesAndLanguageId(shortCodes, languageId);</span>
+
+<span class="nc bnc" id="L118" title="All 2 branches missed.">            if (!translationDTOs.isEmpty()) {</span>
+<span class="nc" id="L119">                return ResponseEntity.ok(translationDTOs);</span>
+            } else {
+<span class="nc" id="L121">                OldApiResponseMessage responseMessage = OldApiResponseMessage.builder()</span>
+<span class="nc" id="L122">                        .message(&quot;No translations found for the provided short codes and language ID.&quot;)</span>
+<span class="nc" id="L123">                        .status(HttpStatus.NOT_FOUND)</span>
+<span class="nc" id="L124">                        .success(false)</span>
+<span class="nc" id="L125">                        .build();</span>
+<span class="nc" id="L126">                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(responseMessage);</span>
+            }
+<span class="nc" id="L128">        } catch (BadApiRequestException ex) {</span>
+<span class="nc" id="L129">            OldApiResponseMessage responseMessage = OldApiResponseMessage.builder()</span>
+<span class="nc" id="L130">                    .message(ex.getMessage())</span>
+<span class="nc" id="L131">                    .status(HttpStatus.BAD_REQUEST)</span>
+<span class="nc" id="L132">                    .success(false)</span>
+<span class="nc" id="L133">                    .build();</span>
+<span class="nc" id="L134">            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseMessage);</span>
+<span class="nc" id="L135">        } catch (Exception ex) {</span>
+<span class="nc" id="L136">            OldApiResponseMessage responseMessage = OldApiResponseMessage.builder()</span>
+<span class="nc" id="L137">                    .message(&quot;An error occurred while fetching translations.&quot;)</span>
+<span class="nc" id="L138">                    .status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L139">                    .success(false)</span>
+<span class="nc" id="L140">                    .build();</span>
+<span class="nc" id="L141">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(responseMessage);</span>
+        }
+    }
+
+    @GetMapping(&quot;/get-by-lang&quot;)
+    public ResponseEntity&lt;?&gt; getTranslationByLang(@RequestParam String lang) {
+        try {
+<span class="nc" id="L148">            String fileName = lang + &quot;.json&quot;;</span>
+<span class="nc" id="L149">            Path filePath = Paths.get(uploadTranslationPath, fileName);</span>
+
+<span class="nc bnc" id="L151" title="All 2 branches missed.">            if (!Files.exists(filePath)) {</span>
+<span class="nc" id="L152">                return ResponseEntity.status(HttpStatus.OK).body(&quot;Translation file not found for lang: &quot; + lang);</span>
+            }
+
+<span class="nc" id="L155">            String content = Files.readString(filePath);</span>
+
+<span class="nc" id="L157">            ObjectMapper objectMapper = new ObjectMapper();</span>
+<span class="nc" id="L158">            Map&lt;String, Object&gt; jsonData = objectMapper.readValue(content, new TypeReference&lt;&gt;() {</span>
+            });
+<span class="nc" id="L160">            return ResponseEntity.ok(jsonData);</span>
+
+<span class="nc" id="L162">        } catch (IOException e) {</span>
+<span class="nc" id="L163">            return ResponseEntity.status(HttpStatus.OK).body(&quot;Error reading translation file&quot;);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

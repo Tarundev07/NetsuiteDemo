@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>InterviewRoundDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.dto</a> &gt; <span class="el_source">InterviewRoundDTO.java</span></div><h1>InterviewRoundDTO.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.dto;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import java.io.Serializable;
+import java.time.LocalDate;
+import java.util.List;
+
+<span class="pc bpc" id="L14" title="124 of 126 branches missed.">@Data</span>
+@JsonInclude(JsonInclude.Include.ALWAYS)
+<span class="fc" id="L16">@NoArgsConstructor</span>
+public class InterviewRoundDTO implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+<span class="fc" id="L21">    private Long interviewRoundId;</span>
+    @NotBlank(message = &quot;Interview_Round_Name_cannot_be_blank&quot;)
+<span class="fc" id="L23">    private String interviewRoundName;</span>
+    @NotNull(message = &quot;Interview_Type_ID_cannot_be_null&quot;)
+<span class="fc" id="L25">    private Long interviewTypeId;</span>
+    @NotNull(message = &quot;Interviewer_ID_cannot_be_null&quot;)
+<span class="nc" id="L27">    private List&lt;Long&gt; interviewersId;</span>
+    @NotNull(message = &quot;Designation_ID_cannot_be_null&quot;)
+<span class="nc" id="L29">    private Long designationId;</span>
+<span class="nc" id="L30">    private List&lt;Long&gt; skillsId;</span>
+    @NotNull(message = &quot;Is_Active_cannot_be_null&quot;)
+<span class="nc" id="L32">    private Boolean isActive;</span>
+    @JsonFormat(pattern = &quot;yyyy-MM-dd&quot;)
+<span class="nc" id="L34">    private LocalDate createdDate;</span>
+<span class="nc" id="L35">    private String createdBy;</span>
+    @JsonFormat(pattern = &quot;yyyy-MM-dd&quot;)
+<span class="nc" id="L37">    private LocalDate updatedDate;</span>
+<span class="nc" id="L38">    private String updatedBy;</span>
+
+<span class="fc" id="L40">    private String interviewTypeName;</span>
+<span class="fc" id="L41">    private List&lt;String&gt; interviewersName;</span>
+<span class="fc" id="L42">    private String designationName;</span>
+<span class="fc" id="L43">    private List&lt;String&gt; skillsName;</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

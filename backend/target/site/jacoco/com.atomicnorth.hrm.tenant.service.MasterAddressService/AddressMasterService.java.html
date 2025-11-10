@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AddressMasterService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.MasterAddressService</a> &gt; <span class="el_source">AddressMasterService.java</span></div><h1>AddressMasterService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.MasterAddressService;
+
+import com.atomicnorth.hrm.tenant.domain.MasterAddress.AddressMaster;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.MasterAddressRepo.AddressMasterRepository;
+import com.atomicnorth.hrm.tenant.service.dto.MasterAddressDTO.AddressRequestDTO;
+import com.atomicnorth.hrm.tenant.service.dto.MasterAddressDTO.AddressResponseDTO;
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import javax.persistence.EntityNotFoundException;
+import javax.persistence.criteria.Predicate;
+import java.lang.reflect.Field;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L30">public class AddressMasterService {</span>
+
+    @Autowired
+    private AddressMasterRepository addressMasterRepository;
+
+    @Autowired
+    private ModelMapper modelMapper;
+
+    public Map&lt;String, Object&gt; getPaginatedAddresses(Pageable pageable, String searchColumn, String searchValue) {
+<span class="nc" id="L39">        Specification&lt;AddressMaster&gt; spec = buildAddressSpecification(searchColumn, searchValue);</span>
+
+<span class="nc" id="L41">        Page&lt;AddressMaster&gt; addressPage = addressMasterRepository.findAll(spec, pageable);</span>
+
+<span class="nc" id="L43">        List&lt;AddressResponseDTO&gt; addressDTOList = addressPage.getContent()</span>
+<span class="nc" id="L44">                .stream()</span>
+<span class="nc" id="L45">                .map(address -&gt; modelMapper.map(address, AddressResponseDTO.class))</span>
+<span class="nc" id="L46">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L48">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L49">        response.put(&quot;result&quot;, addressDTOList);</span>
+<span class="nc" id="L50">        response.put(&quot;currentPage&quot;, addressPage.getNumber() + 1);  // Return page starting from 1</span>
+<span class="nc" id="L51">        response.put(&quot;totalItems&quot;, addressPage.getTotalElements());</span>
+<span class="nc" id="L52">        response.put(&quot;totalPages&quot;, addressPage.getTotalPages());</span>
+
+<span class="nc" id="L54">        return response;</span>
+    }
+
+    public static Specification&lt;AddressMaster&gt; buildAddressSpecification(String searchField, String searchKeyword) {
+<span class="nc" id="L58">        return (root, query, criteriaBuilder) -&gt; {</span>
+<span class="nc bnc" id="L59" title="All 6 branches missed.">            if (searchField == null || searchKeyword == null || searchKeyword.isBlank()) {</span>
+<span class="nc" id="L60">                return criteriaBuilder.conjunction();</span>
+            }
+
+<span class="nc" id="L63">            Predicate predicate = null;</span>
+<span class="nc" id="L64">            String lowerKeyword = &quot;%&quot; + searchKeyword.toLowerCase() + &quot;%&quot;;</span>
+
+
+<span class="nc bnc" id="L67" title="All 2 branches missed.">            if (&quot;country&quot;.equalsIgnoreCase(searchField)) {</span>
+<span class="nc" id="L68">                predicate = criteriaBuilder.like(criteriaBuilder.lower(root.get(&quot;country&quot;)), lowerKeyword);</span>
+<span class="nc bnc" id="L69" title="All 2 branches missed.">            } else if (&quot;state&quot;.equalsIgnoreCase(searchField)) {</span>
+<span class="nc" id="L70">                predicate = criteriaBuilder.like(criteriaBuilder.lower(root.get(&quot;state&quot;)), lowerKeyword);</span>
+<span class="nc bnc" id="L71" title="All 2 branches missed.">            } else if (&quot;city&quot;.equalsIgnoreCase(searchField)) {</span>
+<span class="nc" id="L72">                predicate = criteriaBuilder.like(criteriaBuilder.lower(root.get(&quot;city&quot;)), lowerKeyword);</span>
+            } else {
+
+                try {
+<span class="nc" id="L76">                    Field field = AddressMaster.class.getDeclaredField(searchField);</span>
+<span class="nc bnc" id="L77" title="All 2 branches missed.">                    if (field.getType().equals(String.class)) {</span>
+<span class="nc" id="L78">                        predicate = criteriaBuilder.like(criteriaBuilder.lower(root.get(searchField)), lowerKeyword);</span>
+                    } else {
+<span class="nc" id="L80">                        predicate = criteriaBuilder.equal(root.get(searchField), searchKeyword);</span>
+                    }
+<span class="nc" id="L82">                } catch (NoSuchFieldException e) {</span>
+<span class="nc" id="L83">                    System.err.println(&quot;Invalid field for search: &quot; + searchField);</span>
+<span class="nc" id="L84">                    predicate = criteriaBuilder.conjunction(); // return empty predicate to avoid crash</span>
+<span class="nc" id="L85">                }</span>
+            }
+
+<span class="nc" id="L88">            return predicate;</span>
+        };
+    }
+
+
+
+    @Transactional
+    public AddressResponseDTO saveOrUpdateAddress(AddressRequestDTO request) {
+<span class="nc" id="L96">        UserLoginDetail user = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L97">        String username = String.valueOf(user.getUsername());</span>
+
+        try {
+            // If an address ID exists, update the existing record, otherwise create a new one.
+<span class="nc bnc" id="L101" title="All 2 branches missed.">            AddressMaster address = (request.getAddressId() != null)</span>
+<span class="nc" id="L102">                    ? addressMasterRepository.findById(request.getAddressId())</span>
+<span class="nc" id="L103">                    .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Address not found&quot;))</span>
+<span class="nc" id="L104">                    : new AddressMaster();</span>
+
+<span class="nc" id="L106">            modelMapper.map(request, address);</span>
+<span class="nc" id="L107">            address.setCreatedBy(username);</span>
+<span class="nc" id="L108">            address.setLastUpdatedBy(username);</span>
+<span class="nc" id="L109">            address.setLastUpdatedDate(LocalDateTime.now());</span>
+
+<span class="nc" id="L111">            address = addressMasterRepository.save(address);</span>
+
+<span class="nc" id="L113">            return modelMapper.map(address, AddressResponseDTO.class);</span>
+
+<span class="nc" id="L115">        } catch (EntityNotFoundException ex) {</span>
+<span class="nc" id="L116">            throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage(), ex);</span>
+<span class="nc" id="L117">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L118">            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);</span>
+<span class="nc" id="L119">        } catch (Exception ex) {</span>
+<span class="nc" id="L120">            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, &quot;An unexpected error occurred.&quot;, ex);</span>
+        }
+    }
+
+    public AddressResponseDTO getAddressById(Integer id) {
+<span class="nc" id="L125">        AddressMaster address = addressMasterRepository.findById(id)</span>
+<span class="nc" id="L126">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Address not found with ID: &quot; + id));</span>
+
+<span class="nc" id="L128">        return modelMapper.map(address, AddressResponseDTO.class);</span>
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; getAddressDropdownList() {
+<span class="nc" id="L132">        return addressMasterRepository.findAll()</span>
+<span class="nc" id="L133">                .stream().map(address -&gt; {</span>
+<span class="nc" id="L134">                    Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L135">                    result.put(&quot;addressId&quot;, address.getAddressId());</span>
+<span class="nc" id="L136">                    result.put(&quot;addressName&quot;, address.getFullAddress());</span>
+<span class="nc" id="L137">                    return result;</span>
+<span class="nc" id="L138">                }).collect(Collectors.toList());</span>
+    }
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

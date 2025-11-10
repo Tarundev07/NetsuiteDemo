@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DepartmentController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.web.rest</a> &gt; <span class="el_source">DepartmentController.java</span></div><h1>DepartmentController.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.web.rest;
+
+import com.atomicnorth.hrm.tenant.domain.Department;
+import com.atomicnorth.hrm.tenant.repository.DepartmentRepository;
+import com.atomicnorth.hrm.tenant.service.DepartmentService;
+import com.atomicnorth.hrm.tenant.service.dto.ApproverDTO;
+import com.atomicnorth.hrm.tenant.service.dto.DepartmentDTO;
+import com.atomicnorth.hrm.tenant.service.dto.DepartmentIdNameDTO;
+import com.atomicnorth.hrm.util.commonClass.ApiResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.annotation.*;
+
+import javax.persistence.EntityNotFoundException;
+import javax.validation.Valid;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping(&quot;/api/department&quot;)
+@EnableTransactionManagement
+<span class="nc" id="L30">public class DepartmentController {</span>
+
+<span class="nc" id="L32">    private final Logger log = LoggerFactory.getLogger(DepartmentController.class);</span>
+
+    @Autowired
+    private DepartmentService departmentService;
+
+    @Autowired
+    private DepartmentRepository departmentRepository;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    private ResponseEntity&lt;ApiResponse&lt;?&gt;&gt; handleValidationErrors(BindingResult bindingResult) {
+<span class="nc" id="L44">        Map&lt;String, String&gt; errors = bindingResult.getFieldErrors().stream()</span>
+<span class="nc" id="L45">                .collect(Collectors.toMap(</span>
+                        FieldError::getField,
+<span class="nc" id="L47">                        fieldError -&gt; fieldError.getDefaultMessage()</span>
+                ));
+<span class="nc" id="L49">        return new ResponseEntity&lt;&gt;(</span>
+                new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_VALIDATION_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L51">                        new ArrayList&lt;&gt;(errors.values())),</span>
+                HttpStatus.BAD_REQUEST
+        );
+    }
+
+    @PostMapping(&quot;/create&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;?&gt;&gt; saveOrUpdateDepartment(
+            @Valid @RequestBody DepartmentDTO departmentDTO,
+            BindingResult bindingResult) {
+<span class="nc bnc" id="L60" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L61">            return handleValidationErrors(bindingResult);</span>
+        }
+<span class="nc" id="L63">        Long id = departmentDTO.getId();</span>
+        try {
+            // Validate duplicate approvers in the request
+<span class="nc bnc" id="L66" title="All 4 branches missed.">            if (departmentDTO.getApprovers() != null &amp;&amp; !departmentDTO.getApprovers().isEmpty()) {</span>
+<span class="nc" id="L67">                Set&lt;String&gt; approverSet = new HashSet&lt;&gt;();</span>
+<span class="nc bnc" id="L68" title="All 2 branches missed.">                for (ApproverDTO approver : departmentDTO.getApprovers()) {</span>
+<span class="nc" id="L69">                    String uniqueKey = approver.getEmployeeId() + &quot;-&quot; + approver.getType();</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">                    if (!approverSet.add(uniqueKey)) {</span>
+<span class="nc" id="L71">                        return new ResponseEntity&lt;&gt;(</span>
+                                new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_APPROVER_DUPLICATE_REQUEST&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L73">                                        Collections.singletonList(&quot;Approver with Employee ID &quot; + approver.getEmployeeId() +</span>
+<span class="nc" id="L74">                                                &quot; and Type '&quot; + approver.getType() + &quot;' is duplicated in the request.&quot;)),</span>
+                                HttpStatus.BAD_REQUEST);
+                    }
+<span class="nc" id="L77">                }</span>
+            }
+<span class="nc bnc" id="L79" title="All 2 branches missed.">            if (id == null) {</span>
+                // Create operation
+<span class="nc bnc" id="L81" title="All 2 branches missed.">                if (departmentRepository.findByDnameIgnoreCaseAndCompany(departmentDTO.getDname(), departmentDTO.getCompany()).isPresent()) {</span>
+<span class="nc" id="L82">                    return new ResponseEntity&lt;&gt;(</span>
+                            new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_DEPARTMENT_DUPLICATE&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L84">                                    Collections.singletonList(&quot;This department already exists; consider updating it instead of creating a duplicate: &quot; + departmentDTO.getDname())),</span>
+                            HttpStatus.CONFLICT);
+                }
+<span class="nc" id="L87">                DepartmentDTO savedDepartment = departmentService.createDepartment(departmentDTO);</span>
+<span class="nc" id="L88">                return new ResponseEntity&lt;&gt;(</span>
+                        new ApiResponse&lt;&gt;(savedDepartment, true, &quot;ATMCMN_DEPARTMENT_CREATED&quot;, &quot;SUCCESS&quot;),
+                        HttpStatus.CREATED);
+
+            } else {
+                // Update operation
+<span class="nc" id="L94">                Optional&lt;Department&gt; department = departmentRepository.findByDnameIgnoreCaseAndCompany(</span>
+<span class="nc" id="L95">                        departmentDTO.getDname(), departmentDTO.getCompany());</span>
+<span class="nc bnc" id="L96" title="All 4 branches missed.">                if (department.isPresent() &amp;&amp; !department.get().getId().equals(id)) {</span>
+<span class="nc" id="L97">                    return new ResponseEntity&lt;&gt;(</span>
+                            new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_DEPARTMENT_DUPLICATE&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L99">                                    Collections.singletonList(&quot;A Department with department name: '&quot; + departmentDTO.getDname()</span>
+                                            + &quot;' already exists for the selected company.&quot;)),
+                            HttpStatus.CONFLICT);
+                }
+<span class="nc" id="L103">                DepartmentDTO updatedDepartment = departmentService.updateDepartment(id, departmentDTO);</span>
+<span class="nc" id="L104">                return ResponseEntity.ok(</span>
+                        new ApiResponse&lt;&gt;(updatedDepartment, true, &quot;ATMCMN_DEPARTMENT_UPDATED&quot;, &quot;SUCCESS&quot;));
+            }
+<span class="nc" id="L107">        } catch (EntityNotFoundException ex) {</span>
+<span class="nc" id="L108">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_DEPARTMENT_NOT_FOUND&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L110">                            Collections.singletonList(&quot;Department not found with ID: &quot; + id)),</span>
+                    HttpStatus.NOT_FOUND);
+<span class="nc" id="L112">        } catch (Exception e) {</span>
+<span class="nc" id="L113">            log.error(&quot;Error occurred while saving/updating Department&quot;, e);</span>
+<span class="nc" id="L114">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_DEPARTMENT_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L116">                            Collections.singletonList(e.getMessage())),</span>
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping(&quot;/findAll&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;ObjectNode&gt;&gt; getAllLeaveAllocations(
+            @RequestParam(value = &quot;page&quot;, defaultValue = &quot;1&quot;) int page,
+            @RequestParam(value = &quot;size&quot;, defaultValue = &quot;10&quot;) int size,
+            @RequestParam(value = &quot;sortBy&quot;, defaultValue = &quot;id&quot;) String sortBy,
+            @RequestParam(value = &quot;sortDir&quot;, defaultValue = &quot;desc&quot;) String sortDir,
+            @RequestParam(value = &quot;searchKeyword&quot;, required = false) String searchKeyword,
+            @RequestParam(value = &quot;searchField&quot;, required = false) String searchField) {
+
+        try {
+<span class="nc" id="L131">            List&lt;DepartmentDTO&gt; departments = departmentService.findAllDepartments();</span>
+
+<span class="nc" id="L133">            Comparator&lt;DepartmentDTO&gt; defaultComparator = Comparator.comparing(DepartmentDTO::getId, Comparator.nullsLast(Comparator.naturalOrder()));</span>
+<span class="nc bnc" id="L134" title="All 2 branches missed.">            if (&quot;desc&quot;.equalsIgnoreCase(sortDir)) {</span>
+<span class="nc" id="L135">                defaultComparator = defaultComparator.reversed();</span>
+            }
+<span class="nc" id="L137">            departments.sort(defaultComparator);</span>
+
+<span class="nc bnc" id="L139" title="All 8 branches missed.">            if (searchKeyword != null &amp;&amp; !searchKeyword.isEmpty() &amp;&amp; searchField != null &amp;&amp; !searchField.isEmpty()) {</span>
+<span class="nc bnc" id="L140" title="All 2 branches missed.">                if (&quot;isActive&quot;.equalsIgnoreCase(searchField)) {</span>
+<span class="nc bnc" id="L141" title="All 2 branches missed.">                    if (&quot;active&quot;.contains(searchKeyword )) {</span>
+<span class="nc" id="L142">                        searchKeyword = String.valueOf(true);</span>
+<span class="nc bnc" id="L143" title="All 2 branches missed.">                    } else if (&quot;inactive&quot;.contains(searchKeyword )) {</span>
+<span class="nc" id="L144">                        searchKeyword = String.valueOf(false);</span>
+                    }
+                }
+<span class="nc" id="L147">                String lowerCaseKeyword = searchKeyword.toLowerCase();</span>
+<span class="nc" id="L148">                departments = departments.stream()</span>
+<span class="nc" id="L149">                        .filter(department -&gt; {</span>
+<span class="nc bnc" id="L150" title="All 12 branches missed.">                            switch (searchField.toLowerCase()) {</span>
+                                case &quot;dname&quot;:
+<span class="nc bnc" id="L152" title="All 4 branches missed.">                                    return department.getDname() != null &amp;&amp; department.getDname().toLowerCase().contains(lowerCaseKeyword);</span>
+                                case &quot;parentdepartmentname&quot;:
+<span class="nc bnc" id="L154" title="All 4 branches missed.">                                    return department.getParentDepartmentName() != null &amp;&amp; department.getParentDepartmentName().toLowerCase().contains(lowerCaseKeyword);</span>
+                                case &quot;payrollcostcentername&quot;:
+<span class="nc bnc" id="L156" title="All 4 branches missed.">                                    return department.getPayrollCostCenterName() != null &amp;&amp; department.getPayrollCostCenterName().toLowerCase().contains(lowerCaseKeyword);</span>
+                                case &quot;description&quot;:
+<span class="nc bnc" id="L158" title="All 4 branches missed.">                                    return department.getDescription() != null &amp;&amp; department.getDescription().toLowerCase().contains(lowerCaseKeyword);</span>
+                                case &quot;companyname&quot;:
+<span class="nc bnc" id="L160" title="All 4 branches missed.">                                    return department.getCompanyName() != null &amp;&amp; department.getCompanyName().toLowerCase().contains(lowerCaseKeyword);</span>
+                                case &quot;isgroup&quot;:
+<span class="nc bnc" id="L162" title="All 4 branches missed.">                                    return department.getIsGroup() != null &amp;&amp; department.getIsGroup().toString().toLowerCase().contains(lowerCaseKeyword);</span>
+                                case &quot;leaveblock&quot;:
+<span class="nc bnc" id="L164" title="All 4 branches missed.">                                    return department.getLeaveBlock() != null &amp;&amp; department.getLeaveBlock().toString().toLowerCase().contains(lowerCaseKeyword);</span>
+                                case &quot;createdby&quot;:
+<span class="nc bnc" id="L166" title="All 4 branches missed.">                                    return department.getCreatedBy() != null &amp;&amp; department.getCreatedBy().toLowerCase().contains(lowerCaseKeyword);</span>
+                                case &quot;updatedby&quot;:
+<span class="nc bnc" id="L168" title="All 4 branches missed.">                                    return department.getUpdatedBy() != null &amp;&amp; department.getUpdatedBy().toLowerCase().contains(lowerCaseKeyword);</span>
+                                case &quot;isactive&quot;:
+<span class="nc bnc" id="L170" title="All 4 branches missed.">                                    return department.getIsActive() != null &amp;&amp; department.getIsActive().toString().toLowerCase().contains(lowerCaseKeyword);</span>
+                                case &quot;leaveblockname&quot;:
+<span class="nc bnc" id="L172" title="All 4 branches missed.">                                    return department.getLeaveBlockName() != null &amp;&amp; department.getLeaveBlockName().toLowerCase().contains(lowerCaseKeyword);</span>
+                                default:
+<span class="nc" id="L174">                                    return false;</span>
+                            }
+                        })
+<span class="nc" id="L177">                        .collect(Collectors.toList());</span>
+            }
+
+<span class="nc" id="L180">            Map&lt;String, Comparator&lt;DepartmentDTO&gt;&gt; sortingFields = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L181">            sortingFields.put(&quot;dname&quot;, Comparator.comparing(DepartmentDTO::getDname, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));</span>
+<span class="nc" id="L182">            sortingFields.put(&quot;parentdepartmentname&quot;, Comparator.comparing(DepartmentDTO::getParentDepartmentName, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));</span>
+<span class="nc" id="L183">            sortingFields.put(&quot;payrollcostcentername&quot;, Comparator.comparing(DepartmentDTO::getPayrollCostCenterName, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));</span>
+<span class="nc" id="L184">            sortingFields.put(&quot;description&quot;, Comparator.comparing(DepartmentDTO::getDescription, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));</span>
+<span class="nc" id="L185">            sortingFields.put(&quot;companyname&quot;, Comparator.comparing(DepartmentDTO::getCompanyName, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));</span>
+<span class="nc bnc" id="L186" title="All 2 branches missed.">            sortingFields.put(&quot;isgroup&quot;, Comparator.comparing(d -&gt; d.getIsGroup() != null ? d.getIsGroup().toString() : &quot;&quot;, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));</span>
+<span class="nc bnc" id="L187" title="All 2 branches missed.">            sortingFields.put(&quot;leaveblock&quot;, Comparator.comparing(d -&gt; d.getLeaveBlock() != null ? d.getLeaveBlock().toString() : &quot;&quot;, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));</span>
+<span class="nc" id="L188">            sortingFields.put(&quot;createdby&quot;, Comparator.comparing(DepartmentDTO::getCreatedBy, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));</span>
+<span class="nc" id="L189">            sortingFields.put(&quot;updatedby&quot;, Comparator.comparing(DepartmentDTO::getUpdatedBy, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));</span>
+<span class="nc bnc" id="L190" title="All 2 branches missed.">            sortingFields.put(&quot;isactive&quot;, Comparator.comparing(d -&gt; d.getIsActive() != null ? d.getIsActive().toString() : &quot;&quot;, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));</span>
+<span class="nc" id="L191">            sortingFields.put(&quot;leaveblockname&quot;, Comparator.comparing(DepartmentDTO::getLeaveBlockName, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));</span>
+<span class="nc" id="L192">            sortingFields.put(&quot;createddate&quot;, Comparator.comparing(DepartmentDTO::getCreatedDate, Comparator.nullsLast(Comparator.naturalOrder())));</span>
+
+            //Apply requested sorting
+<span class="nc bnc" id="L195" title="All 2 branches missed.">            if (!&quot;id&quot;.equalsIgnoreCase(sortBy)) {  // ID sorting is already applied by default</span>
+<span class="nc" id="L196">                Comparator&lt;DepartmentDTO&gt; comparator = sortingFields.get(sortBy.toLowerCase());</span>
+<span class="nc bnc" id="L197" title="All 2 branches missed.">                if (comparator != null) {</span>
+<span class="nc bnc" id="L198" title="All 2 branches missed.">                    if (&quot;desc&quot;.equalsIgnoreCase(sortDir)) {</span>
+<span class="nc" id="L199">                        comparator = comparator.reversed();</span>
+                    }
+<span class="nc" id="L201">                    departments.sort(comparator);</span>
+                }
+            }
+
+            //Pagination logic
+<span class="nc" id="L206">            int startIndex = (page - 1) * size;</span>
+<span class="nc" id="L207">            startIndex = Math.max(0, Math.min(startIndex, departments.size()));</span>
+<span class="nc" id="L208">            int endIndex = Math.min(startIndex + size, departments.size());</span>
+<span class="nc" id="L209">            List&lt;DepartmentDTO&gt; currentPageData = departments.subList(startIndex, endIndex);</span>
+
+            //Pagination info
+<span class="nc" id="L212">            ObjectNode paginationInfo = objectMapper.createObjectNode();</span>
+<span class="nc" id="L213">            paginationInfo.put(&quot;totalElements&quot;, departments.size());</span>
+<span class="nc" id="L214">            paginationInfo.put(&quot;totalPages&quot;, (int) Math.ceil((double) departments.size() / size));</span>
+<span class="nc" id="L215">            paginationInfo.put(&quot;pageSize&quot;, size);</span>
+<span class="nc" id="L216">            paginationInfo.put(&quot;currentPage&quot;, page);</span>
+
+            //Build response
+<span class="nc" id="L219">            ObjectNode responseData = objectMapper.createObjectNode();</span>
+<span class="nc" id="L220">            responseData.set(&quot;departments&quot;, objectMapper.valueToTree(currentPageData));</span>
+<span class="nc" id="L221">            responseData.set(&quot;paginationData&quot;, paginationInfo);</span>
+
+<span class="nc" id="L223">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(responseData, true, &quot;ATMCMN_DEPARTMENTS_FETCHED&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L224">        } catch (Exception e) {</span>
+<span class="nc" id="L225">            log.error(&quot;Error occurred while fetching Departments&quot;, e);</span>
+<span class="nc" id="L226">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L227">                    .body(new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_DEPARTMENT_FETCH_ERROR&quot;, &quot;FAILURE&quot;,</span>
+<span class="nc" id="L228">                            Collections.singletonList(&quot;An unexpected error occurred while fetching department data&quot;)));</span>
+        }
+    }
+
+    @GetMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;DepartmentDTO&gt;&gt; getDepartmentById(@PathVariable Long id) {
+        try {
+<span class="nc" id="L235">            return departmentService.getDepartmentById(id)</span>
+<span class="nc" id="L236">                    .map(dept -&gt; ResponseEntity.ok(new ApiResponse&lt;&gt;(dept, true, &quot;ATMCMN_DEPARTMENT_FETCHED&quot;, &quot;SUCCESS&quot;)))</span>
+<span class="nc" id="L237">                    .orElse(new ResponseEntity&lt;&gt;(</span>
+                            new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_DEPARTMENT_NOT_FOUND&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L239">                                    Collections.singletonList(&quot;Department not found with ID: &quot; + id)),</span>
+                            HttpStatus.NOT_FOUND));
+<span class="nc" id="L241">        } catch (Exception e) {</span>
+<span class="nc" id="L242">            log.error(&quot;Error occurred while fetching Department by ID&quot;, e);</span>
+<span class="nc" id="L243">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_DEPARTMENT_FETCH_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L245">                            Collections.singletonList(e.getMessage())),</span>
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @DeleteMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; deleteDepartment(@PathVariable Long id) {
+        try {
+<span class="nc" id="L253">            departmentService.deleteDepartmentById(id);</span>
+<span class="nc" id="L254">            return ResponseEntity.ok(new ApiResponse&lt;&gt;(null, true, &quot;ATMCMN_DEPARTMENT_DELETED&quot;, &quot;SUCCESS&quot;));</span>
+<span class="nc" id="L255">        } catch (EntityNotFoundException ex) {</span>
+<span class="nc" id="L256">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_DEPARTMENT_NOT_FOUND&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L258">                            Collections.singletonList(&quot;Department not found with ID: &quot; + id)),</span>
+                    HttpStatus.NOT_FOUND);
+<span class="nc" id="L260">        } catch (Exception e) {</span>
+<span class="nc" id="L261">            log.error(&quot;Error occurred while deleting Department&quot;, e);</span>
+<span class="nc" id="L262">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;ATMCMN_DEPARTMENT_DELETE_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L264">                            Collections.singletonList(e.getMessage())),</span>
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping(&quot;/departmentNames&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;DepartmentIdNameDTO&gt;&gt;&gt; getAllDepartmentNames() {
+        try {
+<span class="nc" id="L272">            List&lt;DepartmentIdNameDTO&gt; departmentIdNameDTOS = departmentService.getAllDname();</span>
+<span class="nc bnc" id="L273" title="All 2 branches missed.">            if (departmentIdNameDTOS.isEmpty()) {</span>
+<span class="nc" id="L274">                return new ResponseEntity&lt;&gt;(</span>
+                        new ApiResponse&lt;&gt;(null, false, &quot;DEPARTMENT_NAME_NOT_FOUND&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L276">                                Collections.singletonList(&quot;No departments found.&quot;)),</span>
+                        HttpStatus.OK);
+            }
+<span class="nc" id="L279">            return ResponseEntity.ok(</span>
+                    new ApiResponse&lt;&gt;(departmentIdNameDTOS, true, &quot;DEPARTMENT_NAME_FETCHED&quot;, &quot;SUCCESS&quot;));
+<span class="nc" id="L281">        } catch (Exception e) {</span>
+<span class="nc" id="L282">            log.error(&quot;Error occurred while fetching department names&quot;, e);</span>
+<span class="nc" id="L283">            return new ResponseEntity&lt;&gt;(</span>
+                    new ApiResponse&lt;&gt;(null, false, &quot;DEPARTMENT_NAME_FETCH_ERROR&quot;, &quot;FAILURE&quot;,
+<span class="nc" id="L285">                            Collections.singletonList(e.getMessage())),</span>
+                    HttpStatus.OK);
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

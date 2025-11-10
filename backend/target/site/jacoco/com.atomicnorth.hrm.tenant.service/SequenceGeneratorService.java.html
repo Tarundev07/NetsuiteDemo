@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SequenceGeneratorService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service</a> &gt; <span class="el_source">SequenceGeneratorService.java</span></div><h1>SequenceGeneratorService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service;
+
+import com.atomicnorth.hrm.tenant.domain.ApplicationSequence;
+import com.atomicnorth.hrm.tenant.repository.ApplicationSequenceRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.persistence.EntityNotFoundException;
+import java.time.Year;
+import java.util.Optional;
+
+@Service
+<span class="nc" id="L14">@RequiredArgsConstructor</span>
+public class SequenceGeneratorService {
+
+    private final ApplicationSequenceRepository sequenceRepository;
+
+    @Transactional
+    public String generateSequence(String type, Integer division) {
+<span class="nc bnc" id="L21" title="All 2 branches missed.">        Optional&lt;ApplicationSequence&gt; optionalApplicationSequence = (division != null)</span>
+<span class="nc" id="L22">                ? sequenceRepository.findByTypeAndDivision(type, division)</span>
+<span class="nc" id="L23">                : sequenceRepository.findByTypeAndDivisionIsNull(type);</span>
+
+<span class="nc" id="L25">        ApplicationSequence sequence = optionalApplicationSequence</span>
+<span class="nc" id="L26">                .or(() -&gt; sequenceRepository.findByTypeAndDivisionIsNull(type))</span>
+<span class="nc" id="L27">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;No sequence config found for type: &quot; + type));</span>
+
+<span class="nc bnc" id="L29" title="All 2 branches missed.">        Integer current = sequence.getCurrentNumber() != null</span>
+<span class="nc" id="L30">                ? sequence.getCurrentNumber()</span>
+<span class="nc" id="L31">                : sequence.getStartNumber() - sequence.getIncrement();</span>
+
+<span class="nc" id="L33">        Integer next = current + sequence.getIncrement();</span>
+<span class="nc" id="L34">        sequence.setCurrentNumber(next);</span>
+<span class="nc" id="L35">        sequenceRepository.save(sequence);</span>
+
+<span class="nc" id="L37">        return sequence.getPrefix() + String.format(&quot;%04d&quot;, next);</span>
+    }
+
+    @Transactional
+    public String generateSequenceWithYear(String type, Integer division) {
+<span class="nc bnc" id="L42" title="All 2 branches missed.">        Optional&lt;ApplicationSequence&gt; optionalApplicationSequence = (division != null)</span>
+<span class="nc" id="L43">                ? sequenceRepository.findByTypeAndDivision(type, division)</span>
+<span class="nc" id="L44">                : sequenceRepository.findByTypeAndDivisionIsNull(type);</span>
+
+<span class="nc" id="L46">        ApplicationSequence sequence = optionalApplicationSequence</span>
+<span class="nc" id="L47">                .or(() -&gt; sequenceRepository.findByTypeAndDivisionIsNull(type))</span>
+<span class="nc" id="L48">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;No sequence config found for type: &quot; + type));</span>
+
+<span class="nc bnc" id="L50" title="All 2 branches missed.">        Integer current = (sequence.getCurrentNumber() != null)</span>
+<span class="nc" id="L51">                ? sequence.getCurrentNumber()</span>
+<span class="nc" id="L52">                : sequence.getStartNumber() - sequence.getIncrement();</span>
+
+<span class="nc" id="L54">        Integer next = current + sequence.getIncrement();</span>
+<span class="nc" id="L55">        sequence.setCurrentNumber(next);</span>
+<span class="nc" id="L56">        sequenceRepository.save(sequence);</span>
+
+<span class="nc" id="L58">        int currentYear = Year.now().getValue();</span>
+
+<span class="nc" id="L60">        return String.format(&quot;%s-%d-%05d&quot;, sequence.getPrefix(), currentYear, next);</span>
+    }
+
+    public String previewNewRequest(String type, Integer division) {
+<span class="nc bnc" id="L64" title="All 2 branches missed.">        Optional&lt;ApplicationSequence&gt; optionalApplicationSequence = (division != null)</span>
+<span class="nc" id="L65">                ? sequenceRepository.findByTypeAndDivision(type, division)</span>
+<span class="nc" id="L66">                : sequenceRepository.findByTypeAndDivisionIsNull(type);</span>
+
+<span class="nc" id="L68">        ApplicationSequence seq = optionalApplicationSequence</span>
+<span class="nc" id="L69">                .or(() -&gt; sequenceRepository.findByTypeAndDivisionIsNull(type))</span>
+<span class="nc" id="L70">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;No sequence config found for type: &quot; + type));</span>
+
+<span class="nc bnc" id="L72" title="All 2 branches missed.">        int next = ((seq.getCurrentNumber() != null) ? seq.getCurrentNumber()</span>
+<span class="nc" id="L73">                : seq.getStartNumber() - seq.getIncrement()) + seq.getIncrement();</span>
+
+<span class="nc" id="L75">        int currentYear = Year.now().getValue();</span>
+<span class="nc" id="L76">        return String.format(&quot;%s-%d-%05d&quot;, seq.getPrefix(), currentYear, next);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

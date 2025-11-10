@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DesignationSkillService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.designation</a> &gt; <span class="el_source">DesignationSkillService.java</span></div><h1>DesignationSkillService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.designation;
+
+import com.atomicnorth.hrm.tenant.domain.designation.Designation;
+import com.atomicnorth.hrm.tenant.domain.designation.DesignationSkill;
+import com.atomicnorth.hrm.tenant.domain.designation.SkillSet;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.designation.DesignationRepository;
+import com.atomicnorth.hrm.tenant.repository.designation.DesignationSkillRepository;
+import com.atomicnorth.hrm.tenant.repository.designation.SkillSetRepository;
+import com.atomicnorth.hrm.tenant.service.dto.designation.DesignationDTO;
+import com.atomicnorth.hrm.tenant.service.dto.designation.DesignationSkillDTO;
+import com.atomicnorth.hrm.tenant.service.dto.designation.DesignationSkillResponseDTO;
+import com.atomicnorth.hrm.tenant.service.dto.designation.SkillSetDTO;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+
+import javax.persistence.EntityNotFoundException;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Path;
+import javax.persistence.criteria.Root;
+import javax.transaction.Transactional;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@Service
+<span class="nc" id="L46">public class DesignationSkillService {</span>
+
+<span class="nc" id="L48">    private final Logger log = LoggerFactory.getLogger(DesignationSkillService.class);</span>
+    @Autowired
+    private DesignationSkillRepository designationSkillRepository;
+    @Autowired
+    private SkillSetRepository skillSetRepository;
+    @Autowired
+    private DesignationRepository designationRepository;
+
+    @Autowired
+    private ModelMapper modelMapper;
+
+    public static Specification&lt;Designation&gt; searchByColumn(String column, String value) {
+<span class="nc" id="L60">        return (Root&lt;Designation&gt; root, CriteriaQuery&lt;?&gt; query, CriteriaBuilder criteriaBuilder) -&gt; {</span>
+<span class="nc" id="L61">            Path&lt;?&gt; path = root.get(column);</span>
+
+<span class="nc bnc" id="L63" title="All 2 branches missed.">            if (path.getJavaType().equals(String.class)) {</span>
+<span class="nc" id="L64">                return criteriaBuilder.like(criteriaBuilder.lower(root.get(column)), &quot;%&quot; + value.toLowerCase() + &quot;%&quot;);</span>
+<span class="nc bnc" id="L65" title="All 2 branches missed.">            } else if (path.getJavaType().equals(Date.class)) {</span>
+                try {
+<span class="nc" id="L67">                    Date parsedDate = new SimpleDateFormat(&quot;yyyy-MM-dd&quot;).parse(value);</span>
+<span class="nc" id="L68">                    return criteriaBuilder.equal(root.get(column), parsedDate);</span>
+<span class="nc" id="L69">                } catch (ParseException e) {</span>
+<span class="nc" id="L70">                    throw new RuntimeException(&quot;Invalid date format for field: &quot; + column, e);</span>
+                }
+            } else {
+<span class="nc" id="L73">                return criteriaBuilder.equal(root.get(column), value);</span>
+            }
+        };
+    }
+
+    @Transactional
+    public DesignationDTO createDesignation(DesignationDTO designationDTO) throws JsonProcessingException {
+<span class="nc" id="L80">        UserLoginDetail userLoginDetail = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L81">        ObjectMapper objectMapper = new ObjectMapper();</span>
+<span class="nc bnc" id="L82" title="All 4 branches missed.">        if (designationDTO.getDesignationName() == null || designationDTO.getDesignationName().isEmpty()) {</span>
+<span class="nc" id="L83">            throw new IllegalArgumentException(&quot;Designation name cannot be empty&quot;);</span>
+        }
+<span class="nc" id="L85">        String normalizedInput = designationDTO.getDesignationName()</span>
+<span class="nc" id="L86">                .trim()</span>
+<span class="nc" id="L87">                .replaceAll(&quot;\\s+&quot;, &quot; &quot;)</span>
+<span class="nc" id="L88">                .toLowerCase();</span>
+
+<span class="nc" id="L90">        List&lt;Designation&gt; designations = designationRepository.findAll();</span>
+
+<span class="nc" id="L92">        boolean exists = designations.stream()</span>
+<span class="nc" id="L93">                .map(d -&gt; d.getDesignationName()</span>
+<span class="nc" id="L94">                        .trim()</span>
+<span class="nc" id="L95">                        .replaceAll(&quot;\\s+&quot;, &quot; &quot;)</span>
+<span class="nc" id="L96">                        .toLowerCase())</span>
+<span class="nc" id="L97">                .anyMatch(normalized -&gt; normalized.equals(normalizedInput));</span>
+
+<span class="nc bnc" id="L99" title="All 2 branches missed.">        if (exists) {</span>
+<span class="nc" id="L100">            throw new IllegalArgumentException(&quot;DUPLICATE_DESIGNATION&quot;);</span>
+        }
+<span class="nc" id="L102">        Designation designationEntity = new Designation();</span>
+<span class="nc" id="L103">        designationEntity.setDesignationName(designationDTO.getDesignationName());</span>
+<span class="nc" id="L104">        designationEntity.setDescription(designationDTO.getDescription());</span>
+<span class="nc" id="L105">        designationEntity.setAppraisalTemplateId(designationDTO.getAppraisalTemplateId());</span>
+<span class="nc" id="L106">        designationEntity.setStartDate(designationDTO.getStartDate());</span>
+<span class="nc" id="L107">        designationEntity.setEndDate(designationDTO.getEndDate());</span>
+<span class="nc" id="L108">        designationEntity.setStatus(designationDTO.getStatus());</span>
+<span class="nc" id="L109">        designationEntity.setCreatedDate(new Date());</span>
+<span class="nc" id="L110">        designationEntity.setLastModifiedDate(new Date());</span>
+<span class="nc" id="L111">        designationEntity.setRecordInfo(objectMapper.writeValueAsString(designationEntity));</span>
+<span class="nc" id="L112">        designationEntity.setCreatedBy(String.valueOf(userLoginDetail.getUsername()));</span>
+<span class="nc" id="L113">        designationEntity.setLastModifiedBy(String.valueOf(userLoginDetail.getUsername()));</span>
+<span class="nc bnc" id="L114" title="All 2 branches missed.">        if (designationDTO.getSkills() != null) {</span>
+<span class="nc" id="L115">            List&lt;DesignationSkill&gt; designationSkillList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L116" title="All 2 branches missed.">            for (DesignationSkillDTO skillDTO : designationDTO.getSkills()) {</span>
+<span class="nc" id="L117">                DesignationSkill skillEntity = new DesignationSkill();</span>
+<span class="nc" id="L118">                skillEntity.setDesignation(designationEntity);</span>
+<span class="nc" id="L119">                skillEntity.setSkillId(skillDTO.getSkillId());</span>
+<span class="nc" id="L120">                skillEntity.setStartDate(skillDTO.getStartDate());</span>
+<span class="nc" id="L121">                skillEntity.setEndDate(skillDTO.getEndDate());</span>
+<span class="nc" id="L122">                skillEntity.setStatus(skillDTO.getStatus());</span>
+<span class="nc" id="L123">                skillEntity.setCreatedDate(new Date());</span>
+<span class="nc" id="L124">                skillEntity.setLastModifiedDate(new Date());</span>
+<span class="nc" id="L125">                skillEntity.setRecordInfo(objectMapper.writeValueAsString(designationEntity));</span>
+<span class="nc" id="L126">                skillEntity.setCreatedBy(String.valueOf(userLoginDetail.getUsername()));</span>
+<span class="nc" id="L127">                skillEntity.setLastModifiedBy(String.valueOf(userLoginDetail.getUsername()));</span>
+<span class="nc" id="L128">                designationSkillList.add(skillEntity);</span>
+<span class="nc" id="L129">            }</span>
+<span class="nc" id="L130">            designationEntity.setSkills(designationSkillList);</span>
+        }
+<span class="nc" id="L132">        designationRepository.save(designationEntity);</span>
+<span class="nc" id="L133">        return designationDTO;</span>
+    }
+
+    @Transactional
+    public DesignationDTO updateDesignation(Integer designationId, DesignationDTO designationDTO) {
+<span class="nc" id="L138">        UserLoginDetail userLoginDetail = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L139">        String normalizedInput = designationDTO.getDesignationName()</span>
+<span class="nc" id="L140">                .trim()</span>
+<span class="nc" id="L141">                .replaceAll(&quot;\\s+&quot;, &quot; &quot;)</span>
+<span class="nc" id="L142">                .toLowerCase();</span>
+
+<span class="nc" id="L144">        List&lt;Designation&gt; designations = designationRepository.findAll();</span>
+
+<span class="nc" id="L146">        boolean exists = designations.stream()</span>
+<span class="nc bnc" id="L147" title="All 2 branches missed.">                .filter(d -&gt; !d.getId().equals(designationId))</span>
+<span class="nc" id="L148">                .map(d -&gt; d.getDesignationName()</span>
+<span class="nc" id="L149">                        .trim()</span>
+<span class="nc" id="L150">                        .replaceAll(&quot;\\s+&quot;, &quot; &quot;)</span>
+<span class="nc" id="L151">                        .toLowerCase())</span>
+<span class="nc" id="L152">                .anyMatch(normalized -&gt; normalized.equals(normalizedInput));</span>
+
+<span class="nc bnc" id="L154" title="All 2 branches missed.">        if (exists) {</span>
+<span class="nc" id="L155">            throw new IllegalArgumentException(&quot;DUPLICATE_DESIGNATION&quot;);</span>
+        }
+
+        // Fetch designation
+<span class="nc" id="L159">        Designation designation = designationRepository.findById(designationId)</span>
+<span class="nc" id="L160">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Designation not found with ID: &quot; + designationId));</span>
+        // Update basic fields
+<span class="nc" id="L162">        designation.setDesignationName(designationDTO.getDesignationName());</span>
+<span class="nc" id="L163">        designation.setDescription(designationDTO.getDescription());</span>
+<span class="nc" id="L164">        designation.setAppraisalTemplateId(designationDTO.getAppraisalTemplateId());</span>
+<span class="nc" id="L165">        designation.setStartDate(designationDTO.getStartDate());</span>
+<span class="nc" id="L166">        designation.setEndDate(designationDTO.getEndDate());</span>
+<span class="nc" id="L167">        designation.setStatus(designationDTO.getStatus());</span>
+<span class="nc" id="L168">        designation.setCreatedBy(String.valueOf(userLoginDetail.getUsername()));</span>
+<span class="nc" id="L169">        designation.setLastModifiedBy(String.valueOf(userLoginDetail.getUsername()));</span>
+<span class="nc" id="L170">        designation = designationRepository.save(designation);</span>
+        // Update or add skills
+<span class="nc bnc" id="L172" title="All 4 branches missed.">        if (designationDTO.getSkills() != null &amp;&amp; !designationDTO.getSkills().isEmpty()) {</span>
+<span class="nc bnc" id="L173" title="All 2 branches missed.">            for (DesignationSkillDTO skillDTO : designationDTO.getSkills()) {</span>
+<span class="nc bnc" id="L174" title="All 2 branches missed.">                if (skillDTO.getId() != null) {</span>
+                    // Update existing skill
+<span class="nc" id="L176">                    Optional&lt;DesignationSkill&gt; optionalSkill = designationSkillRepository.findById(skillDTO.getId());</span>
+<span class="nc bnc" id="L177" title="All 2 branches missed.">                    if (optionalSkill.isPresent()) {</span>
+<span class="nc" id="L178">                        DesignationSkill existingSkill = optionalSkill.get();</span>
+<span class="nc" id="L179">                        existingSkill.setSkillId(skillDTO.getSkillId());</span>
+<span class="nc" id="L180">                        existingSkill.setStatus(skillDTO.getStatus());</span>
+<span class="nc" id="L181">                        existingSkill.setId(skillDTO.getId());</span>
+<span class="nc" id="L182">                        existingSkill.setStartDate(skillDTO.getStartDate());</span>
+<span class="nc" id="L183">                        existingSkill.setEndDate(skillDTO.getEndDate());</span>
+<span class="nc" id="L184">                        existingSkill.setLastModifiedDate(new Date());</span>
+<span class="nc" id="L185">                        existingSkill.setLastModifiedBy(String.valueOf(userLoginDetail.getUsername()));</span>
+<span class="nc" id="L186">                        designationSkillRepository.save(existingSkill);</span>
+                    }
+<span class="nc" id="L188">                } else {</span>
+                    // Add new skill
+<span class="nc" id="L190">                    DesignationSkill newSkill = new DesignationSkill();</span>
+<span class="nc" id="L191">                    newSkill.setDesignation(designation);</span>
+<span class="nc" id="L192">                    newSkill.setSkillId(skillDTO.getSkillId());</span>
+<span class="nc" id="L193">                    newSkill.setId(skillDTO.getId());</span>
+<span class="nc" id="L194">                    newSkill.setStatus(skillDTO.getStatus());</span>
+<span class="nc" id="L195">                    newSkill.setStartDate(skillDTO.getStartDate());</span>
+<span class="nc" id="L196">                    newSkill.setEndDate(skillDTO.getEndDate());</span>
+<span class="nc" id="L197">                    newSkill.setCreatedDate(new Date());</span>
+<span class="nc" id="L198">                    newSkill.setLastModifiedDate(new Date());</span>
+<span class="nc" id="L199">                    newSkill.setCreatedBy(String.valueOf(userLoginDetail.getUsername()));</span>
+<span class="nc" id="L200">                    newSkill.setLastModifiedBy(String.valueOf(userLoginDetail.getUsername()));</span>
+<span class="nc" id="L201">                    designationSkillRepository.save(newSkill);</span>
+                }
+<span class="nc" id="L203">            }</span>
+        }
+<span class="nc" id="L205">        return designationDTO;</span>
+    }
+
+    public DesignationDTO getDesignationById(Integer designationId) {
+        // Fetch the designation by ID or throw an exception
+<span class="nc" id="L210">        Designation designation = designationRepository.findById(designationId)</span>
+<span class="nc" id="L211">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Designation not found with ID: &quot; + designationId));</span>
+
+        // Map entity to DTO
+<span class="nc" id="L214">        DesignationDTO dto = new DesignationDTO();</span>
+<span class="nc" id="L215">        dto.setId(designation.getId());</span>
+<span class="nc" id="L216">        dto.setDesignationName(designation.getDesignationName());</span>
+<span class="nc" id="L217">        dto.setDescription(designation.getDescription());</span>
+<span class="nc" id="L218">        dto.setAppraisalTemplateId(designation.getAppraisalTemplateId());</span>
+<span class="nc" id="L219">        dto.setStartDate(designation.getStartDate());</span>
+<span class="nc" id="L220">        dto.setEndDate(designation.getEndDate());</span>
+<span class="nc" id="L221">        dto.setStatus(designation.getStatus());</span>
+<span class="nc" id="L222">        dto.setCreatedBy(designation.getCreatedBy());</span>
+<span class="nc" id="L223">        dto.setCreatedDate(designation.getCreatedDate());</span>
+<span class="nc" id="L224">        dto.setLastModifiedBy(designation.getLastModifiedBy());</span>
+<span class="nc" id="L225">        dto.setLastModifiedDate(designation.getLastModifiedDate());</span>
+        // Fetch associated skills
+<span class="nc" id="L227">        List&lt;DesignationSkill&gt; skills = designationSkillRepository.findByDesignationId(designationId);</span>
+<span class="nc" id="L228">        List&lt;DesignationSkillDTO&gt; skillDTOs = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L229" title="All 2 branches missed.">        for (DesignationSkill skill : skills) {</span>
+<span class="nc" id="L230">            DesignationSkillDTO skillDTO = new DesignationSkillDTO();</span>
+<span class="nc" id="L231">            skillDTO.setDesignation(skill.getDesignation().getId());</span>
+<span class="nc" id="L232">            skillDTO.setSkillId((skill.getSkillId()));</span>
+<span class="nc" id="L233">            SkillSet skillSet = skillSetRepository.findById(Math.toIntExact(skill.getSkillId())).orElse(null);</span>
+<span class="nc bnc" id="L234" title="All 2 branches missed.">            if (skillSet != null) {</span>
+<span class="nc" id="L235">                String fullName = skillSet.getName();</span>
+<span class="nc" id="L236">                skillDTO.setSkillName(fullName);</span>
+            }
+<span class="nc" id="L238">            skillDTO.setStartDate(skill.getStartDate());</span>
+<span class="nc" id="L239">            skillDTO.setStatus(skill.getStatus());</span>
+<span class="nc" id="L240">            skillDTO.setId(skill.getId());</span>
+<span class="nc" id="L241">            skillDTO.setEndDate(skill.getEndDate());</span>
+<span class="nc" id="L242">            skillDTO.setCreatedDate(skill.getCreatedDate());</span>
+<span class="nc" id="L243">            skillDTO.setCreatedBy(skill.getCreatedBy());</span>
+<span class="nc" id="L244">            skillDTO.setLastModifiedBy(skill.getLastModifiedBy());</span>
+<span class="nc" id="L245">            skillDTO.setLastModifiedDate(skill.getLastModifiedDate());</span>
+<span class="nc" id="L246">            skillDTOs.add(skillDTO);</span>
+<span class="nc" id="L247">        }</span>
+<span class="nc" id="L248">        dto.setSkills(skillDTOs);</span>
+
+<span class="nc" id="L250">        return dto;</span>
+    }
+
+    public Map&lt;String, Object&gt; getPaginatedDesignations(Pageable pageable, String searchColumn, String searchValue) {
+        Page&lt;Designation&gt; designations;
+
+<span class="nc bnc" id="L256" title="All 2 branches missed.">        if (&quot;skills&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc" id="L257">            designations = designationRepository.findBySkills_SkillSet_NameContainingIgnoreCase(searchValue, pageable);</span>
+<span class="nc bnc" id="L258" title="All 4 branches missed.">        } else if (searchColumn != null &amp;&amp; searchValue != null) {</span>
+<span class="nc bnc" id="L259" title="All 2 branches missed.">            if (&quot;status&quot;.equalsIgnoreCase(searchColumn)) {</span>
+<span class="nc bnc" id="L260" title="All 2 branches missed.">                if (&quot;active&quot;.contains(searchValue)) {</span>
+<span class="nc" id="L261">                    searchValue = &quot;A&quot;;</span>
+<span class="nc bnc" id="L262" title="All 2 branches missed.">                } else if (&quot;inactive&quot;.contains(searchValue)) {</span>
+<span class="nc" id="L263">                    searchValue = &quot;I&quot;;</span>
+                }
+            }
+<span class="nc" id="L266">            Specification&lt;Designation&gt; spec = searchByColumn(searchColumn, searchValue);</span>
+<span class="nc" id="L267">            designations = designationRepository.findAll(spec, pageable);</span>
+<span class="nc" id="L268">        } else {</span>
+<span class="nc" id="L269">            designations = designationRepository.findAll(pageable);</span>
+        }
+<span class="nc" id="L271">        Set&lt;Integer&gt; skillIds = designations.getContent().stream()</span>
+<span class="nc" id="L272">                .flatMap(d -&gt; d.getSkills().stream())</span>
+<span class="nc" id="L273">                .filter(skill -&gt; &quot;Y&quot;.equalsIgnoreCase(skill.getStatus()))</span>
+<span class="nc" id="L274">                .map(DesignationSkill::getSkillId)</span>
+<span class="nc" id="L275">                .collect(Collectors.toSet());</span>
+
+        // Batch fetch skill set names
+<span class="nc" id="L278">        Map&lt;Integer, String&gt; skillIdToNameMap = skillSetRepository.findAllById(skillIds).stream()</span>
+<span class="nc" id="L279">                .collect(Collectors.toMap(SkillSet::getSkillId, SkillSet::getName));</span>
+
+        // Map entities to DTOs
+<span class="nc" id="L282">        List&lt;DesignationDTO&gt; designationDTOs = designations.getContent().stream().map(designation -&gt; {</span>
+<span class="nc" id="L283">            DesignationDTO dto = new DesignationDTO();</span>
+<span class="nc" id="L284">            dto.setId(designation.getId());</span>
+<span class="nc" id="L285">            dto.setDesignationName(designation.getDesignationName());</span>
+<span class="nc" id="L286">            dto.setDescription(designation.getDescription());</span>
+<span class="nc" id="L287">            dto.setAppraisalTemplateId(designation.getAppraisalTemplateId());</span>
+<span class="nc" id="L288">            dto.setStartDate(designation.getStartDate());</span>
+<span class="nc" id="L289">            dto.setEndDate(designation.getEndDate());</span>
+<span class="nc" id="L290">            dto.setStatus(designation.getStatus());</span>
+<span class="nc" id="L291">            dto.setCreatedBy(designation.getCreatedBy());</span>
+<span class="nc" id="L292">            dto.setCreatedDate(designation.getCreatedDate());</span>
+<span class="nc" id="L293">            dto.setLastModifiedBy(designation.getLastModifiedBy());</span>
+<span class="nc" id="L294">            dto.setLastModifiedDate(designation.getLastModifiedDate());</span>
+
+            // Filter active skills and map them
+<span class="nc" id="L297">            List&lt;DesignationSkillDTO&gt; filteredSkills = designation.getSkills().stream()</span>
+<span class="nc" id="L298">                    .filter(skill -&gt; &quot;Y&quot;.equalsIgnoreCase(skill.getStatus()))</span>
+<span class="nc" id="L299">                    .map(skill -&gt; {</span>
+<span class="nc" id="L300">                        DesignationSkillDTO skillDTO = new DesignationSkillDTO();</span>
+<span class="nc" id="L301">                        skillDTO.setId(skill.getId());</span>
+<span class="nc" id="L302">                        skillDTO.setSkillId(skill.getSkillId());</span>
+<span class="nc" id="L303">                        skillDTO.setStartDate(skill.getStartDate());</span>
+<span class="nc" id="L304">                        skillDTO.setEndDate(skill.getEndDate());</span>
+<span class="nc" id="L305">                        skillDTO.setStatus(skill.getStatus());</span>
+<span class="nc" id="L306">                        skillDTO.setCreatedBy(skill.getCreatedBy());</span>
+<span class="nc" id="L307">                        skillDTO.setCreatedDate(skill.getCreatedDate());</span>
+<span class="nc" id="L308">                        skillDTO.setLastModifiedBy(skill.getLastModifiedBy());</span>
+<span class="nc" id="L309">                        skillDTO.setLastModifiedDate(skill.getLastModifiedDate());</span>
+<span class="nc" id="L310">                        skillDTO.setSkillName(skillIdToNameMap.get(skill.getSkillId()));</span>
+<span class="nc" id="L311">                        return skillDTO;</span>
+                    })
+<span class="nc" id="L313">                    .collect(Collectors.toList());</span>
+
+<span class="nc" id="L315">            dto.setSkills(filteredSkills);</span>
+<span class="nc" id="L316">            return dto;</span>
+<span class="nc" id="L317">        }).collect(Collectors.toList());</span>
+        // Prepare response map
+<span class="nc" id="L319">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L320">        response.put(&quot;result&quot;, designationDTOs);</span>
+<span class="nc" id="L321">        response.put(&quot;currentPage&quot;, pageable.getPageNumber() + 1);</span>
+<span class="nc" id="L322">        response.put(&quot;pageSize&quot;, pageable.getPageSize());</span>
+<span class="nc" id="L323">        response.put(&quot;totalItems&quot;, designations.getTotalElements());</span>
+<span class="nc" id="L324">        response.put(&quot;totalPages&quot;, designations.getTotalPages());</span>
+
+<span class="nc" id="L326">        return response;</span>
+    }
+
+    @Transactional
+    public String deleteDesignation(Integer designationId) {
+<span class="nc bnc" id="L331" title="All 2 branches missed.">        if (!designationRepository.existsById(designationId)) {</span>
+<span class="nc" id="L332">            throw new EntityNotFoundException(&quot;Designation not found with ID: &quot; + designationId);</span>
+        }
+<span class="nc" id="L334">        designationSkillRepository.deleteByDesignationId(designationId);</span>
+<span class="nc" id="L335">        designationRepository.deleteById(designationId);</span>
+<span class="nc" id="L336">        return &quot;Designation deleted successfully with ID: &quot; + designationId;</span>
+    }
+
+    public List&lt;SkillSetDTO&gt; getAllSkills() {
+<span class="nc" id="L340">        List&lt;SkillSet&gt; skillEntities = skillSetRepository.findAll();</span>
+<span class="nc" id="L341">        return skillEntities.stream()</span>
+<span class="nc" id="L342">                .map(skill -&gt; new SkillSetDTO(</span>
+<span class="nc" id="L343">                        skill.getSkillId(),</span>
+<span class="nc" id="L344">                        skill.getName(),</span>
+<span class="nc" id="L345">                        skill.getDescription(),</span>
+<span class="nc" id="L346">                        skill.getIsActive(),</span>
+<span class="nc" id="L347">                        skill.getCategoryCode()</span>
+                ))
+<span class="nc" id="L349">                .collect(Collectors.toList());</span>
+    }
+
+    public List&lt;DesignationSkillResponseDTO&gt; getDesignationSkillsById(Integer designationId) {
+        // Fetch results from the repository
+<span class="nc" id="L354">        List&lt;Object[]&gt; results = designationSkillRepository.fetchDesignationSkillsById(designationId);</span>
+
+        // Map the results to DTOs
+<span class="nc" id="L357">        return results.stream().map(record -&gt; new DesignationSkillResponseDTO(</span>
+                (Integer) record[0],  // SKILL_ID
+                (String) record[1],   // NAME
+                (String) record[2],   // DESCRIPTION
+                (String) record[3]    // CATEGORY_CODE
+<span class="nc" id="L362">        )).collect(Collectors.toList());</span>
+
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; findDesignationNameAndId() {
+<span class="nc" id="L367">        return designationRepository.findAll().stream()</span>
+<span class="nc" id="L368">                .filter(x -&gt; &quot;A&quot;.equalsIgnoreCase(x.getStatus()))</span>
+<span class="nc" id="L369">                .sorted(Comparator.comparing(Designation::getDesignationName, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))</span>
+<span class="nc" id="L370">                .map(x -&gt; {</span>
+<span class="nc" id="L371">                    Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L372">                    result.put(&quot;id&quot;, x.getId());</span>
+<span class="nc" id="L373">                    result.put(&quot;designationName&quot;, x.getDesignationName());</span>
+<span class="nc" id="L374">                    return result;</span>
+<span class="nc" id="L375">                }).collect(Collectors.toList());</span>
+    }
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

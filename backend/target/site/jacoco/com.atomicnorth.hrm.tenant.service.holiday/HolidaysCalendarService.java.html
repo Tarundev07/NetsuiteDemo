@@ -1,0 +1,502 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>HolidaysCalendarService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service.holiday</a> &gt; <span class="el_source">HolidaysCalendarService.java</span></div><h1>HolidaysCalendarService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service.holiday;
+
+import com.atomicnorth.hrm.configuration.multitenant.TenantContextHolder;
+import com.atomicnorth.hrm.tenant.domain.employeeGrade.EmployeeGrade;
+import com.atomicnorth.hrm.tenant.domain.holiday.HolidaysCalendar;
+import com.atomicnorth.hrm.tenant.domain.holiday.HolidaysCalendarDay;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.LookupCodeRepository;
+import com.atomicnorth.hrm.tenant.repository.holiday.HolidaysCalendarDayRepository;
+import com.atomicnorth.hrm.tenant.repository.holiday.HolidaysCalendarRepository;
+import com.atomicnorth.hrm.tenant.service.dto.holiday.HolidaysCalendarDayRequest;
+import com.atomicnorth.hrm.tenant.service.dto.holiday.HolidaysCalendarDayResponse;
+import com.atomicnorth.hrm.tenant.service.dto.holiday.HolidaysCalendarSaveRequest;
+import com.atomicnorth.hrm.tenant.service.dto.holiday.HolidaysCalendarSaveResponse;
+import com.atomicnorth.hrm.util.commonClass.PaginatedResponse;
+import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.persistence.EntityNotFoundException;
+import javax.persistence.criteria.*;
+import java.lang.reflect.Field;
+import java.sql.ResultSet;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+public class HolidaysCalendarService {
+
+    private final HolidaysCalendarRepository holidaysCalendarRepository;
+    private final HolidaysCalendarDayRepository holidaysCalendarDayRepository;
+    private final JdbcTemplate jdbcTemplate;
+
+    private final ModelMapper modelMapper;
+    private final LookupCodeRepository lookupCodeRepository;
+
+    public HolidaysCalendarService(HolidaysCalendarRepository holidaysCalendarRepository,
+                                   HolidaysCalendarDayRepository holidaysCalendarDayRepository,
+<span class="nc" id="L47">                                   JdbcTemplate jdbcTemplate, ModelMapper modelMapper, LookupCodeRepository lookupCodeRepository) {</span>
+<span class="nc" id="L48">        this.holidaysCalendarRepository = holidaysCalendarRepository;</span>
+<span class="nc" id="L49">        this.holidaysCalendarDayRepository = holidaysCalendarDayRepository;</span>
+<span class="nc" id="L50">        this.jdbcTemplate = jdbcTemplate;</span>
+<span class="nc" id="L51">        this.modelMapper = modelMapper;</span>
+<span class="nc" id="L52">        this.lookupCodeRepository = lookupCodeRepository;</span>
+<span class="nc" id="L53">    }</span>
+
+    @Transactional
+    public HolidaysCalendarSaveResponse saveHolidaysCalendar(HolidaysCalendarSaveRequest request) {
+<span class="nc" id="L57">        UserLoginDetail user = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L58">        System.out.println(user.getUsername());</span>
+
+<span class="nc" id="L60">        HolidaysCalendar holidaysCalendar = holidaysCalendarRepository</span>
+<span class="nc" id="L61">                .findByName(request.getName())</span>
+<span class="nc" id="L62">                .orElseGet(HolidaysCalendar::new);</span>
+
+<span class="nc" id="L64">        holidaysCalendar.setName(request.getName());</span>
+<span class="nc" id="L65">        holidaysCalendar.setLastUpdateSessionId(request.getLastUpdateSessionId());</span>
+<span class="nc" id="L66">        holidaysCalendar.setFromDate(request.getFromDate());</span>
+<span class="nc" id="L67">        holidaysCalendar.setToDate(request.getToDate());</span>
+<span class="nc" id="L68">        holidaysCalendar.setTotalHolidays(request.getTotalHolidays());</span>
+<span class="nc" id="L69">        holidaysCalendar.setCreatedBy(user.getUsername().toString());</span>
+<span class="nc" id="L70">        holidaysCalendar.setLastUpdatedBy(user.getUsername().toString());</span>
+<span class="nc" id="L71">        holidaysCalendar.setRecordInfo(request.getRecordInfo());</span>
+<span class="nc" id="L72">        holidaysCalendar.setLastUpdatedDate(LocalDate.now());</span>
+
+        // Save or update holidays calendar
+<span class="nc" id="L75">        holidaysCalendar = holidaysCalendarRepository.save(holidaysCalendar);</span>
+
+        // Save  holidays days
+<span class="nc" id="L78">        List&lt;HolidaysCalendarDayResponse&gt; holidaysDayResponses = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">        for (HolidaysCalendarDayRequest holidaysDayRequest : request.getHolidayCalendarDays()) {</span>
+            // Map the holidays day request to the entity
+<span class="nc" id="L81">            HolidaysCalendarDay holidaysCalendarDay = new HolidaysCalendarDay();</span>
+<span class="nc" id="L82">            holidaysCalendarDay.setHolidayCalendarId(holidaysCalendar.getHolidayCalendarId());</span>
+<span class="nc" id="L83">            holidaysCalendarDay.setName(holidaysDayRequest.getName());</span>
+<span class="nc" id="L84">            holidaysCalendarDay.setHolidayType(holidaysDayRequest.getHolidayType());</span>
+<span class="nc" id="L85">            holidaysCalendarDay.setHolidayDate(holidaysDayRequest.getHolidayDate());</span>
+<span class="nc" id="L86">            holidaysCalendarDay.setIsActive(holidaysDayRequest.getIsActive());</span>
+<span class="nc" id="L87">            holidaysCalendarDay.setLeaveCode(holidaysDayRequest.getLeaveCode());</span>
+<span class="nc" id="L88">            holidaysCalendarDay.setLastUpdateSessionId(holidaysDayRequest.getLastUpdateSessionId());</span>
+<span class="nc" id="L89">            holidaysCalendarDay.setCreatedBy(user.getUsername().toString());</span>
+<span class="nc" id="L90">            holidaysCalendarDay.setLastUpdatedBy(user.getUsername().toString());</span>
+<span class="nc" id="L91">            holidaysCalendarDay.setCreationDate(LocalDate.now());</span>
+<span class="nc" id="L92">            holidaysCalendarDay.setRecordInfo(holidaysDayRequest.getRecordInfo());</span>
+<span class="nc" id="L93">            holidaysCalendarDay.setLastUpdatedDate(LocalDate.now());</span>
+
+            // Save the holidays day
+<span class="nc" id="L96">            holidaysCalendarDay = holidaysCalendarDayRepository.save(holidaysCalendarDay);</span>
+
+            // Map the saved holidays day to response DTO
+<span class="nc" id="L99">            HolidaysCalendarDayResponse holidaysDayResponse = new HolidaysCalendarDayResponse();</span>
+<span class="nc" id="L100">            holidaysDayResponse.setHolidayCalendarId(holidaysCalendar.getHolidayCalendarId());</span>
+<span class="nc" id="L101">            holidaysDayResponse.setName(holidaysCalendarDay.getName());</span>
+<span class="nc" id="L102">            holidaysDayResponse.setHolidayType(holidaysCalendarDay.getHolidayType());</span>
+<span class="nc" id="L103">            holidaysDayResponse.setHolidayDate(holidaysCalendarDay.getHolidayDate());</span>
+<span class="nc" id="L104">            holidaysDayResponse.setIsActive(holidaysCalendarDay.getIsActive());</span>
+<span class="nc" id="L105">            holidaysDayResponse.setLeaveCode(holidaysCalendarDay.getLeaveCode());</span>
+<span class="nc" id="L106">            holidaysDayResponse.setLastUpdateSessionId(holidaysCalendarDay.getLastUpdateSessionId());</span>
+<span class="nc" id="L107">            holidaysDayResponse.setCreationDate(holidaysCalendarDay.getCreationDate());</span>
+<span class="nc" id="L108">            holidaysDayResponse.setCreatedBy(holidaysCalendarDay.getCreatedBy());</span>
+<span class="nc" id="L109">            holidaysDayResponse.setLastUpdatedBy(holidaysCalendarDay.getLastUpdatedBy());</span>
+<span class="nc" id="L110">            holidaysDayResponse.setLastUpdatedDate(holidaysCalendarDay.getLastUpdatedDate());</span>
+<span class="nc" id="L111">            holidaysDayResponse.setRecordInfo(holidaysCalendarDay.getRecordInfo());</span>
+
+<span class="nc" id="L113">            holidaysDayResponses.add(holidaysDayResponse);</span>
+<span class="nc" id="L114">        }</span>
+
+        // Prepare response
+<span class="nc" id="L117">        HolidaysCalendarSaveResponse response = new HolidaysCalendarSaveResponse();</span>
+<span class="nc" id="L118">        response.setHolidayCalendarId(holidaysCalendar.getHolidayCalendarId());</span>
+<span class="nc" id="L119">        response.setName(holidaysCalendar.getName());</span>
+<span class="nc" id="L120">        response.setLastUpdateSessionId(holidaysCalendar.getLastUpdateSessionId());</span>
+<span class="nc" id="L121">        response.setFromDate(holidaysCalendar.getFromDate());</span>
+<span class="nc" id="L122">        response.setToDate(holidaysCalendar.getToDate());</span>
+<span class="nc" id="L123">        response.setTotalHolidays(holidaysCalendar.getTotalHolidays());</span>
+<span class="nc" id="L124">        response.setCreatedBy(holidaysCalendar.getCreatedBy());</span>
+<span class="nc" id="L125">        response.setRecordInfo(holidaysCalendar.getRecordInfo());</span>
+<span class="nc" id="L126">        response.setHolidayCalendarDays(holidaysDayResponses);</span>
+
+<span class="nc" id="L128">        return response;</span>
+    }
+
+    public HolidaysCalendarSaveResponse getHolidayCalendarByHolidayId(Integer holidayId) {
+<span class="nc" id="L132">        HolidaysCalendar holidayCalendar = holidaysCalendarRepository.findByHolidayCalendarId(holidayId)</span>
+<span class="nc" id="L133">                .orElse(null);</span>
+
+<span class="nc bnc" id="L135" title="All 2 branches missed.">        if (holidayCalendar != null) {</span>
+<span class="nc" id="L136">            HolidaysCalendarSaveResponse response = modelMapper.map(holidayCalendar, HolidaysCalendarSaveResponse.class);</span>
+<span class="nc" id="L137">            List&lt;HolidaysCalendarDay&gt; holidayCalendarDays = holidaysCalendarDayRepository.findByHolidayCalendarId(holidayCalendar.getHolidayCalendarId());</span>
+
+<span class="nc" id="L139">            List&lt;HolidaysCalendarDayResponse&gt; holidayCalendarDayResponses = holidayCalendarDays.stream()</span>
+<span class="nc" id="L140">                    .map(day -&gt; {</span>
+<span class="nc" id="L141">                        HolidaysCalendarDayResponse response1 = modelMapper.map(day, HolidaysCalendarDayResponse.class);</span>
+<span class="nc" id="L142">                        response1.setFlag(&quot;E&quot;);</span>
+<span class="nc" id="L143">                        return response1;</span>
+                    })
+<span class="nc" id="L145">                    .collect(Collectors.toList());</span>
+
+
+<span class="nc" id="L148">            response.setHolidayCalendarDays(holidayCalendarDayResponses);</span>
+<span class="nc" id="L149">            return response;</span>
+        }
+<span class="nc" id="L151">        return null;</span>
+    }
+
+    @Transactional
+    public HolidaysCalendarSaveResponse updateHolidaysCalendar(String name, HolidaysCalendarSaveRequest request) {
+<span class="nc" id="L156">        HolidaysCalendar existingCalendar = holidaysCalendarRepository.findByName(name)</span>
+<span class="nc" id="L157">                .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Calendar not found with name: &quot; + name));</span>
+
+<span class="nc" id="L159">        int HolidayCalendarId = existingCalendar.getHolidayCalendarId();</span>
+
+<span class="nc bnc" id="L161" title="All 2 branches missed.">        existingCalendar.setName(request.getName() != null ? request.getName() : existingCalendar.getName());</span>
+<span class="nc bnc" id="L162" title="All 2 branches missed.">        existingCalendar.setLastUpdateSessionId(request.getLastUpdateSessionId() != null ? request.getLastUpdateSessionId() : existingCalendar.getLastUpdateSessionId());</span>
+<span class="nc bnc" id="L163" title="All 2 branches missed.">        existingCalendar.setFromDate(request.getFromDate() != null ? request.getFromDate() : existingCalendar.getFromDate());</span>
+<span class="nc bnc" id="L164" title="All 2 branches missed.">        existingCalendar.setToDate(request.getToDate() != null ? request.getToDate() : existingCalendar.getToDate());</span>
+
+<span class="nc" id="L166">        holidaysCalendarRepository.save(existingCalendar);</span>
+
+<span class="nc" id="L168">        List&lt;HolidaysCalendarDayRequest&gt; holidayDayRequests = request.getHolidayCalendarDays();</span>
+<span class="nc" id="L169">        List&lt;HolidaysCalendarDayResponse&gt; holidaysDayResponses = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L170" title="All 4 branches missed.">        if (holidayDayRequests != null &amp;&amp; !holidayDayRequests.isEmpty()) {</span>
+<span class="nc bnc" id="L171" title="All 2 branches missed.">            for (HolidaysCalendarDayRequest dayRequest : holidayDayRequests) {</span>
+<span class="nc" id="L172">                HolidaysCalendarDay existingDay = holidaysCalendarDayRepository</span>
+<span class="nc" id="L173">                        .findByHolidayCalendarIdAndHolidayDate(HolidayCalendarId, dayRequest.getHolidayDate())</span>
+<span class="nc" id="L174">                        .orElse(new HolidaysCalendarDay());</span>
+
+<span class="nc bnc" id="L176" title="All 2 branches missed.">                existingDay.setName(dayRequest.getName() != null ? dayRequest.getName() : existingDay.getName());</span>
+<span class="nc bnc" id="L177" title="All 2 branches missed.">                existingDay.setHolidayType(dayRequest.getHolidayType() != null ? dayRequest.getHolidayType() : existingDay.getHolidayType());</span>
+<span class="nc bnc" id="L178" title="All 2 branches missed.">                existingDay.setHolidayDate(dayRequest.getHolidayDate() != null ? dayRequest.getHolidayDate() : existingDay.getHolidayDate());</span>
+<span class="nc bnc" id="L179" title="All 2 branches missed.">                existingDay.setIsActive(dayRequest.getIsActive() != null ? dayRequest.getIsActive() : existingDay.getIsActive());</span>
+<span class="nc bnc" id="L180" title="All 2 branches missed.">                existingDay.setLeaveCode(dayRequest.getLeaveCode() != null ? dayRequest.getLeaveCode() : existingDay.getLeaveCode());</span>
+<span class="nc bnc" id="L181" title="All 2 branches missed.">                existingDay.setLastUpdateSessionId(dayRequest.getLastUpdateSessionId() != null ? dayRequest.getLastUpdateSessionId() : existingDay.getLastUpdateSessionId());</span>
+
+<span class="nc" id="L183">                holidaysCalendarDayRepository.save(existingDay);</span>
+
+<span class="nc" id="L185">                HolidaysCalendarDayResponse holidaysDayResponse = new HolidaysCalendarDayResponse();</span>
+<span class="nc" id="L186">                holidaysDayResponse.setHolidayCalendarId(existingDay.getHolidayCalendarId());</span>
+<span class="nc" id="L187">                holidaysDayResponse.setName(existingDay.getName());</span>
+<span class="nc" id="L188">                holidaysDayResponse.setHolidayType(existingDay.getHolidayType());</span>
+<span class="nc" id="L189">                holidaysDayResponse.setHolidayDate(existingDay.getHolidayDate());</span>
+<span class="nc" id="L190">                holidaysDayResponse.setIsActive(existingDay.getIsActive());</span>
+<span class="nc" id="L191">                holidaysDayResponse.setLeaveCode(existingDay.getLeaveCode());</span>
+<span class="nc" id="L192">                holidaysDayResponse.setLastUpdateSessionId(existingDay.getLastUpdateSessionId());</span>
+<span class="nc" id="L193">                holidaysDayResponse.setCreationDate(existingDay.getCreationDate());</span>
+<span class="nc" id="L194">                holidaysDayResponse.setCreatedBy(existingDay.getCreatedBy());</span>
+<span class="nc" id="L195">                holidaysDayResponse.setLastUpdatedBy(existingDay.getLastUpdatedBy());</span>
+<span class="nc" id="L196">                holidaysDayResponse.setLastUpdatedDate(existingDay.getLastUpdatedDate());</span>
+<span class="nc" id="L197">                holidaysDayResponse.setRecordInfo(existingDay.getRecordInfo());</span>
+
+<span class="nc" id="L199">                holidaysDayResponses.add(holidaysDayResponse);</span>
+<span class="nc" id="L200">            }</span>
+        }
+
+<span class="nc" id="L203">        HolidaysCalendarSaveResponse response = new HolidaysCalendarSaveResponse();</span>
+<span class="nc" id="L204">        response.setHolidayCalendarId(existingCalendar.getHolidayCalendarId());</span>
+<span class="nc" id="L205">        response.setName(existingCalendar.getName());</span>
+<span class="nc" id="L206">        response.setFromDate(existingCalendar.getFromDate());</span>
+<span class="nc" id="L207">        response.setToDate(existingCalendar.getToDate());</span>
+<span class="nc" id="L208">        response.setTotalHolidays(existingCalendar.getTotalHolidays());</span>
+<span class="nc" id="L209">        response.setHolidayCalendarDays(holidaysDayResponses);</span>
+
+<span class="nc" id="L211">        return response;</span>
+    }
+
+    public PaginatedResponse&lt;HolidaysCalendarSaveResponse&gt; getHolidayCalendarData(
+            int pageNumber, int pageSize, String searchColumn, String searchValue, String sortBy, String sortOrder) {
+
+<span class="nc" id="L217">        String schemaName = TenantContextHolder.getTenant();</span>
+<span class="nc" id="L218">        String procedureName = &quot;Fetch_All_Holiday_Data&quot;;</span>
+
+<span class="nc" id="L220">        String sql = &quot;CALL &quot; + schemaName + &quot;.&quot; + procedureName + &quot;()&quot;;</span>
+
+<span class="nc" id="L222">        List&lt;HolidaysCalendarSaveResponse&gt; allData = jdbcTemplate.query(sql, (ResultSet rs) -&gt; {</span>
+<span class="nc" id="L223">            Map&lt;Integer, HolidaysCalendarSaveResponse&gt; calendarMap = new LinkedHashMap&lt;&gt;();</span>
+
+<span class="nc bnc" id="L225" title="All 2 branches missed.">            while (rs.next()) {</span>
+<span class="nc" id="L226">                int holidayCalendarId = rs.getInt(&quot;HOLIDAY_CALENDAR_ID&quot;);</span>
+
+<span class="nc" id="L228">                HolidaysCalendarSaveResponse calendarResponse = calendarMap.get(holidayCalendarId);</span>
+<span class="nc bnc" id="L229" title="All 2 branches missed.">                if (calendarResponse == null) {</span>
+<span class="nc" id="L230">                    calendarResponse = new HolidaysCalendarSaveResponse();</span>
+<span class="nc" id="L231">                    calendarResponse.setHolidayCalendarId(holidayCalendarId);</span>
+<span class="nc" id="L232">                    calendarResponse.setName(rs.getString(&quot;Calendar_Name&quot;));</span>
+<span class="nc" id="L233">                    calendarResponse.setLastUpdateSessionId(rs.getInt(&quot;LAST_UPDATE_SESSION_ID&quot;));</span>
+<span class="nc bnc" id="L234" title="All 2 branches missed.">                    calendarResponse.setFromDate(rs.getDate(&quot;FROM_DATE&quot;) != null ? rs.getDate(&quot;FROM_DATE&quot;).toLocalDate() : null);</span>
+<span class="nc bnc" id="L235" title="All 2 branches missed.">                    calendarResponse.setToDate(rs.getDate(&quot;TO_DATE&quot;) != null ? rs.getDate(&quot;TO_DATE&quot;).toLocalDate() : null);</span>
+<span class="nc" id="L236">                    calendarResponse.setTotalHolidays(rs.getInt(&quot;TOTAL_HOLIDAYS&quot;));</span>
+<span class="nc" id="L237">                    calendarResponse.setCreatedBy(rs.getString(&quot;CREATED_BY&quot;));</span>
+<span class="nc" id="L238">                    calendarResponse.setRecordInfo(rs.getString(&quot;Calendar_Record_Info&quot;));</span>
+<span class="nc" id="L239">                    calendarResponse.setHolidayCalendarDays(new ArrayList&lt;&gt;());</span>
+<span class="nc" id="L240">                    calendarMap.put(holidayCalendarId, calendarResponse);</span>
+                }
+
+                // Populate holiday days
+<span class="nc" id="L244">                HolidaysCalendarDayResponse dayResponse = new HolidaysCalendarDayResponse();</span>
+<span class="nc" id="L245">                dayResponse.setHolidayCalendarId(holidayCalendarId);</span>
+<span class="nc" id="L246">                dayResponse.setHolidayCalendarDayId(rs.getInt(&quot;HOLIDAY_CALENDAR_DAY_ID&quot;));</span>
+<span class="nc" id="L247">                dayResponse.setName(rs.getString(&quot;Holiday_Name&quot;));</span>
+<span class="nc" id="L248">                dayResponse.setHolidayType(rs.getString(&quot;HOLIDAY_TYPE&quot;));</span>
+<span class="nc bnc" id="L249" title="All 2 branches missed.">                dayResponse.setHolidayDate(rs.getDate(&quot;HOLIDAY_DATE&quot;) != null ? rs.getDate(&quot;HOLIDAY_DATE&quot;).toLocalDate() : null);</span>
+<span class="nc" id="L250">                dayResponse.setIsActive(rs.getString(&quot;IS_ACTIVE&quot;));</span>
+<span class="nc" id="L251">                dayResponse.setLeaveCode(rs.getInt(&quot;LEAVE_CODE&quot;));</span>
+<span class="nc" id="L252">                dayResponse.setLastUpdateSessionId(rs.getInt(&quot;Holiday_Last_Update_Session_ID&quot;));</span>
+<span class="nc bnc" id="L253" title="All 2 branches missed.">                dayResponse.setCreationDate(rs.getDate(&quot;Holiday_Creation_Date&quot;) != null ? rs.getDate(&quot;Holiday_Creation_Date&quot;).toLocalDate() : null);</span>
+<span class="nc" id="L254">                dayResponse.setCreatedBy(rs.getString(&quot;Holiday_Created_By&quot;));</span>
+<span class="nc" id="L255">                dayResponse.setLastUpdatedBy(rs.getString(&quot;Holiday_Last_Updated_By&quot;));</span>
+<span class="nc bnc" id="L256" title="All 2 branches missed.">                dayResponse.setLastUpdatedDate(rs.getDate(&quot;Holiday_Last_Updated_Date&quot;) != null ? rs.getDate(&quot;Holiday_Last_Updated_Date&quot;).toLocalDate() : null);</span>
+<span class="nc" id="L257">                dayResponse.setRecordInfo(rs.getString(&quot;Holiday_Record_Info&quot;));</span>
+<span class="nc" id="L258">                dayResponse.setFlag(rs.getString(&quot;flag&quot;));</span>
+
+<span class="nc" id="L260">                calendarResponse.getHolidayCalendarDays().add(dayResponse);</span>
+<span class="nc" id="L261">            }</span>
+
+<span class="nc" id="L263">            return new ArrayList&lt;&gt;(calendarMap.values());</span>
+        });
+
+        // Apply search filtering
+<span class="nc" id="L267">        allData = applySearchFilter(allData, searchColumn, searchValue);</span>
+
+        // Get total elements **before pagination**
+<span class="nc" id="L270">        int totalElements = allData.size();</span>
+
+        // Apply sorting
+<span class="nc" id="L273">        allData = applySorting(allData, sortBy, sortOrder);</span>
+
+        // Apply pagination
+<span class="nc" id="L276">        int fromIndex = Math.min((pageNumber - 1) * pageSize, totalElements);</span>
+<span class="nc" id="L277">        int toIndex = Math.min(fromIndex + pageSize, totalElements);</span>
+<span class="nc" id="L278">        List&lt;HolidaysCalendarSaveResponse&gt; paginatedData = allData.subList(fromIndex, toIndex);</span>
+
+        // Calculate total pages
+<span class="nc" id="L281">        int totalPages = (int) Math.ceil((double) totalElements / pageSize);</span>
+
+        // Prepare paginated response
+<span class="nc" id="L284">        PaginatedResponse&lt;HolidaysCalendarSaveResponse&gt; paginatedResponse = new PaginatedResponse&lt;&gt;();</span>
+<span class="nc" id="L285">        paginatedResponse.setPaginationData(paginatedData);</span>
+<span class="nc" id="L286">        paginatedResponse.setTotalPages(totalPages);</span>
+<span class="nc" id="L287">        paginatedResponse.setTotalElements(totalElements);</span>
+<span class="nc" id="L288">        paginatedResponse.setPageSize(pageSize);</span>
+<span class="nc" id="L289">        paginatedResponse.setCurrentPage(pageNumber);</span>
+
+<span class="nc" id="L291">        return paginatedResponse;</span>
+    }
+
+    private List&lt;HolidaysCalendarSaveResponse&gt; applySearchFilter(
+            List&lt;HolidaysCalendarSaveResponse&gt; dataList, String searchColumn, String searchValue) {
+<span class="nc bnc" id="L296" title="All 4 branches missed.">        if (searchColumn != null &amp;&amp; searchValue != null) {</span>
+            try {
+<span class="nc" id="L298">                Field field = HolidaysCalendarSaveResponse.class.getDeclaredField(searchColumn);</span>
+<span class="nc" id="L299">                field.setAccessible(true);</span>
+
+<span class="nc" id="L301">                return dataList.stream()</span>
+<span class="nc" id="L302">                        .filter(dto -&gt; {</span>
+                            try {
+<span class="nc" id="L304">                                Object fieldValue = field.get(dto);</span>
+<span class="nc bnc" id="L305" title="All 4 branches missed.">                                return fieldValue != null &amp;&amp; fieldValue.toString().toLowerCase().contains(searchValue.toLowerCase());</span>
+<span class="nc" id="L306">                            } catch (IllegalAccessException e) {</span>
+<span class="nc" id="L307">                                throw new RuntimeException(&quot;Error accessing field: &quot; + searchColumn, e);</span>
+                            }
+                        })
+<span class="nc" id="L310">                        .collect(Collectors.toList());</span>
+<span class="nc" id="L311">            } catch (NoSuchFieldException e) {</span>
+<span class="nc" id="L312">                throw new RuntimeException(&quot;Invalid search field: &quot; + searchColumn);</span>
+            }
+        }
+<span class="nc" id="L315">        return dataList;</span>
+    }
+
+    private List&lt;HolidaysCalendarSaveResponse&gt; applySorting(
+            List&lt;HolidaysCalendarSaveResponse&gt; dataList, String sortBy, String sortOrder) {
+<span class="nc bnc" id="L320" title="All 4 branches missed.">        if (sortBy != null &amp;&amp; !sortBy.isEmpty()) {</span>
+            try {
+<span class="nc" id="L322">                Field field = HolidaysCalendarSaveResponse.class.getDeclaredField(sortBy);</span>
+<span class="nc" id="L323">                field.setAccessible(true);</span>
+
+<span class="nc" id="L325">                Comparator&lt;HolidaysCalendarSaveResponse&gt; comparator = (o1, o2) -&gt; {</span>
+                    try {
+<span class="nc" id="L327">                        Object value1 = field.get(o1);</span>
+<span class="nc" id="L328">                        Object value2 = field.get(o2);</span>
+
+<span class="nc bnc" id="L330" title="All 4 branches missed.">                        if (value1 == null || value2 == null) return 0;</span>
+<span class="nc bnc" id="L331" title="All 4 branches missed.">                        if (value1 instanceof Comparable &amp;&amp; value2 instanceof Comparable) {</span>
+<span class="nc" id="L332">                            return ((Comparable) value1).compareTo(value2);</span>
+                        }
+<span class="nc" id="L334">                        return 0;</span>
+<span class="nc" id="L335">                    } catch (IllegalAccessException e) {</span>
+<span class="nc" id="L336">                        throw new RuntimeException(&quot;Error accessing field: &quot; + sortBy, e);</span>
+                    }
+                };
+
+<span class="nc bnc" id="L340" title="All 2 branches missed.">                if (&quot;desc&quot;.equalsIgnoreCase(sortOrder)) {</span>
+<span class="nc" id="L341">                    comparator = comparator.reversed();</span>
+                }
+
+<span class="nc" id="L344">                dataList.sort(comparator);</span>
+<span class="nc" id="L345">            } catch (NoSuchFieldException e) {</span>
+<span class="nc" id="L346">                throw new RuntimeException(&quot;Invalid sorting field: &quot; + sortBy);</span>
+<span class="nc" id="L347">            }</span>
+        }
+<span class="nc" id="L349">        return dataList;</span>
+    }
+
+    @Transactional
+    public HolidaysCalendarSaveResponse saveOrUpdateHolidaysCalendarNew(HolidaysCalendarSaveRequest request) {
+
+<span class="nc" id="L355">        UserLoginDetail user = SessionHolder.getUserLoginDetail();</span>
+<span class="nc" id="L356">        String username = String.valueOf(user.getUsername());</span>
+
+<span class="nc bnc" id="L358" title="All 2 branches missed.">        HolidaysCalendar holidaysCalendar = request.getHolidayCalendarId() == null ?</span>
+<span class="nc" id="L359">                new HolidaysCalendar() :</span>
+<span class="nc" id="L360">                holidaysCalendarRepository.findById(request.getHolidayCalendarId())</span>
+<span class="nc" id="L361">                        .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Holiday Calendar not found&quot;));</span>
+
+<span class="nc" id="L363">        modelMapper.map(request, holidaysCalendar);</span>
+<span class="nc" id="L364">        holidaysCalendar.setCreatedBy(username);</span>
+<span class="nc" id="L365">        holidaysCalendar.setLastUpdatedDate(LocalDate.now());</span>
+
+<span class="nc" id="L367">        holidaysCalendar = holidaysCalendarRepository.save(holidaysCalendar);</span>
+
+<span class="nc" id="L369">        processHolidayCalendarDays(request, holidaysCalendar, username);</span>
+
+<span class="nc" id="L371">        HolidaysCalendarSaveResponse response = modelMapper.map(holidaysCalendar, HolidaysCalendarSaveResponse.class);</span>
+<span class="nc" id="L372">        response.setHolidayCalendarDays(</span>
+<span class="nc" id="L373">                holidaysCalendarDayRepository.findByHolidayCalendarId(holidaysCalendar.getHolidayCalendarId())</span>
+<span class="nc" id="L374">                        .stream()</span>
+<span class="nc" id="L375">                        .map(day -&gt; {</span>
+<span class="nc" id="L376">                            HolidaysCalendarDayResponse dayResponse = modelMapper.map(day, HolidaysCalendarDayResponse.class);</span>
+<span class="nc bnc" id="L377" title="All 2 branches missed.">                            dayResponse.setFlag(day.getIsActive().equalsIgnoreCase(&quot;Y&quot;) ? &quot;E&quot; : &quot;D&quot;);</span>
+<span class="nc" id="L378">                            return dayResponse;</span>
+                        })
+<span class="nc" id="L380">                        .collect(Collectors.toList())</span>
+        );
+
+<span class="nc" id="L383">        return response;</span>
+    }
+
+    private void processHolidayCalendarDays(HolidaysCalendarSaveRequest request, HolidaysCalendar holidaysCalendar, String username) {
+<span class="nc bnc" id="L387" title="All 2 branches missed.">        for (HolidaysCalendarDayRequest childRequest : request.getHolidayCalendarDays()) {</span>
+<span class="nc bnc" id="L388" title="All 4 branches missed.">            switch (childRequest.getFlag().toUpperCase()) {</span>
+                case &quot;E&quot;:
+<span class="nc" id="L390">                    HolidaysCalendarDay existingDay = holidaysCalendarDayRepository.findById(childRequest.getHolidayCalendarDayId())</span>
+<span class="nc" id="L391">                            .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Holiday Calendar Day not found&quot;));</span>
+<span class="nc" id="L392">                    modelMapper.map(childRequest, existingDay);</span>
+<span class="nc" id="L393">                    existingDay.setLastUpdatedBy(username);</span>
+<span class="nc" id="L394">                    existingDay.setLastUpdatedDate(LocalDate.now());</span>
+<span class="nc" id="L395">                    holidaysCalendarDayRepository.save(existingDay);</span>
+<span class="nc" id="L396">                    break;</span>
+                case &quot;D&quot;:
+<span class="nc" id="L398">                    HolidaysCalendarDay deleteDay = holidaysCalendarDayRepository.findById(childRequest.getHolidayCalendarDayId())</span>
+<span class="nc" id="L399">                            .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Holiday Calendar Day not found&quot;));</span>
+<span class="nc" id="L400">                    deleteDay.setIsActive(&quot;N&quot;);</span>
+<span class="nc" id="L401">                    holidaysCalendarDayRepository.save(deleteDay);</span>
+<span class="nc" id="L402">                    break;</span>
+                case &quot;A&quot;:
+<span class="nc bnc" id="L404" title="All 2 branches missed.">                    if (childRequest.getHolidayCalendarDayId() != null) {</span>
+<span class="nc" id="L405">                        throw new IllegalArgumentException(&quot;Holiday Calendar Day ID must be null for new additions.&quot;);</span>
+                    }
+<span class="nc" id="L407">                    HolidaysCalendarDay newDay = modelMapper.map(childRequest, HolidaysCalendarDay.class);</span>
+<span class="nc" id="L408">                    newDay.setHolidayCalendarId(holidaysCalendar.getHolidayCalendarId());</span>
+<span class="nc" id="L409">                    newDay.setIsActive(&quot;Y&quot;);</span>
+<span class="nc" id="L410">                    newDay.setCreatedBy(username);</span>
+<span class="nc" id="L411">                    newDay.setCreationDate(LocalDate.now());</span>
+<span class="nc" id="L412">                    newDay.setLastUpdatedBy(username);</span>
+<span class="nc" id="L413">                    newDay.setLastUpdatedDate(LocalDate.now());</span>
+<span class="nc" id="L414">                    holidaysCalendarDayRepository.save(newDay);</span>
+                    break;
+            }
+<span class="nc" id="L417">        }</span>
+<span class="nc" id="L418">        long childCount = holidaysCalendarDayRepository.countByHolidayCalendarId(holidaysCalendar.getHolidayCalendarId());</span>
+<span class="nc" id="L419">        holidaysCalendar.setTotalHolidays((int) childCount);</span>
+<span class="nc" id="L420">        holidaysCalendarRepository.save(holidaysCalendar);</span>
+<span class="nc" id="L421">    }</span>
+
+    public List&lt;Map&lt;String, Object&gt;&gt; findHolidayNameAndId() {
+<span class="nc" id="L424">        LocalDate today = LocalDate.now();</span>
+
+<span class="nc" id="L426">        return holidaysCalendarRepository.findAll().stream()</span>
+<span class="nc bnc" id="L427" title="All 4 branches missed.">                .filter(x -&gt; x.getToDate() != null &amp;&amp; !x.getToDate().isBefore(today))</span>
+<span class="nc" id="L428">                .sorted(Comparator.comparing(HolidaysCalendar::getName, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))</span>
+<span class="nc" id="L429">                .map(x -&gt; {</span>
+<span class="nc" id="L430">                    Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L431">                    result.put(&quot;id&quot;, x.getHolidayCalendarId());</span>
+<span class="nc" id="L432">                    result.put(&quot;holidayName&quot;, x.getName());</span>
+<span class="nc" id="L433">                    return result;</span>
+                })
+<span class="nc" id="L435">                .collect(Collectors.toList());</span>
+    }
+
+    public Map&lt;String, Object&gt; getHolidayCalendarDateById(Integer calendarId, Pageable pageable, String searchColumn, String searchValue) {
+        Page&lt;HolidaysCalendarDay&gt; holidaysCalendarDays;
+<span class="nc" id="L440">        Specification&lt;HolidaysCalendarDay&gt; spec = searchByColumn(calendarId, searchColumn, searchValue);</span>
+<span class="nc" id="L441">        holidaysCalendarDays = holidaysCalendarDayRepository.findAll(spec, pageable);</span>
+
+<span class="nc" id="L443">        List&lt;HolidaysCalendarDayResponse&gt; holidaysCalendarDayResponses = holidaysCalendarDays.getContent().stream()</span>
+<span class="nc" id="L444">                .map(this::convertToDTO)</span>
+<span class="nc" id="L445">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L447">        HolidaysCalendarSaveResponse calendarResponse = holidaysCalendarRepository.findById(calendarId)</span>
+<span class="nc" id="L448">                .map(entity -&gt; convertToDto(entity, holidaysCalendarDayResponses))</span>
+<span class="nc" id="L449">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Calendar not found&quot;));</span>
+
+<span class="nc" id="L451">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L452">        response.put(&quot;result&quot;, calendarResponse);</span>
+<span class="nc" id="L453">        response.put(&quot;currentPage&quot;, pageable.getPageNumber() + 1);</span>
+<span class="nc" id="L454">        response.put(&quot;pageSize&quot;, pageable.getPageSize());</span>
+<span class="nc" id="L455">        response.put(&quot;totalItems&quot;, holidaysCalendarDays.getTotalElements());</span>
+<span class="nc" id="L456">        response.put(&quot;totalPages&quot;, holidaysCalendarDays.getTotalPages());</span>
+
+<span class="nc" id="L458">        return response;</span>
+    }
+
+    private HolidaysCalendarSaveResponse convertToDto(HolidaysCalendar entity, List&lt;HolidaysCalendarDayResponse&gt; holidaysCalendarDayResponses) {
+<span class="nc" id="L462">        HolidaysCalendarSaveResponse dto = modelMapper.map(entity, HolidaysCalendarSaveResponse.class);</span>
+<span class="nc" id="L463">        dto.setHolidayCalendarDays(holidaysCalendarDayResponses);</span>
+<span class="nc" id="L464">        return dto;</span>
+    }
+
+
+    public static Specification&lt;HolidaysCalendarDay&gt; searchByColumn(Integer calendarId, String column, String value) {
+<span class="nc" id="L469">        return (Root&lt;HolidaysCalendarDay&gt; root, CriteriaQuery&lt;?&gt; query, CriteriaBuilder cb) -&gt; {</span>
+<span class="nc" id="L470">            Predicate basePredicate = cb.equal(root.get(&quot;holidayCalendarId&quot;), calendarId);</span>
+
+<span class="nc bnc" id="L472" title="All 8 branches missed.">            if (column != null &amp;&amp; !column.isBlank() &amp;&amp; value != null &amp;&amp; !value.isBlank()) {</span>
+<span class="nc" id="L473">                Path&lt;?&gt; path = root.get(column);</span>
+
+                Predicate searchPredicate;
+<span class="nc bnc" id="L476" title="All 2 branches missed.">                if (path.getJavaType().equals(String.class)) {</span>
+<span class="nc" id="L477">                    searchPredicate = cb.like(cb.lower(root.get(column)), &quot;%&quot; + value.toLowerCase() + &quot;%&quot;);</span>
+<span class="nc bnc" id="L478" title="All 2 branches missed.">                } else if (path.getJavaType().equals(Date.class)) {</span>
+                    try {
+<span class="nc" id="L480">                        Date parsedDate = new SimpleDateFormat(&quot;yyyy-MM-dd&quot;).parse(value);</span>
+<span class="nc" id="L481">                        searchPredicate = cb.equal(root.get(column), parsedDate);</span>
+<span class="nc" id="L482">                    } catch (ParseException e) {</span>
+<span class="nc" id="L483">                        throw new RuntimeException(&quot;Invalid date format for field: &quot; + column, e);</span>
+<span class="nc" id="L484">                    }</span>
+                } else {
+<span class="nc" id="L486">                    searchPredicate = cb.equal(root.get(column), value);</span>
+                }
+
+<span class="nc" id="L489">                return cb.and(basePredicate, searchPredicate);</span>
+            }
+
+<span class="nc" id="L492">            return basePredicate;</span>
+        };
+    }
+
+    private HolidaysCalendarDayResponse convertToDTO(HolidaysCalendarDay entity) {
+<span class="nc" id="L497">        HolidaysCalendarDayResponse dto = modelMapper.map(entity, HolidaysCalendarDayResponse.class);</span>
+<span class="nc" id="L498">        dto.setHolidayType(lookupCodeRepository.findByLookupCodes(dto.getHolidayType()));</span>
+<span class="nc" id="L499">        return dto;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

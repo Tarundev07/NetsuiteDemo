@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProjectMilestone.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.domain.project</a> &gt; <span class="el_source">ProjectMilestone.java</span></div><h1>ProjectMilestone.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.domain.project;
+
+import com.atomicnorth.hrm.tenant.domain.AbstractAuditingEntity;
+import lombok.Data;
+
+import javax.persistence.*;
+import java.util.Date;
+
+<span class="nc bnc" id="L9" title="All 94 branches missed.">@Data</span>
+@Entity
+@Table(name = &quot;ses_m02_project_milestone&quot;)
+public class ProjectMilestone extends AbstractAuditingEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = &quot;PROJECT_MILESTONE_ID&quot;)
+<span class="nc" id="L17">    private Integer projectMilestoneId;</span>
+
+    @Column(name = &quot;MILESTONE_NAME&quot;)
+<span class="nc" id="L20">    private String milestoneName;</span>
+
+    @Column(name = &quot;PROJECT_RF_NUM&quot;)
+<span class="nc" id="L23">    private Integer projectRfNum;</span>
+
+    @Column(name = &quot;PROJECT_MILESTONE_TYPE_ID&quot;)
+<span class="nc" id="L26">    private Integer projectMilestoneTypeId;</span>
+
+    @Column(name = &quot;SEQUENCE_ORDER&quot;)
+<span class="nc" id="L29">    private Integer sequenceOrder;</span>
+
+    @Column(name = &quot;AMOUNT&quot;)
+<span class="nc" id="L32">    private Double amount;</span>
+
+    @Column(name = &quot;START_DATE&quot;)
+<span class="nc" id="L35">    private Date startDate;</span>
+
+    @Column(name = &quot;END_DATE&quot;)
+<span class="nc" id="L38">    private Date endDate;</span>
+
+    @Column(name = &quot;REMARK&quot;)
+<span class="nc" id="L41">    private String remark;</span>
+
+    @Column(name = &quot;IS_ACTIVE&quot;)
+<span class="nc" id="L44">    private String isActive;</span>
+
+    @Column(name = &quot;IS_DELETED&quot;)
+<span class="nc" id="L47">    private String isDeleted;</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

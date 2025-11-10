@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>InterviewFeedbackService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HR Management</a> &gt; <a href="index.source.html" class="el_package">com.atomicnorth.hrm.tenant.service</a> &gt; <span class="el_source">InterviewFeedbackService.java</span></div><h1>InterviewFeedbackService.java</h1><pre class="source lang-java linenums">package com.atomicnorth.hrm.tenant.service;
+
+import com.atomicnorth.hrm.tenant.domain.InterviewFeedback;
+import com.atomicnorth.hrm.tenant.helper.SessionHolder;
+import com.atomicnorth.hrm.tenant.helper.UserLoginDetail;
+import com.atomicnorth.hrm.tenant.repository.InterviewFeedbackRepository;
+import com.atomicnorth.hrm.tenant.repository.LookupCodeRepository;
+import com.atomicnorth.hrm.tenant.repository.employement.employee_job_applicant.JobApplicantRepository;
+import com.atomicnorth.hrm.tenant.service.dto.InterviewFeedbackDTO;
+import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import javax.persistence.EntityNotFoundException;
+import javax.transaction.Transactional;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@Service
+<span class="fc" id="L24">public class InterviewFeedbackService {</span>
+
+<span class="fc" id="L26">    private final Logger log = LoggerFactory.getLogger(InterviewFeedbackService.class);</span>
+    @Autowired
+    private InterviewFeedbackRepository interviewFeedbackRepository;
+    @Autowired
+    private ModelMapper modelMapper;
+    @Autowired
+    private LookupCodeRepository lookupCodeRepository;
+    @Autowired
+    private JobApplicantRepository employeeJobApplicantRepository;
+    @Autowired
+    private EmployeeService employeeService;
+
+    @Transactional
+    public InterviewFeedbackDTO createInterviewFeedback(InterviewFeedbackDTO dto) {
+<span class="fc" id="L40">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="fc" id="L41">        InterviewFeedback interviewFeedback = modelMapper.map(dto, InterviewFeedback.class);</span>
+<span class="fc" id="L42">        interviewFeedback.setCreatedDate(LocalDate.now());</span>
+<span class="fc" id="L43">        interviewFeedback.setCreatedBy(tokenHolder.getUsername().toString());</span>
+<span class="fc" id="L44">        InterviewFeedback savedInterviewFeedback = interviewFeedbackRepository.save(interviewFeedback);</span>
+<span class="fc" id="L45">        log.info(&quot;Interview Feedback created with ID: {}&quot;, savedInterviewFeedback.getInterviewFeedbackId());</span>
+<span class="fc" id="L46">        return modelMapper.map(savedInterviewFeedback, InterviewFeedbackDTO.class);</span>
+    }
+
+    @Transactional
+    public InterviewFeedbackDTO updateInterviewFeedback(Long interviewFeedbackId, InterviewFeedbackDTO dto) {
+<span class="fc" id="L51">        UserLoginDetail tokenHolder = SessionHolder.getUserLoginDetail();</span>
+<span class="fc" id="L52">        Optional&lt;InterviewFeedback&gt; existingInterviewFeedbackOpt = interviewFeedbackRepository.findById(interviewFeedbackId);</span>
+<span class="pc bpc" id="L53" title="1 of 2 branches missed.">        if (existingInterviewFeedbackOpt.isEmpty()) {</span>
+<span class="fc" id="L54">            log.error(&quot;Interview Feedback with ID {} not found for update&quot;, interviewFeedbackId);</span>
+<span class="fc" id="L55">            throw new EntityNotFoundException(&quot;Interview Feedback not found for ID: &quot; + interviewFeedbackId);</span>
+        }
+<span class="nc" id="L57">        InterviewFeedback existingInterviewFeedback = existingInterviewFeedbackOpt.get();</span>
+<span class="nc bnc" id="L58" title="All 2 branches missed.">        if (employeeService.checkEmployeeExists(existingInterviewFeedback.getJobApplicantId())) {</span>
+<span class="nc" id="L59">            throw  new IllegalArgumentException(&quot;Employee already exists for this job applicant.&quot;);</span>
+        }
+<span class="nc" id="L61">        dto.setCreatedDate(existingInterviewFeedback.getCreatedDate());</span>
+<span class="nc" id="L62">        dto.setCreatedBy(existingInterviewFeedback.getCreatedBy());</span>
+<span class="nc" id="L63">        modelMapper.map(dto, existingInterviewFeedback);</span>
+<span class="nc" id="L64">        existingInterviewFeedback.setUpdatedDate(LocalDate.now());</span>
+<span class="nc" id="L65">        existingInterviewFeedback.setUpdatedBy(String.valueOf(tokenHolder.getUsername()));</span>
+<span class="nc" id="L66">        InterviewFeedback updatedInterviewFeedback = interviewFeedbackRepository.save(existingInterviewFeedback);</span>
+<span class="nc" id="L67">        log.info(&quot;Interview Feedback with ID {} updated successfully&quot;, updatedInterviewFeedback.getInterviewFeedbackId());</span>
+<span class="nc" id="L68">        return modelMapper.map(updatedInterviewFeedback, InterviewFeedbackDTO.class);</span>
+    }
+
+    @Transactional
+    public List&lt;InterviewFeedbackDTO&gt; findAllInterviewFeedbacks() {
+<span class="fc" id="L73">        List&lt;InterviewFeedback&gt; interviewFeedbacks = interviewFeedbackRepository.findAll();</span>
+<span class="pc bpc" id="L74" title="1 of 2 branches missed.">        if (interviewFeedbacks.isEmpty()) {</span>
+<span class="nc" id="L75">            log.info(&quot;No active Interview Feedbacks found&quot;);</span>
+        } else {
+<span class="fc" id="L77">            log.info(&quot;Active Interview Feedbacks retrieved: {}&quot;, interviewFeedbacks.size());</span>
+        }
+<span class="fc" id="L79">        return interviewFeedbacks.stream()</span>
+<span class="fc" id="L80">                .map(this::mapToDTO)</span>
+<span class="fc" id="L81">                .collect(Collectors.toList());</span>
+    }
+
+    @Transactional
+    public Optional&lt;InterviewFeedbackDTO&gt; getInterviewFeedbackById(Long id) {
+<span class="fc" id="L86">        return interviewFeedbackRepository.findById(id)</span>
+<span class="fc" id="L87">                .map(this::mapToDTO);</span>
+    }
+
+    @Transactional
+    public Optional&lt;InterviewFeedbackDTO&gt; getInterviewByInterviewId(Long interviewId) {
+<span class="nc" id="L92">        return interviewFeedbackRepository.findByInterviewId(interviewId)</span>
+<span class="nc" id="L93">                .map(this::mapToDTO);</span>
+    }
+
+    private InterviewFeedbackDTO mapToDTO(InterviewFeedback interviewFeedback) {
+<span class="fc" id="L97">        InterviewFeedbackDTO dto = new InterviewFeedbackDTO();</span>
+<span class="fc" id="L98">        dto.setInterviewFeedbackId(interviewFeedback.getInterviewFeedbackId());</span>
+<span class="fc" id="L99">        dto.setInterviewId(interviewFeedback.getInterviewId());</span>
+<span class="pc bpc" id="L100" title="1 of 2 branches missed.">        if (interviewFeedback.getInterviewResultCode() != null) {</span>
+<span class="fc" id="L101">            dto.setInterviewResult(lookupCodeRepository</span>
+<span class="fc" id="L102">                    .findMeaningByLookupTypeAndLookupCode(&quot;RESULT_STATUS&quot;, interviewFeedback.getInterviewResultCode())</span>
+<span class="fc" id="L103">                    .orElse(&quot;Unknown Result&quot;));</span>
+        }
+<span class="fc" id="L105">        dto.setInterviewResultCode(interviewFeedback.getInterviewResultCode());</span>
+<span class="fc" id="L106">        dto.setJobApplicantId(interviewFeedback.getJobApplicantId());</span>
+<span class="fc" id="L107">        dto.setCreatedDate(interviewFeedback.getCreatedDate());</span>
+<span class="fc" id="L108">        dto.setCreatedBy(interviewFeedback.getCreatedBy());</span>
+<span class="fc" id="L109">        dto.setUpdatedDate(interviewFeedback.getUpdatedDate());</span>
+<span class="fc" id="L110">        dto.setUpdatedBy(interviewFeedback.getUpdatedBy());</span>
+<span class="fc" id="L111">        dto.setIsActive(interviewFeedback.getIsActive());</span>
+<span class="fc" id="L112">        dto.setSkillFeedback(interviewFeedback.getSkillFeedback());</span>
+<span class="pc bpc" id="L113" title="1 of 2 branches missed.">        if (interviewFeedback.getJobApplicantId() != null) {</span>
+<span class="fc" id="L114">            dto.setJobApplicantName(</span>
+<span class="fc" id="L115">                    employeeJobApplicantRepository.findJobApplicantNameById(interviewFeedback.getJobApplicantId())</span>
+<span class="fc" id="L116">                            .orElseGet(() -&gt; {</span>
+<span class="nc" id="L117">                                log.warn(&quot;Job Applicant name not found for ID: {}&quot;, interviewFeedback.getJobApplicantId());</span>
+<span class="nc" id="L118">                                return &quot;Unknown Applicant&quot;;</span>
+                            }));
+        }
+<span class="fc" id="L121">        return dto;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>
