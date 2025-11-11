@@ -19,6 +19,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
+import org.springframework.web.bind.annotation.GetMapping;
 
 import javax.annotation.PostConstruct;
 import java.net.InetAddress;
@@ -43,6 +44,12 @@ public class HRManagementApp extends SpringBootServletInitializer {
     public HRManagementApp() {
     }
 
+
+    @GetMapping("/testAPI")
+    public String message()
+    {
+        return "Wohoo! Your App Delpoyed Successfully";
+    }
     public static void main(String[] args) {
         String activeProfile = System.getProperty("spring.profiles.active"); 
         SpringApplication app = new SpringApplication(HRManagementApp.class);
